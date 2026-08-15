@@ -1,0 +1,129 @@
+﻿import { useState } from "react";
+import { Users, MessageCircle, MapPin, ChevronRight, Hash } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import TURKEY_PROVINCES from "@/lib/turkeyProvinces";
+import { useMembership } from "@/contexts/MembershipContext";
+import { Link } from "wouter";
+
+/**
+ * Design: Asphalt & Steel
+ * Topluluk — şehir grupları, sohbet odaları, forum
+ */
+export default function CommunityPage() {
+  const [activeTab, setActiveTab] = useState("groups");
+  const { isMember, joinCity, leaveCity, getMemberCount, joinedCities } = useMembership();
+
+  const channels = [
+    { name: "genel-sohbet", members: 18500, lastMsg: "Selam herkese, hafta sonu tur planlayan var mı?" },
+    { name: "yol-yardim", members: 9200, lastMsg: "Ankara yolunda lastik patladı, yardım edebilecek?" },
+    { name: "ikinci-el", members: 6700, lastMsg: "Shoei kask satılık, az kullanılmış" },
+    { name: "etkinlikler", members: 5400, lastMsg: "17 Ağustos Beypazarı turu için kayıtlar açık!" },
+    { name: "teknik-bilgi", members: 8100, lastMsg: "PCX 125 zincir bakımı ne sıklıkta yapılmalı?" },
+  ];
+
+  return (
+    <div className="min-h-screen bg-asphalt">
+      <header className="sticky top-0 z-40 bg-card/90 backdrop-blur-xl border-b border-border">
+        <div className="px-4 h-14 flex items-center justify-between">
+          <h1 className="font-display text-lg font-bold text-white uppercase tracking-wider">
+            Topluluk
+          </h1>
+          <div className="flex items-center gap-2">
+            <a href="/yardim-talepleri" className="text-sm bg-primary text-white px-3 py-1 rounded-md">Yardım Talepleri</a>
+          </div>
+        </div>
+      </header>
+
+      {/* Tab seçici */}
+      <div className="px-4 pt-4">
+        <div className="flex gap-2">
+          <TabButton active={activeTab === "groups"} onClick={() => setActiveTab("groups")}>
+            <Users className="w-4 h-4" /> Şehir Grupları
+          </TabButton>
+          <TabButton active={activeTab === "channels"} onClick={() => setActiveTab("channels")}>
+            <Hash className="w-4 h-4" /> Kanallar
+          </TabButton>
+        </div>
+      </div>
+
+      {activeTab === "groups" && (
+        <div className="px-4 pt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          {TURKEY_PROVINCES.map((prov) => (
+            <Card key={prov} className="bg-card-gradient border-border p-3 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center">
+                    <MapPin className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-display font-bold text-foreground uppercase tracking-wide text-sm">{prov}</p>
+                    <p className="text-[11px] text-muted-foreground mt-1">{getMemberCount(prov)} üye</p>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-3 flex items-center justify-between">
+                <Link href={`/group/${encodeURIComponent(prov)}`}>
+                  <button className="text-xs text-primary">Gruba Gir</button>
+                </Link>
+                {isMember(prov) ? (
+                  <button onClick={() => leaveCity(prov)} className="px-2 py-1 text-xs rounded bg-card-gradient border border-border">Üyelikten Çık</button>
+                ) : (
+                  <button onClick={() => joinCity(prov)} className="px-2 py-1 text-xs rounded bg-primary text-white">Katıl / Üye Ol</button>
+                )}
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {activeTab === "channels" && (
+        <div className="px-4 pt-3 space-y-2">
+          {channels.map((ch) => (
+            <Card key={ch.name} className="bg-card-gradient border-border p-4 active:scale-[0.98] transition-transform">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-lg bg-primary/15 flex items-center justify-center flex-shrink-0">
+                  <Hash className="w-5 h-5 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-foreground text-sm">
+                    #{ch.name}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                    {ch.lastMsg}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    {ch.members.toLocaleString("tr")} üye
+                  </p>
+                </div>
+                <MessageCircle className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-1" />
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TabButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-medium transition-colors ${
+        active
+          ? "bg-primary text-white"
+          : "bg-card-gradient border border-border text-muted-foreground"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}

@@ -1,0 +1,32 @@
+﻿import { initializeApp } from "firebase/app";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut, onAuthStateChanged } from "firebase/auth";
+
+const firebaseConfig = {
+  apiKey: "projenin_api_key_degeri",
+  authDomain: "projenin_domaini.firebaseapp.com",
+  projectId: "proje_id",
+  storageBucket: "bucket.appspot.com",
+  messagingSenderId: "sender_id",
+  appId: "app_id"
+};
+
+const app = initializeApp(firebaseConfig);
+export const auth = getAuth(app);
+
+// Authentication helpers
+// Use these wrappers from your React components instead of importing firebase/auth directly.
+export function signIn(email, password) {
+  return signInWithEmailAndPassword(auth, email, password);
+}
+
+export function signUp(email, password) {
+  return createUserWithEmailAndPassword(auth, email, password);
+}
+
+export function signOutUser() {
+  return firebaseSignOut(auth);
+}
+
+export function onAuthStateChangedListener(callback) {
+  return onAuthStateChanged(auth, callback);
+}

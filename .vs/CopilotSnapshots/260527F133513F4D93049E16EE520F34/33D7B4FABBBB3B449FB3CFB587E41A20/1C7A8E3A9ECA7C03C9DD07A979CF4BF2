@@ -1,0 +1,183 @@
+﻿import React, { createContext, useContext, useEffect, useState } from "react";
+import { subscribeHelpRequestsRealtime, createHelpRequestRealtime, subscribeMessagesRealtime, sendMessageRealtime } from '../../../firebase';
+import { nanoid } from "nanoid";
+
+type Message = {
+  id: string;
+  from: string | null;
+  text: string;
+  ts: number;
+};
+
+type HelpRequest = {
+  id: string;
+  title: string;
+  description: string;
+  user?: string | null;
+  lat?: number;
+  lng?: number;
+  createdAt: number;
+  active: boolean;
+  helpers?: string[];
+  resolvedBy?: string | null;
+  resolvedAt?: number | null;
+};
+
+type MessageContextType = {
+  helpRequests: HelpRequest[];
+  messages: Record<string, Message[]>;
+  createHelpRequest: (r: Omit<HelpRequest, "id" | "createdAt" | "active">) => HelpRequest;
+  sendMessage: (requestId: string, text: string, from?: string | null) => Message;
+  subscribeToMessages: (requestId: string, onUpdate: (arr: Message[]) => void) => (() => void);
+  acceptHelp: (requestId: string, helperEmail: string) => void;
+  resolveHelp: (requestId: string, helperEmail: string) => void;
+  getTopHelpers: (limit?: number) => {email:string,count:number}[];
+};
+
+const MessageContext = createContext<MessageContextType | undefined>(undefined);
+
+const STORAGE_KEY = "motosos_help_requests_v1";
+
+export function MessageProvider({ children }: { children: React.ReactNode }) {
+  const [helpRequests, setHelpRequests] = useState<HelpRequest[]>(() => {
+	try {
+	  const raw = localStorage.getItem(STORAGE_KEY);
+	  return raw ? JSON.parse(raw).helpRequests || [] : [];
+	} catch (e) {
+	  return [];
+	}
+  });
+
+  const [messages, setMessages] = useState<Record<string, Message[]>>(() => {
+	try {
+	  const raw = localStorage.getItem(STORAGE_KEY);
+	  return raw ? JSON.parse(raw).messages || {} : {};
+	} catch (e) {
+	  return {};
+	}
+  });
+
+  useEffect(() => {
+	localStorage.setItem(STORAGE_KEY, JSON.stringify({ helpRequests, messages }));
+  }, [helpRequests, messages]);
+
+  // helpCounts per user
+  const [helpCounts, setHelpCounts] = useState<Record<string, number>>(() => {
+	try {
+	  const raw = localStorage.getItem("motosos_user_stats_v1");
+	  return raw ? JSON.parse(raw) : {};
+	} catch (e) { return {}; }
+  });
+
+  useEffect(() => {
+	try { localStorage.setItem("motosos_user_stats_v1", JSON.stringify(helpCounts)); } catch(e){}
+  }, [helpCounts]);
+
+  function incrementHelpCount(email?: string) {
+	if (!email) return;
+	setHelpCounts(s => ({ ...s, [email]: (s[email] || 0) + 1 }));
+  }
+
+  function getTopHelpers(limit = 10) {
+	return Object.entries(helpCounts).sort((a,b)=>b[1]-a[1]).slice(0,limit).map(([email,count])=>({email,count}));
+  }
+
+  // Realtime subscription to helpRequests (Firestore). If available, it will keep local state in sync.
+  useEffect(() => {
+	let unsub = null;
+	try {
+	  unsub = subscribeHelpRequestsRealtime((arr) => {
+		// Map Firestore timestamp to number if necessary
+		const normalized = arr.map((d: any) => ({
+		  ...d,
+		  createdAt: d.createdAt && d.createdAt.toMillis ? d.createdAt.toMillis() : d.createdAt || Date.now(),
+		}));
+		setHelpRequests(normalized as HelpRequest[]);
+	  });
+	} catch (e) {
+	  console.info("Realtime helpRequests not available", e);
+	}
+
+	return () => {
+	  if (unsub) unsub();
+	};
+  }, []);
+
+  function createHelpRequest(r: Omit<HelpRequest, "id" | "createdAt" | "active">) {
+	// Try realtime first
+	try {
+	  createHelpRequestRealtime(r);
+	  // Firestore snapshot will update local state
+	  const id = nanoid();
+	  setMessages((m) => ({ ...m, [id]: [] }));
+	  return { ...r, id, createdAt: Date.now(), active: true } as HelpRequest;
+	} catch (e) {
+	  const id = nanoid();
+		const hr: HelpRequest = { ...r, id, createdAt: Date.now(), active: true, helpers: [], resolvedBy: null, resolvedAt: null };
+	  setHelpRequests((s) => [hr, ...s]);
+	  setMessages((m) => ({ ...m, [id]: [] }));
+	  return hr;
+	}
+  }
+
+  // accept helping a request
+  function acceptHelp(requestId: string, helperEmail: string) {
+	// update local
+	setHelpRequests((s) => s.map(hr => hr.id === requestId ? { ...hr, helpers: Array.from(new Set([...(hr.helpers||[]), helperEmail])) } : hr));
+	try { updateHelpRequestRealtime(requestId, { helpers: (helpRequests.find(h=>h.id===requestId)?.helpers||[])}); } catch(e){}
+  }
+
+  // resolve help: credit helper and mark resolved
+  function resolveHelp(requestId: string, helperEmail: string) {
+	setHelpRequests((s) => s.map(hr => hr.id === requestId ? { ...hr, resolvedBy: helperEmail, resolvedAt: Date.now(), active: false } : hr));
+	incrementHelpCount(helperEmail);
+	try { updateHelpRequestRealtime(requestId, { resolvedBy: helperEmail, resolvedAt: Date.now(), active: false }); } catch(e){}
+  }
+
+  function sendMessage(requestId: string, text: string, from: string | null = null) {
+	const msg: Message = { id: nanoid(), from, text, ts: Date.now() };
+	try {
+	  sendMessageRealtime(requestId, msg);
+	  return msg; // Firestore snapshot will sync
+	} catch (e) {
+	  setMessages((m) => {
+		const arr = m[requestId] ? [...m[requestId], msg] : [msg];
+		return { ...m, [requestId]: arr };
+	  });
+	  return msg;
+	}
+  }
+
+  // Allow components to subscribe to realtime messages for a specific request
+  function subscribeToMessages(requestId: string, onUpdate: (arr: Message[]) => void) {
+	try {
+	  return subscribeMessagesRealtime(requestId, (arr: any[]) => {
+		const normalized = arr.map((d) => ({ ...d, ts: d.ts && d.ts.toMillis ? d.ts.toMillis() : d.ts }));
+		// update local messages store as well
+		setMessages((m) => ({ ...m, [requestId]: normalized }));
+		onUpdate(normalized as Message[]);
+	  });
+	} catch (e) {
+	  // fallback: no-op unsubscribe
+	  return () => {};
+	}
+  }
+
+  const value: MessageContextType = {
+	helpRequests,
+	messages,
+	createHelpRequest,
+	sendMessage,
+	  subscribeToMessages,
+  };
+
+  return <MessageContext.Provider value={value}>{children}</MessageContext.Provider>;
+}
+
+export function useMessages() {
+  const ctx = useContext(MessageContext);
+  if (!ctx) throw new Error("useMessages must be used within MessageProvider");
+  return ctx;
+}
+
+export default MessageContext;

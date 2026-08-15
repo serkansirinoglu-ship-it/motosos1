@@ -1,0 +1,124 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return request.auth != null && request.auth.token.admin == true;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // Users collection: each user can read/write only their own profile
+    match /users/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow create: if isOwner(uid);
+      allow update: if isOwner(uid) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // SOS requests: authenticated users can create; owner can update/cancel;
+    // helpers can read active requests; admin full access
+    match /sosRequests/{sosId} {
+      allow create: if isSignedIn()
+        && request.resource.data.requesterId == request.auth.uid
+        && request.resource.data.status == 'active';
+      allow read: if isSignedIn();
+      allow update: if isSignedIn()
+        && (
+          resource.data.requesterId == request.auth.uid
+          || isAdmin()
+        );
+      allow delete: if isAdmin();
+    }
+
+    // Help requests: authenticated users can create/read; owner can update/delete
+    match /helpRequests/{requestId} {
+      allow create: if isSignedIn();
+      allow read: if isSignedIn();
+      allow update: if isSignedIn()
+        && (
+          resource.data.user == request.auth.token.email
+          || isAdmin()
+        );
+      allow delete: if isAdmin();
+
+      // Messages subcollection: authenticated users can read/create
+      match /messages/{messageId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn();
+        allow update: if isAdmin();
+        allow delete: if isAdmin();
+      }
+    }
+
+    // Products: public read, admin write
+    match /products/{productId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Banners: public read, admin write
+    match /banners/{bannerId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Community posts: authenticated users can create; owner can update/delete
+    match /communityPosts/{postId} {
+      allow create: if isSignedIn()
+        && request.resource.data.authorId == request.auth.uid;
+      allow read: if true;
+      allow update: if isSignedIn()
+        && (
+          resource.data.authorId == request.auth.uid
+          || isAdmin()
+        );
+      allow delete: if isSignedIn()
+        && (
+          resource.data.authorId == request.auth.uid
+          || isAdmin()
+        );
+    }
+
+    // Events: public read, authenticated create, owner/admin update/delete
+    match /events/{eventId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn()
+        && (
+          resource.data.organizerId == request.auth.uid
+          || isAdmin()
+        );
+      allow delete: if isAdmin();
+    }
+
+    // Listings: public read, authenticated create, owner/admin update/delete
+    match /listings/{listingId} {
+      allow read: if true;
+      allow create: if isSignedIn()
+        && request.resource.data.sellerId == request.auth.uid;
+      allow update: if isSignedIn()
+        && (
+          resource.data.sellerId == request.auth.uid
+          || isAdmin()
+        );
+      allow delete: if isSignedIn()
+        && (
+          resource.data.sellerId == request.auth.uid
+          || isAdmin()
+        );
+    }
+
+    // Default: deny all writes, allow reads only for public content
+    match /{document=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+  }
+}

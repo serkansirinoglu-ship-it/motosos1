@@ -1,0 +1,113 @@
+﻿import { initializeApp } from "firebase/app";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut, onAuthStateChanged } from "firebase/auth";
+import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from "firebase/firestore";
+
+// Read config from Vite environment variables
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "",
+};
+
+const hasFirebaseConfig = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId);
+
+if (!hasFirebaseConfig) {
+  console.warn(
+	"Firebase config incomplete — realtime features will run in local/mock mode. Set VITE_FIREBASE_* vars in .env.local for realtime features."
+  );
+}
+
+let app = null;
+let auth = null;
+let db = null;
+
+if (hasFirebaseConfig) {
+  app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  db = getFirestore(app);
+}
+
+export { auth, db };
+
+// Authentication helpers
+// Use these wrappers from your React components instead of importing firebase/auth directly.
+export function signIn(email, password) {
+	if (!auth) return Promise.reject(new Error('Firebase not configured'));
+  return signInWithEmailAndPassword(auth, email, password);
+}
+
+export function signUp(email, password) {
+	if (!auth) return Promise.reject(new Error('Firebase not configured'));
+  return createUserWithEmailAndPassword(auth, email, password);
+}
+
+export function signOutUser() {
+	if (!auth) return Promise.resolve();
+  return firebaseSignOut(auth);
+}
+
+export function onAuthStateChangedListener(callback) {
+	if (!auth) {
+	// mock: call back null and return noop unsubscribe
+	setTimeout(() => callback(null), 0);
+	return () => {};
+  }
+  return onAuthStateChanged(auth, callback);
+}
+
+// Realtime helpers (Firestore)
+export function subscribeHelpRequestsRealtime(onUpdate) {
+	if (!db) {
+	// Firestore not configured — no-op subscription
+	console.info("subscribeHelpRequestsRealtime: Firestore not configured, running in local/mock mode");
+	return () => {};
+  }
+
+  try {
+	const q = query(collection(db, "helpRequests"), orderBy("createdAt", "desc"));
+	return onSnapshot(q, (snap) => {
+	  const arr = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+	  onUpdate(arr);
+	});
+  } catch (e) {
+	console.error("subscribeHelpRequestsRealtime error", e);
+	return () => {};
+  }
+}
+
+export async function createHelpRequestRealtime(data) {
+	if (!db) {
+	console.info("createHelpRequestRealtime: Firestore not configured, skipping realtime write");
+	return null;
+  }
+  return addDoc(collection(db, "helpRequests"), { ...data, createdAt: serverTimestamp(), active: true });
+}
+
+export function subscribeMessagesRealtime(requestId, onUpdate) {
+	if (!db) {
+	console.info("subscribeMessagesRealtime: Firestore not configured, running in local/mock mode");
+	return () => {};
+  }
+
+  try {
+	const q = query(collection(db, "helpRequests", requestId, "messages"), orderBy("ts", "asc"));
+	return onSnapshot(q, (snap) => {
+	  const arr = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+	  onUpdate(arr);
+	});
+  } catch (e) {
+	console.error("subscribeMessagesRealtime error", e);
+	return () => {};
+  }
+}
+
+export async function sendMessageRealtime(requestId, msg) {
+	if (!db) {
+	console.info("sendMessageRealtime: Firestore not configured, skipping realtime write");
+	return null;
+  }
+  return addDoc(collection(db, "helpRequests", requestId, "messages"), { ...msg, ts: serverTimestamp() });
+}

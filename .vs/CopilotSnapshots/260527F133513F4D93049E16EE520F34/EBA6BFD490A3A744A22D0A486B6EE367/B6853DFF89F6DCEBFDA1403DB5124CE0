@@ -1,0 +1,87 @@
+﻿import React, { useState } from 'react';
+import AuthModal from './components/AuthModal';
+import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import NotFound from "@/pages/NotFound";
+import { Route, Switch } from "wouter";
+import ErrorBoundary from "./components/ErrorBoundary";
+import { ThemeProvider } from "./contexts/ThemeContext";
+import Home from "./pages/Home";
+import MapPage from "./pages/MapPage";
+import SOSPage from "./pages/SOSPage";
+import CommunityPage from "./pages/CommunityPage";
+import ProfilePage from "./pages/ProfilePage";
+import MarketplacePage from "./pages/MarketplacePage";
+import EventsPage from "./pages/EventsPage";
+import BottomNav from "./components/BottomNav";
+
+function AppLayout({ children, onAuthOpen }: { children: React.ReactNode; onAuthOpen?: () => void }) {
+  return (
+    <div className="min-h-screen bg-asphalt flex flex-col">
+      <div className="flex-1 pb-20">{children}</div>
+      <BottomNav onAuthOpen={onAuthOpen} />
+    </div>
+  );
+}
+
+function Router({ onAuthOpen }: { onAuthOpen?: () => void }) {
+  return (
+    <Switch>
+      <Route path="/">
+        <AppLayout onAuthOpen={onAuthOpen}>
+          <Home />
+        </AppLayout>
+      </Route>
+      <Route path="/harita">
+        <AppLayout onAuthOpen={onAuthOpen}>
+          <MapPage />
+        </AppLayout>
+      </Route>
+      <Route path="/sos">
+        <AppLayout onAuthOpen={onAuthOpen}>
+          <SOSPage />
+        </AppLayout>
+      </Route>
+      <Route path="/topluluk">
+        <AppLayout onAuthOpen={onAuthOpen}>
+          <CommunityPage />
+        </AppLayout>
+      </Route>
+      <Route path="/profil">
+        <AppLayout onAuthOpen={onAuthOpen}>
+          <ProfilePage />
+        </AppLayout>
+      </Route>
+      <Route path="/ikinci-el">
+        <AppLayout onAuthOpen={onAuthOpen}>
+          <MarketplacePage />
+        </AppLayout>
+      </Route>
+      <Route path="/etkinlikler">
+        <AppLayout onAuthOpen={onAuthOpen}>
+          <EventsPage />
+        </AppLayout>
+      </Route>
+      <Route path="/404" component={NotFound} />
+      <Route component={NotFound} />
+    </Switch>
+  );
+}
+
+function App() {
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+
+  return (
+    <ErrorBoundary>
+      <ThemeProvider defaultTheme="dark">
+        <TooltipProvider>
+          <Toaster />
+          <Router onAuthOpen={() => setIsAuthOpen(true)} />
+          <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
+        </TooltipProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
+  );
+}
+
+export default App;

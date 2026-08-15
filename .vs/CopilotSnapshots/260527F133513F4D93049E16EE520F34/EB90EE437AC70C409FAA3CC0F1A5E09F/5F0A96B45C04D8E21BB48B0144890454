@@ -1,0 +1,290 @@
+﻿import { Link } from "wouter";
+import {
+  Shield,
+  MapPin,
+  Users,
+  ShoppingBag,
+  Calendar,
+  Star,
+  TrendingUp,
+  ChevronRight,
+  Bike,
+  Fuel,
+  Wrench,
+  Truck,
+} from "lucide-react";
+import { Card } from "@/components/ui/card";
+
+/**
+ * Design: Asphalt & Steel
+ * Ana Sayfa — hero, hızlı erişim kartları, etkinlikler, son ilanlar
+ */
+export default function Home() {
+  return (
+    <div className="min-h-screen bg-asphalt">
+      {/* Header */}
+      <header className="sticky top-0 z-40 bg-card/90 backdrop-blur-xl border-b border-border">
+        <div className="flex items-center justify-between px-4 h-14">
+          <div className="flex items-center gap-2">
+            <img
+              src="/manus-storage/motosos-logo_fe75cbca.png"
+              alt="MotoGuard"
+              className="w-8 h-8"
+            />
+            <span className="font-display font-bold text-white text-lg tracking-wider">
+              MOTO<span className="text-primary">GUARD</span>
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+            <span className="text-xs text-muted-foreground">Çevrimiçi</span>
+          </div>
+        </div>
+      </header>
+
+      {/* Hero */}
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0">
+          <img
+            src="/manus-storage/motosos-hero_a7b24b8c.jpg"
+            alt="Motosiklet yol"
+            className="w-full h-full object-cover opacity-40"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-background/50 via-background/70 to-background" />
+        </div>
+        <div className="relative px-4 pt-12 pb-8">
+          <h1 className="font-display text-4xl font-bold text-white uppercase leading-tight tracking-wide">
+            Yolda kaldın?
+            <br />
+            <span className="text-primary text-glow-orange">Tek tuşla</span>
+            <br />
+            kardeşlerini çağır.
+          </h1>
+          <p className="text-muted-foreground mt-3 text-sm max-w-xs">
+            Türkiye'nin motosiklet kardeşlik platformu. Acil yardım, harita, topluluk ve pazar yeri tek uygulamada.
+          </p>
+          <div className="flex gap-3 mt-5">
+            <Link href="/sos">
+              <button className="bg-primary text-white font-semibold px-6 py-3 rounded-xl active:scale-95 transition-transform flex items-center gap-2">
+                <Shield className="w-5 h-5" />
+                Acil Yardım
+              </button>
+            </Link>
+            <Link href="/harita">
+              <button className="bg-card-gradient border border-border text-foreground font-semibold px-6 py-3 rounded-xl active:scale-95 transition-transform flex items-center gap-2">
+                <MapPin className="w-5 h-5 text-primary" />
+                Harita
+              </button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Hızlı Erişim Kartları */}
+      <section className="px-4 mt-2">
+        <h2 className="font-display text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+          Hızlı Erişim
+        </h2>
+        <div className="grid grid-cols-4 gap-3">
+          <QuickAccess icon={Wrench} label="Usta" color="text-blue-400" />
+          <QuickAccess icon={Truck} label="Çekici" color="text-amber-400" />
+          <QuickAccess icon={Fuel} label="Benzinlik" color="text-red-400" />
+          <QuickAccess icon={Bike} label="Lastikçi" color="text-green-400" />
+        </div>
+      </section>
+
+      {/* İstatistikler */}
+      <section className="px-4 mt-6">
+        <div className="grid grid-cols-3 gap-3">
+          <StatCard value="7.2M" label="Motorcu" />
+          <StatCard value="12K" label="Kardeş" />
+          <StatCard value="3.5K" label="Usta" />
+        </div>
+      </section>
+
+      {/* Yakındaki Etkinlikler */}
+      <section className="px-4 mt-6">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-display text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+            Yakındaki Etkinlikler
+          </h2>
+          <Link href="/etkinlikler">
+            <span className="text-xs text-primary font-medium flex items-center">
+              Tümü <ChevronRight className="w-3 h-3" />
+            </span>
+          </Link>
+        </div>
+        <div className="space-y-3">
+          <EventCard
+            title="İzmir Moto Buluşması"
+            date="10 Ağu Pazar"
+            location="Alsancak, İzmir"
+            attendees={47}
+          />
+          <EventCard
+            title="Ankara-Beypazarı Turu"
+            date="17 Ağu Pazar"
+            location="Çankaya, Ankara"
+            attendees={23}
+          />
+        </div>
+      </section>
+
+      {/* Son İlanlar */}
+      <section className="px-4 mt-6">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-display text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+            İkinci El
+          </h2>
+          <Link href="/ikinci-el">
+            <span className="text-xs text-primary font-medium flex items-center">
+              Tümü <ChevronRight className="w-3 h-3" />
+            </span>
+          </Link>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <ListingCard
+            title="Shoei NXR2 Kask"
+            price="4.500 TL"
+            location="İstanbul"
+            condition="Az kullanılmış"
+          />
+          <ListingCard
+            title="Alpinestars Mont"
+            price="2.800 TL"
+            location="İzmir"
+            condition="Mükemmel"
+          />
+        </div>
+      </section>
+
+      {/* Topluluk önizleme */}
+      <section className="px-4 mt-6 mb-4">
+        <Link href="/topluluk">
+          <Card className="bg-card-gradient border-border p-4 active:scale-[0.98] transition-transform">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-xl bg-primary/15 flex items-center justify-center">
+                <Users className="w-7 h-7 text-primary" />
+              </div>
+              <div className="flex-1">
+                <p className="font-display font-bold text-foreground uppercase tracking-wide">
+                  Topluluğa Katıl
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Şehrinin motorcularıyla sohbet et, grup sürüşlerine katıl.
+                </p>
+              </div>
+              <ChevronRight className="w-5 h-5 text-muted-foreground" />
+            </div>
+          </Card>
+        </Link>
+      </section>
+    </div>
+  );
+}
+
+function QuickAccess({
+  icon: Icon,
+  label,
+  color,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  color: string;
+}) {
+  return (
+    <Link href="/harita">
+      <div className="flex flex-col items-center gap-2 bg-card-gradient border border-border rounded-xl py-3 active:scale-95 transition-transform">
+        <Icon className={`w-6 h-6 ${color}`} />
+        <span className="text-xs font-medium text-foreground">{label}</span>
+      </div>
+    </Link>
+  );
+}
+
+function StatCard({ value, label }: { value: string; label: string }) {
+  return (
+    <div className="bg-card-gradient border border-border rounded-xl py-3 text-center">
+      <p className="font-display text-xl font-bold text-primary">{value}</p>
+      <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
+        {label}
+      </p>
+    </div>
+  );
+}
+
+function EventCard({
+  title,
+  date,
+  location,
+  attendees,
+}: {
+  title: string;
+  date: string;
+  location: string;
+  attendees: number;
+}) {
+  return (
+    <Card className="bg-card-gradient border-border p-4 active:scale-[0.98] transition-transform">
+      <div className="flex items-start gap-3">
+        <div className="w-12 h-12 rounded-lg bg-primary/15 flex flex-col items-center justify-center flex-shrink-0">
+          <span className="text-[10px] text-muted-foreground uppercase">
+            {date.split(" ")[1]}
+          </span>
+          <span className="font-display text-lg font-bold text-primary">
+            {date.split(" ")[0]}
+          </span>
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-foreground text-sm">{title}</p>
+          <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+            <MapPin className="w-3 h-3" /> {location}
+          </p>
+          <div className="flex items-center gap-2 mt-2">
+            <div className="flex -space-x-2">
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="w-5 h-5 rounded-full bg-muted border border-card"
+                />
+              ))}
+            </div>
+            <span className="text-xs text-muted-foreground">
+              {attendees} kişi katılıyor
+            </span>
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function ListingCard({
+  title,
+  price,
+  location,
+  condition,
+}: {
+  title: string;
+  price: string;
+  location: string;
+  condition: string;
+}) {
+  return (
+    <Card className="bg-card-gradient border-border overflow-hidden active:scale-[0.98] transition-transform">
+      <div className="aspect-square bg-muted flex items-center justify-center">
+        <ShoppingBag className="w-10 h-10 text-muted-foreground" />
+      </div>
+      <div className="p-3">
+        <p className="text-sm font-semibold text-foreground truncate">{title}</p>
+        <p className="font-display text-lg font-bold text-primary mt-1">{price}</p>
+        <div className="flex items-center justify-between mt-2">
+          <span className="text-[10px] text-muted-foreground">{location}</span>
+          <span className="text-[10px] text-green-500 bg-green-500/10 px-2 py-0.5 rounded-full">
+            {condition}
+          </span>
+        </div>
+      </div>
+    </Card>
+  );
+}

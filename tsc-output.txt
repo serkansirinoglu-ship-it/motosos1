@@ -1,0 +1,15 @@
+client/src/App.tsx(34,42): error TS2322: Type '{ onAuthOpen: (() => void) | undefined; isAuthenticated: boolean | undefined; }' is not assignable to type 'IntrinsicAttributes & { onAuthOpen?: (() => void) | undefined; }'.
+  Property 'isAuthenticated' does not exist on type 'IntrinsicAttributes & { onAuthOpen?: (() => void) | undefined; }'.
+client/src/contexts/AuthContext.tsx(18,44): error TS7006: Parameter 'u' implicitly has an 'any' type.
+client/src/lib/places.ts(45,46): error TS1501: This regular expression flag is only available when targeting 'es6' or later.
+client/src/pages/AdminPanel.tsx(9,75): error TS7006: Parameter 's' implicitly has an 'any' type.
+client/src/pages/ChatPage.tsx(44,14): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+client/src/pages/ChatPage.tsx(49,26): error TS2339: Property '__openAuthModal' does not exist on type 'Window & typeof globalThis'.
+client/src/pages/ChatPage.tsx(49,52): error TS2339: Property '__openAuthModal' does not exist on type 'Window & typeof globalThis'.
+client/src/pages/ChatPage.tsx(50,13): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+client/src/pages/ChatPage.tsx(55,26): error TS2339: Property '__openAuthModal' does not exist on type 'Window & typeof globalThis'.
+client/src/pages/ChatPage.tsx(55,52): error TS2339: Property '__openAuthModal' does not exist on type 'Window & typeof globalThis'.
+client/src/pages/ChatPage.tsx(56,14): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.

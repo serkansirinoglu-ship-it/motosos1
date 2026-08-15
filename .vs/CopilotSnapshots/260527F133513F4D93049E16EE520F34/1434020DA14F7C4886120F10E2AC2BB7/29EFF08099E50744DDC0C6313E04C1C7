@@ -1,0 +1,59 @@
+﻿# MotoSOS — Tasarım Fikirleri (Brainstorming)
+
+## Üç Yaklaşım
+
+### 1. Asphalt & Steel (Asfalt & Çelik)
+**Tema:** Endüstriyel/sert estetik. Koyu antrasit arka planlar, çelik grileri ve cesur bir güvenlik turuncusu aksan. Yol, metal ve acil durum hazır bulunuşluğunu çağrıştırır.
+**Olasılık:** 0.07
+
+### 2. Road Horizon (Yol Ufku)
+**Tema:** Sıcak gün batımı/şafak esinli palet; derin lacivert, amber/altın aksanlar. Açık yolun özgürlüğünü, macerayı ve topluluk sıcaklığını çağrıştırır.
+**Olasılık:** 0.04
+
+### 3. Neon Garage (Neon Garaj)
+**Tema:** Karanlık mod, elektrik yeşili/cyan aksanlar, modern teknoloji odaklı his. Dijital bir garaj, bağlantısallık ve modernlik çağrışımı.
+**Olasılık:** 0.03
+
+---
+
+## Seçilen Yaklaşım: Asphalt & Steel
+
+**Tasarım Hareketi:** Endüstriyel Brutalizm + Modern Mobil UI — cesur, fonksiyonel, güven verici.
+
+**Temel İlkeler:**
+1. **Acil Öncelik:** SOS butonu her ekranda erişilebilir, görsel olarak baskın.
+2. **Koyu Palet:** Karanlık arka planlar, harita ve gece sürüşü için ideal; turuncu aksanlar acil durum sinyali verir.
+3. **Dokulu Derinlik:** Subtle metal/asfalt dokuları, yumuşak gölgeler ve katmanlı arka planlar ile düz renklerden kaçınılır.
+4. **Mobil-Öncelikli:** Alt navigasyon barı, büyük dokunma hedefleri, thumb-friendly yerleşim.
+
+**Renk Felsefesi:**
+- **Arka plan:** Koyu antrasit/çelik grisi (#1a1a1e, #25262b) — yol asfaltını ve garaj ortamını çağrıştırır.
+- **Aksan:** Güvenlik turuncusu (#FF6B00) — acil durum, uyarı, enerji. SOS butonu ve kritik aksiyonlar için.
+- **İkincil aksan:** Sıcak amber (#FFB800) — rozetler, puanlar, topluluk ödülleri için.
+- **Başarı/Yardım:** Yeşil (#22C55E) — yardım tamamlandı, çevrimiçi durum, "Koruyucu Kardeş" rozetleri.
+
+**Düzen Paradigması:** Alt tab bar navigasyonu (5 sekme: Ana Sayfa, Harita, SOS, Topluluk, Profil). SOS ortada büyük ve öne çıkan bir buton olarak. Üstte sticky header. Kart tabanlı içerik yerleşimi.
+
+**İmza Öğeleri:**
+1. **Pulse SOS Butonu:** Alt navigasyonda ortada, nabız atan turuncu halka efektli büyük buton.
+2. **Rozet Sistemi:** "Koruyucu Kardeş" rozetleri, yardım sayısı göstergeleri, kask ikonları.
+3. **Harita Pin Tasarımları:** Motosiklet, usta, çekici, benzinlik için özel ikon pinler.
+
+**Etkileşim Felsefesi:** Hızlı, emin ve güven verici. Acil durum butonları anında tepki verir. Geçişler kısa ve keskindir (200ms). Yardım çağrısı gönderildiğinde güçlü bir görsel onay mekanizması.
+
+**Animasyon:** Nabız atan SOS butonu (canlı acil durum hissi), harita pin giriş animasyonları (stagger), kart hover efektleri (scale 1.02), rozet kazanım kutlaması (parlama).
+
+**Tipografi Sistemi:**
+- **Başlık:** Saira Condensed / Oswald — sıkı, dar, sportif, motosiklet plakası estetiği.
+- **Gövde:** Inter — okunabilir, modern, mobil için optimize.
+- **Hiyerarşi:** Başlıklar bold uppercase, gövde regular, etiketler semibold tracking-wide.
+
+**Marka Özü:** MotoSOS — yolda kalan motorcunun tek tuşla kardeşlerine ulaştığı, güvenli ve güçlü topluluk platformu. Kişilik: Cesur, Dayanışmacı, Güvenilir.
+
+**Marka Sesi:** Başlıklar kısa ve vurucu; CTA'lar emir kipinde ve net.
+- "Yolda kaldın? Tek tuşla kardeşlerini çağır."
+- "Sende yardım et. Rozetini kazan."
+
+**Wordmark & Logo:** MotoSOS — kask silüeti içinde bir konum iğnesi, turuncu halka ile. Sıkı, condensed tipografi ile "MOTOSOS" wordmark.
+
+**İmza Marka Rengi:** Güvenlik Turuncusu (#FF6B00) — acil durum, enerji, cesaret.

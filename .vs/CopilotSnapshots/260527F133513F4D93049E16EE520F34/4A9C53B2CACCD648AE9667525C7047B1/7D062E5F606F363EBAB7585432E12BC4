@@ -1,0 +1,187 @@
+﻿import { Award, Shield, Star, Bike, MapPin, Settings, ChevronRight, Crown, Heart, Wrench } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { useAuth } from "../contexts/AuthContext";
+
+/**
+ * Design: Asphalt & Steel
+ * Profil — kullanıcı bilgileri, Koruyucu Kardeş rozetleri, istatistikler
+ */
+export default function ProfilePage() {
+  const badges = [
+    { icon: Shield, title: "Koruyucu Kardeş", desc: "5 kez yardım ettin", color: "text-primary", bg: "bg-primary/15", earned: true },
+    { icon: Heart, title: "Yol Meleği", desc: "10 kez yardım ettin", color: "text-red-400", bg: "bg-red-500/15", earned: true },
+    { icon: Crown, title: "Kardeşlik Lideri", desc: "50 kez yardım ettin", color: "text-amber-500", bg: "bg-amber-500/15", earned: false },
+    { icon: Wrench, title: "Usta Tavsiyeci", desc: "20 usta değerlendir", color: "text-blue-400", bg: "bg-blue-500/15", earned: false },
+  ];
+
+  return (
+    <div className="min-h-screen bg-asphalt">
+      <header className="sticky top-0 z-40 bg-card/90 backdrop-blur-xl border-b border-border">
+        <div className="px-4 h-14 flex items-center justify-between">
+          <h1 className="font-display text-lg font-bold text-white uppercase tracking-wider">
+            Profil
+          </h1>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-muted-foreground">{user?.email}</span>
+            <button onClick={handleSignOut} className="text-sm text-red-400 hover:underline">
+              Çıkış Yap
+            </button>
+            <Settings className="w-5 h-5 text-muted-foreground" />
+          </div>
+        </div>
+      </header>
+
+      {/* Profil başlık */}
+      <div className="px-4 pt-6">
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            <div className="w-20 h-20 rounded-full bg-card-gradient border-2 border-primary flex items-center justify-center">
+              <Bike className="w-10 h-10 text-primary" />
+            </div>
+            <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-primary flex items-center justify-center border-2 border-background">
+              <Shield className="w-4 h-4 text-white" />
+            </div>
+          </div>
+          <div className="flex-1">
+            <h2 className="font-display text-xl font-bold text-white uppercase tracking-wide">
+              {user?.displayName || user?.email || "Kullanıcı"}
+            </h2>
+            <p className="text-sm text-muted-foreground flex items-center gap-1 mt-0.5">
+              <MapPin className="w-3.5 h-3.5" /> İzmir, Alsancak
+            </p>
+            <div className="flex items-center gap-2 mt-2">
+              <span className="text-xs bg-primary/15 text-primary font-medium px-2 py-1 rounded-full">
+                Koruyucu Kardeş
+              </span>
+              <span className="text-xs bg-amber-500/15 text-amber-500 font-medium px-2 py-1 rounded-full">
+                Seviye 3
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* İstatistikler */}
+      <div className="px-4 mt-6">
+        <div className="grid grid-cols-3 gap-3">
+          <StatBox value="12" label="Yardım" icon={Shield} />
+          <StatBox value="48" label="Puan" icon={Star} />
+          <StatBox value="3.2K" label="Km" icon={Bike} />
+        </div>
+      </div>
+
+      {/* Rozetler */}
+      <div className="px-4 mt-6">
+        <h3 className="font-display text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+          Rozetler
+        </h3>
+        <div className="grid grid-cols-2 gap-3">
+          {badges.map((badge, i) => {
+            const Icon = badge.icon;
+            return (
+              <Card
+                key={i}
+                className={`p-4 border-border transition-transform active:scale-[0.98] ${
+                  badge.earned ? "bg-card-gradient" : "bg-muted/30 opacity-50"
+                }`}
+              >
+                <div className={`w-12 h-12 rounded-full ${badge.bg} flex items-center justify-center mb-2`}>
+                  <Icon className={`w-6 h-6 ${badge.color}`} />
+                </div>
+                <p className="font-semibold text-foreground text-sm">{badge.title}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{badge.desc}</p>
+              </Card>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Araç bilgileri */}
+      <div className="px-4 mt-6">
+        <h3 className="font-display text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+          Motosikletim
+        </h3>
+        <Card className="bg-card-gradient border-border p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-14 h-14 rounded-xl bg-muted flex items-center justify-center">
+              <Bike className="w-7 h-7 text-primary" />
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-foreground">Honda PCX 125</p>
+              <p className="text-xs text-muted-foreground mt-0.5">2024 · Plaka: 35 ABC 123</p>
+            </div>
+            <ChevronRight className="w-5 h-5 text-muted-foreground" />
+          </div>
+        </Card>
+      </div>
+
+      {/* Menü */}
+      <div className="px-4 mt-6 mb-4">
+        <div className="space-y-1">
+          <MenuItem icon={Award} label="Premium Üyelik" value="Aktif" />
+          <MenuItem icon={Settings} label="Ayarlar" />
+          <MenuItem icon={Star} label="Değerlendirmelerim" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProfilePageWrapper() {
+  const { user, signOut } = useAuth();
+
+  async function handleSignOut() {
+    try {
+      await signOut();
+    } catch (err) {
+      console.error('Sign out error', err);
+    }
+  }
+
+  // Pass user and handler via window for access in render scope above
+  // (Simple approach — alternatively restructure component to accept props)
+  (globalThis as any).__currentAuthUser = user;
+  (globalThis as any).__handleSignOut = handleSignOut;
+
+  return <ProfilePage />;
+}
+
+// Export wrapper as default
+export default ProfilePageWrapper;
+
+function StatBox({
+  value,
+  label,
+  icon: Icon,
+}: {
+  value: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+}) {
+  return (
+    <div className="bg-card-gradient border border-border rounded-xl py-4 text-center">
+      <Icon className="w-5 h-5 text-primary mx-auto mb-1" />
+      <p className="font-display text-xl font-bold text-foreground">{value}</p>
+      <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{label}</p>
+    </div>
+  );
+}
+
+function MenuItem({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value?: string;
+}) {
+  return (
+    <button className="w-full flex items-center gap-3 bg-card-gradient border border-border rounded-xl px-4 py-3 active:scale-[0.98] transition-transform">
+      <Icon className="w-5 h-5 text-muted-foreground" />
+      <span className="flex-1 text-left text-sm font-medium text-foreground">{label}</span>
+      {value && <span className="text-xs text-primary font-medium">{value}</span>}
+      <ChevronRight className="w-4 h-4 text-muted-foreground" />
+    </button>
+  );
+}

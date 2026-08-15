@@ -1,0 +1,22 @@
+{
+  "short_name": "MotoGuard",
+  "name": "MotoGuard — Türkiye Motosiklet Dayanışma Platformu",
+  "description": "Motosikletçiler için acil yardım, yol yardım, harita, topluluk ve pazar yeri.",
+  "icons": [
+    {
+      "src": "/manifest-icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/manifest-icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#0f0f12",
+  "theme_color": "#FF6B00",
+  "display": "standalone",
+  "orientation": "portrait"
+}

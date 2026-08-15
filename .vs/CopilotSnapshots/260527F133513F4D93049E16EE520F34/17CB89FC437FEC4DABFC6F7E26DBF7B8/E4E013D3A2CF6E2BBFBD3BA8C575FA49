@@ -1,0 +1,14 @@
+﻿import { initializeApp } from "firebase/app";
+import { getAuth } from "firebase/auth";
+
+const firebaseConfig = {
+  apiKey: "projenin_api_key_degeri",
+  authDomain: "projenin_domaini.firebaseapp.com",
+  projectId: "proje_id",
+  storageBucket: "bucket.appspot.com",
+  messagingSenderId: "sender_id",
+  appId: "app_id"
+};
+
+const app = initializeApp(firebaseConfig);
+export const auth = getAuth(app);

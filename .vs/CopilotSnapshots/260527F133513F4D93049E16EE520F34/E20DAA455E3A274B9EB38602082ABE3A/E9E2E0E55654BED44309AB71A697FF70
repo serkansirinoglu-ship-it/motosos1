@@ -1,0 +1,139 @@
+﻿import React, { useState, useEffect } from 'react';
+import { AuthProvider } from './contexts/AuthContext';
+import { MessageProvider } from './contexts/MessageContext';
+import { AdminProvider } from './contexts/AdminContext';
+import { MembershipProvider } from './contexts/MembershipContext';
+import AuthModal from './components/AuthModal';
+import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import NotFound from "@/pages/NotFound";
+import { Route, Switch } from "wouter";
+import ErrorBoundary from "./components/ErrorBoundary";
+import { ThemeProvider } from "./contexts/ThemeContext";
+import Home from "./pages/Home";
+import MapPage from "./pages/MapPage";
+import SOSPage from "./pages/SOSPage";
+import UstaPage from "./pages/UstaPage";
+import CekiciPage from "./pages/CekiciPage";
+import BenzinlikPage from "./pages/BenzinlikPage";
+import LastikciPage from "./pages/LastikciPage";
+import CommunityPage from "./pages/CommunityPage";
+import ProfilePage from "./pages/ProfilePage";
+import MarketplacePage from "./pages/MarketplacePage";
+import EventsPage from "./pages/EventsPage";
+import BottomNav from "./components/BottomNav";
+import AdminPanel from "./pages/AdminPanel";
+import HelpRequestsPage from "./pages/HelpRequestsPage";
+import ChatPage from "./pages/ChatPage";
+
+function AppLayout({ children, onAuthOpen, isAuthenticated }: { children: React.ReactNode; onAuthOpen?: () => void; isAuthenticated?: boolean }) {
+  return (
+    <div className="min-h-screen bg-asphalt flex flex-col">
+      <div className="flex-1 pb-20">{children}</div>
+      <BottomNav onAuthOpen={onAuthOpen} isAuthenticated={isAuthenticated} />
+    </div>
+  );
+}
+
+function Router({ onAuthOpen, isAuthenticated }: { onAuthOpen?: () => void; isAuthenticated?: boolean }) {
+  return (
+    <Switch>
+      <Route path="/">
+        <AppLayout onAuthOpen={onAuthOpen} isAuthenticated={isAuthenticated}>
+          <Home />
+        </AppLayout>
+      </Route>
+      <Route path="/harita">
+        <AppLayout onAuthOpen={onAuthOpen} isAuthenticated={isAuthenticated}>
+          <MapPage />
+        </AppLayout>
+      </Route>
+      <Route path="/sos">
+        <AppLayout onAuthOpen={onAuthOpen} isAuthenticated={isAuthenticated}>
+          <SOSPage />
+        </AppLayout>
+      </Route>
+      <Route path="/usta">
+        <AppLayout onAuthOpen={onAuthOpen} isAuthenticated={isAuthenticated}>
+          <UstaPage />
+        </AppLayout>
+      </Route>
+      <Route path="/cekici">
+        <AppLayout onAuthOpen={onAuthOpen} isAuthenticated={isAuthenticated}>
+          <CekiciPage />
+        </AppLayout>
+      </Route>
+      <Route path="/benzinlik">
+        <AppLayout onAuthOpen={onAuthOpen} isAuthenticated={isAuthenticated}>
+          <BenzinlikPage />
+        </AppLayout>
+      </Route>
+      <Route path="/lastikci">
+        <AppLayout onAuthOpen={onAuthOpen} isAuthenticated={isAuthenticated}>
+          <LastikciPage />
+        </AppLayout>
+      </Route>
+      <Route path="/topluluk">
+        <AppLayout onAuthOpen={onAuthOpen} isAuthenticated={isAuthenticated}>
+          <CommunityPage />
+        </AppLayout>
+      </Route>
+      <Route path="/profil">
+        <AppLayout onAuthOpen={onAuthOpen} isAuthenticated={isAuthenticated}>
+          <ProfilePage />
+        </AppLayout>
+      </Route>
+      <Route path="/ikinci-el">
+        <AppLayout onAuthOpen={onAuthOpen} isAuthenticated={isAuthenticated}>
+          <MarketplacePage />
+        </AppLayout>
+      </Route>
+      <Route path="/etkinlikler">
+        <AppLayout onAuthOpen={onAuthOpen} isAuthenticated={isAuthenticated}>
+          <EventsPage />
+        </AppLayout>
+      </Route>
+      <Route path="/yardim-talepleri">
+        <AppLayout onAuthOpen={onAuthOpen} isAuthenticated={isAuthenticated}>
+          <HelpRequestsPage />
+        </AppLayout>
+      </Route>
+      <Route path="/chat/:id">
+        <AppLayout onAuthOpen={onAuthOpen} isAuthenticated={isAuthenticated}>
+          <ChatPage />
+        </AppLayout>
+      </Route>
+      <Route path="/admin">
+        <AppLayout onAuthOpen={onAuthOpen} isAuthenticated={isAuthenticated}>
+          <AdminPanel />
+        </AppLayout>
+      </Route>
+      <Route path="/404" component={NotFound} />
+      <Route component={NotFound} />
+    </Switch>
+  );
+}
+
+function App() {
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+
+  return (
+    <ErrorBoundary>
+      <ThemeProvider defaultTheme="dark">
+        <AuthProvider>
+          <MessageProvider>
+            <AdminProvider>
+              <TooltipProvider>
+                <Toaster />
+                <Router onAuthOpen={() => setIsAuthOpen(true)} />
+                <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
+              </TooltipProvider>
+            </AdminProvider>
+          </MessageProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
+  );
+}
+
+export default App;

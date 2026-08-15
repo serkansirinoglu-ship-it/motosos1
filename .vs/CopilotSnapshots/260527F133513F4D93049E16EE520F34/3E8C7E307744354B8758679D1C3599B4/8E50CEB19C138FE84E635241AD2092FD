@@ -1,0 +1,68 @@
+﻿import { Link } from "wouter";
+import { Home, MapPin, Users, User } from "lucide-react";
+
+/**
+ * Design: Asphalt & Steel — Endüstriyel Brutalizm + Modern Mobil UI
+ * Alt navigasyon: 5 sekme, SOS ortada büyük turuncu pulse buton
+ */
+export default function BottomNav() {
+  const navItems = [
+    { path: "/", icon: Home, label: "Ana Sayfa" },
+    { path: "/harita", icon: MapPin, label: "Harita" },
+    { path: "/topluluk", icon: Users, label: "Topluluk" },
+    { path: "/profil", icon: User, label: "Profil" },
+  ];
+
+  return (
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-xl border-t border-border">
+      <div className="flex items-center justify-around h-16 px-2 relative">
+        {/* Sol 2 sekme */}
+        <div className="flex flex-1 justify-around">
+          <NavLink {...navItems[0]} />
+          <NavLink {...navItems[1]} />
+        </div>
+
+        {/* Orta SOS butonu */}
+        <div className="flex-shrink-0 px-2">
+          <Link href="/sos">
+            <div className="relative">
+              <div className="absolute inset-0 sos-pulse rounded-full" />
+              <div className="relative w-14 h-14 -mt-7 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-primary/40 active:scale-95 transition-transform">
+                <span className="font-display font-bold text-white text-lg tracking-wider">
+                  SOS
+                </span>
+              </div>
+            </div>
+          </Link>
+        </div>
+
+        {/* Sağ 2 sekme */}
+        <div className="flex flex-1 justify-around">
+          <NavLink {...navItems[2]} />
+          <NavLink {...navItems[3]} />
+        </div>
+      </div>
+    </nav>
+  );
+}
+
+function NavLink({
+  path,
+  icon: Icon,
+  label,
+}: {
+  path: string;
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+}) {
+  return (
+    <Link href={path}>
+      <div className="flex flex-col items-center gap-0.5 py-1 px-3 rounded-lg active:scale-95 transition-transform">
+        <Icon className="w-5 h-5 text-muted-foreground" />
+        <span className="text-[10px] font-medium text-muted-foreground">
+          {label}
+        </span>
+      </div>
+    </Link>
+  );
+}

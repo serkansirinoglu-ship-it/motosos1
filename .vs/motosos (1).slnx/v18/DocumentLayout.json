@@ -1,0 +1,741 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\pc\\Desktop\\motosos (1)\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\components\\AuthModal.tsx||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:client\\src\\components\\AuthModal.tsx||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\client\\index.html||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:client\\index.html||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\tsconfig.node.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:tsconfig.node.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\.env.local.example||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:.env.local.example||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\vite.config.ts||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:vite.config.ts||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\tsconfig.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:tsconfig.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\template.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:template.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\pnpm-lock.yaml||{06C066C6-04A2-4E5D-8202-439FD4234EF1}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:pnpm-lock.yaml||{06C066C6-04A2-4E5D-8202-439FD4234EF1}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\package.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:package.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\package-lock.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:package-lock.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\main.js||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:main.js||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\ideas.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:ideas.md||{EFC0BB08-EA7D-40C6-A696-C870411A895B}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\firestore.rules||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:firestore.rules||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\firestore.prod.rules||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:firestore.prod.rules||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\firebase.js||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:firebase.js||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\components.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:components.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\app.js||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:app.js||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\.prettierrc||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:.prettierrc||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\.prettierignore||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:.prettierignore||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\.gitkeep||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:.gitkeep||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\.gitignore||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:.gitignore||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\App.tsx||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:client\\src\\App.tsx||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\const.ts||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:client\\src\\const.ts||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\dist\\index.js||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:dist\\index.js||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\components\\BottomNav.tsx||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:client\\src\\components\\BottomNav.tsx||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\pages\\Home.tsx||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:client\\src\\pages\\Home.tsx||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\contexts\\AuthContext.tsx||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:client\\src\\contexts\\AuthContext.tsx||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\pages\\ProfilePage.tsx||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:client\\src\\pages\\ProfilePage.tsx||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\pages\\SOSPage.tsx||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:client\\src\\pages\\SOSPage.tsx||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\pages\\UstaPage.tsx||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:client\\src\\pages\\UstaPage.tsx||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\pages\\CekiciPage.tsx||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:client\\src\\pages\\CekiciPage.tsx||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\pages\\BenzinlikPage.tsx||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:client\\src\\pages\\BenzinlikPage.tsx||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\pages\\LastikciPage.tsx||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:client\\src\\pages\\LastikciPage.tsx||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\contexts\\MessageContext.tsx||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:client\\src\\contexts\\MessageContext.tsx||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\pages\\HelpRequestsPage.tsx||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:client\\src\\pages\\HelpRequestsPage.tsx||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\pages\\ChatPage.tsx||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:client\\src\\pages\\ChatPage.tsx||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\pages\\CommunityPage.tsx||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:client\\src\\pages\\CommunityPage.tsx||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\lib\\places.ts||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:client\\src\\lib\\places.ts||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\contexts\\AdminContext.tsx||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:client\\src\\contexts\\AdminContext.tsx||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\pages\\AdminPanel.tsx||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:client\\src\\pages\\AdminPanel.tsx||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\contexts\\MembershipContext.tsx||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:client\\src\\contexts\\MembershipContext.tsx||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\lib\\turkeyProvinces.ts||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:client\\src\\lib\\turkeyProvinces.ts||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\pages\\GroupPage.tsx||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:client\\src\\pages\\GroupPage.tsx||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\components\\BannersRow.tsx||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:client\\src\\components\\BannersRow.tsx||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\components\\Leaderboard.tsx||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:client\\src\\components\\Leaderboard.tsx||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 3,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "tsconfig.json",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\tsconfig.json",
+              "RelativeDocumentMoniker": "tsconfig.json",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\tsconfig.json",
+              "RelativeToolTip": "tsconfig.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-08-02T15:59:14.864Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "tsconfig.node.json",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\tsconfig.node.json",
+              "RelativeDocumentMoniker": "tsconfig.node.json",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\tsconfig.node.json",
+              "RelativeToolTip": "tsconfig.node.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAQAAAAXAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-08-02T15:59:15.099Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "vite.config.ts",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\vite.config.ts",
+              "RelativeDocumentMoniker": "vite.config.ts",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\vite.config.ts",
+              "RelativeToolTip": "vite.config.ts",
+              "ViewState": "AgIAAAMAAAAAAAAAAAAAAAgAAABSAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
+              "WhenOpened": "2026-08-02T15:59:15.317Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "AuthModal.tsx",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\components\\AuthModal.tsx",
+              "RelativeDocumentMoniker": "client\\src\\components\\AuthModal.tsx",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\components\\AuthModal.tsx",
+              "RelativeToolTip": "client\\src\\components\\AuthModal.tsx",
+              "ViewState": "AgIAABgAAAAAAAAAAAAgwIMAAAATAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
+              "WhenOpened": "2026-08-02T20:49:56.048Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "index.html",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\index.html",
+              "RelativeDocumentMoniker": "client\\index.html",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\index.html",
+              "RelativeToolTip": "client\\index.html",
+              "ViewState": "AgIAAAoAAAAAAAAAAAAAABIAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001512|",
+              "WhenOpened": "2026-08-02T15:04:22.826Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "template.json",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\template.json",
+              "RelativeDocumentMoniker": "template.json",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\template.json",
+              "RelativeToolTip": "template.json",
+              "ViewState": "AgIAAAwAAAAAAAAAAABBwAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-08-02T15:59:14.63Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": ".env.local.example",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\.env.local.example",
+              "RelativeDocumentMoniker": ".env.local.example",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\.env.local.example",
+              "RelativeToolTip": ".env.local.example",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAAfAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
+              "WhenOpened": "2026-08-05T20:06:05.449Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "pnpm-lock.yaml",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\pnpm-lock.yaml",
+              "RelativeDocumentMoniker": "pnpm-lock.yaml",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\pnpm-lock.yaml",
+              "RelativeToolTip": "pnpm-lock.yaml",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003775|",
+              "WhenOpened": "2026-08-02T15:59:13.849Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
+              "Title": "package.json",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\package.json",
+              "RelativeDocumentMoniker": "package.json",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\package.json",
+              "RelativeToolTip": "package.json",
+              "ViewState": "AgIAAAEAAAAAAAAAAABBwAIAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-08-02T15:59:13.552Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 9,
+              "Title": "package-lock.json",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\package-lock.json",
+              "RelativeDocumentMoniker": "package-lock.json",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\package-lock.json",
+              "RelativeToolTip": "package-lock.json",
+              "ViewState": "AgIAAAcAAAAAAAAAAABBwAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-08-02T15:59:13.083Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 11,
+              "Title": "ideas.md",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\ideas.md",
+              "RelativeDocumentMoniker": "ideas.md",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\ideas.md",
+              "RelativeToolTip": "ideas.md",
+              "ViewState": "AgIAABkAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001818|",
+              "WhenOpened": "2026-08-02T15:59:12.224Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 10,
+              "Title": "main.js",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\main.js",
+              "RelativeDocumentMoniker": "main.js",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\main.js",
+              "RelativeToolTip": "main.js",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001646|",
+              "WhenOpened": "2026-08-07T20:18:19.203Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 12,
+              "Title": "firestore.rules",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\firestore.rules",
+              "RelativeDocumentMoniker": "firestore.rules",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\firestore.rules",
+              "RelativeToolTip": "firestore.rules",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABYAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
+              "WhenOpened": "2026-08-05T20:06:15.745Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 13,
+              "Title": "firestore.prod.rules",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\firestore.prod.rules",
+              "RelativeDocumentMoniker": "firestore.prod.rules",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\firestore.prod.rules",
+              "RelativeToolTip": "firestore.prod.rules",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAACwAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
+              "WhenOpened": "2026-08-05T20:52:41.725Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 14,
+              "Title": "firebase.js",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\firebase.js",
+              "RelativeDocumentMoniker": "firebase.js",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\firebase.js",
+              "RelativeToolTip": "firebase.js",
+              "ViewState": "AgIAAC4AAAAAAAAAAAApwAMBAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001646|",
+              "WhenOpened": "2026-08-02T20:45:45.859Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 15,
+              "Title": "components.json",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\components.json",
+              "RelativeDocumentMoniker": "components.json",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\components.json",
+              "RelativeToolTip": "components.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-08-02T15:59:11.911Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 16,
+              "Title": "app.js",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\app.js",
+              "RelativeDocumentMoniker": "app.js",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\app.js",
+              "RelativeToolTip": "app.js",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001646|",
+              "WhenOpened": "2026-08-07T20:18:18.01Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 17,
+              "Title": ".prettierrc",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\.prettierrc",
+              "RelativeDocumentMoniker": ".prettierrc",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\.prettierrc",
+              "RelativeToolTip": ".prettierrc",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
+              "WhenOpened": "2026-08-02T15:59:10.911Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 18,
+              "Title": ".prettierignore",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\.prettierignore",
+              "RelativeDocumentMoniker": ".prettierignore",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\.prettierignore",
+              "RelativeToolTip": ".prettierignore",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
+              "WhenOpened": "2026-08-02T15:59:10.708Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 19,
+              "Title": ".gitkeep",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\.gitkeep",
+              "RelativeDocumentMoniker": ".gitkeep",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\.gitkeep",
+              "RelativeToolTip": ".gitkeep",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
+              "WhenOpened": "2026-08-02T15:59:10.443Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 20,
+              "Title": ".gitignore",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\.gitignore",
+              "RelativeDocumentMoniker": ".gitignore",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\.gitignore",
+              "RelativeToolTip": ".gitignore",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "00000000-0000-0000-0000-000000000000.000000|iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAF8SURBVDhPjVNLTgJBEG1lwpoFB3GNK9fieA48hD8iwT/ihwgSDAIHgAGXXsEV18CNzL/LquqZdsYM6kteXqcy3fWqpmpNRBgOhyABBEgpAFVKPIMUcYzUyOU\u002BXM/b2qtU3vkSfRjjZTCAMAw1A2LwzdFoBPP5HNqdzuL27n4juibWI\u002BUshBA1DIkhEx9iEorFotgslQqGYbxxAGFEqt1MxmPWJLbLZdZ\u002Bv89q5PMFPiTR6z2zdaxR0fXA0XTBcVywkb4fwHXjRteecIDNQ7UmExVYAdPcxYaqclN46na5WenMKjtlVnTYwcXlVYaDqImW9beD5N/TeGy32QHXm6hZ03ZgiSQHp2fnWQ4oBmJqWSqwAqZpZjt4aLXAD4J0VqyZsmoubfB8H2r1eoaD6NXZ9HcHO\u002BSA3f4AjifXl8rItOETM8ckB9WTWpYD9RdeZ1PWVWAHWXPQaDb59f/w8LiqHeh1pvGkCaP6qB8yXusoxmuNZ7XmII4O9vGuEF86osuDYRkpYQAAAABJRU5ErkJggg==",
+              "WhenOpened": "2026-08-02T15:59:09.646Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 21,
+              "Title": "App.tsx",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\App.tsx",
+              "RelativeDocumentMoniker": "client\\src\\App.tsx",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\App.tsx",
+              "RelativeToolTip": "client\\src\\App.tsx",
+              "ViewState": "AgIAAAUAAAAAAAAAAAAAABAAAAAsAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
+              "WhenOpened": "2026-08-02T20:40:12.753Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 25,
+              "Title": "Home.tsx",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\pages\\Home.tsx",
+              "RelativeDocumentMoniker": "client\\src\\pages\\Home.tsx",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\pages\\Home.tsx",
+              "RelativeToolTip": "client\\src\\pages\\Home.tsx",
+              "ViewState": "AgIAABIAAAAAAAAAAABBwAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
+              "WhenOpened": "2026-08-05T19:03:14.536Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 26,
+              "Title": "AuthContext.tsx",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\contexts\\AuthContext.tsx",
+              "RelativeDocumentMoniker": "client\\src\\contexts\\AuthContext.tsx",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\contexts\\AuthContext.tsx",
+              "RelativeToolTip": "client\\src\\contexts\\AuthContext.tsx",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAACkAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
+              "WhenOpened": "2026-08-05T19:12:47.745Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 27,
+              "Title": "ProfilePage.tsx",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\pages\\ProfilePage.tsx",
+              "RelativeDocumentMoniker": "client\\src\\pages\\ProfilePage.tsx",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\pages\\ProfilePage.tsx",
+              "RelativeToolTip": "client\\src\\pages\\ProfilePage.tsx",
+              "ViewState": "AgIAAH4AAAAAAAAAAABBwBoAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
+              "WhenOpened": "2026-08-05T19:17:16.788Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 28,
+              "Title": "SOSPage.tsx",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\pages\\SOSPage.tsx",
+              "RelativeDocumentMoniker": "client\\src\\pages\\SOSPage.tsx",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\pages\\SOSPage.tsx",
+              "RelativeToolTip": "client\\src\\pages\\SOSPage.tsx",
+              "ViewState": "AgIAABQAAAAAAAAAAABBwAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
+              "WhenOpened": "2026-08-05T19:24:57.042Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 44,
+              "Title": "Leaderboard.tsx",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\components\\Leaderboard.tsx",
+              "RelativeDocumentMoniker": "client\\src\\components\\Leaderboard.tsx",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\components\\Leaderboard.tsx",
+              "RelativeToolTip": "client\\src\\components\\Leaderboard.tsx",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABgAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
+              "WhenOpened": "2026-08-05T22:05:09.059Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 37,
+              "Title": "places.ts",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\lib\\places.ts",
+              "RelativeDocumentMoniker": "client\\src\\lib\\places.ts",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\lib\\places.ts",
+              "RelativeToolTip": "client\\src\\lib\\places.ts",
+              "ViewState": "AgIAAEcAAAAAAAAAAABBwH0AAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
+              "WhenOpened": "2026-08-05T20:38:25.042Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 43,
+              "Title": "BannersRow.tsx",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\components\\BannersRow.tsx",
+              "RelativeDocumentMoniker": "client\\src\\components\\BannersRow.tsx",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\components\\BannersRow.tsx",
+              "RelativeToolTip": "client\\src\\components\\BannersRow.tsx",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABsAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
+              "WhenOpened": "2026-08-05T21:29:59.783Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 42,
+              "Title": "GroupPage.tsx",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\pages\\GroupPage.tsx",
+              "RelativeDocumentMoniker": "client\\src\\pages\\GroupPage.tsx",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\pages\\GroupPage.tsx",
+              "RelativeToolTip": "client\\src\\pages\\GroupPage.tsx",
+              "ViewState": "AgIAACQAAAAAAAAAAABBwD8AAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
+              "WhenOpened": "2026-08-05T21:14:38.674Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 41,
+              "Title": "turkeyProvinces.ts",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\lib\\turkeyProvinces.ts",
+              "RelativeDocumentMoniker": "client\\src\\lib\\turkeyProvinces.ts",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\lib\\turkeyProvinces.ts",
+              "RelativeToolTip": "client\\src\\lib\\turkeyProvinces.ts",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
+              "WhenOpened": "2026-08-05T21:12:46.915Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 40,
+              "Title": "MembershipContext.tsx",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\contexts\\MembershipContext.tsx",
+              "RelativeDocumentMoniker": "client\\src\\contexts\\MembershipContext.tsx",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\contexts\\MembershipContext.tsx",
+              "RelativeToolTip": "client\\src\\contexts\\MembershipContext.tsx",
+              "ViewState": "AgIAACoAAAAAAAAAAABBwEgAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
+              "WhenOpened": "2026-08-05T21:12:24.189Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 39,
+              "Title": "AdminPanel.tsx",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\pages\\AdminPanel.tsx",
+              "RelativeDocumentMoniker": "client\\src\\pages\\AdminPanel.tsx",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\pages\\AdminPanel.tsx",
+              "RelativeToolTip": "client\\src\\pages\\AdminPanel.tsx",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAIIAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
+              "WhenOpened": "2026-08-05T20:44:44.047Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 38,
+              "Title": "AdminContext.tsx",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\contexts\\AdminContext.tsx",
+              "RelativeDocumentMoniker": "client\\src\\contexts\\AdminContext.tsx",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\contexts\\AdminContext.tsx",
+              "RelativeToolTip": "client\\src\\contexts\\AdminContext.tsx",
+              "ViewState": "AgIAAGYAAAAAAAAAAABBwMAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
+              "WhenOpened": "2026-08-05T20:44:01.246Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 29,
+              "Title": "UstaPage.tsx",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\pages\\UstaPage.tsx",
+              "RelativeDocumentMoniker": "client\\src\\pages\\UstaPage.tsx",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\pages\\UstaPage.tsx",
+              "RelativeToolTip": "client\\src\\pages\\UstaPage.tsx",
+              "ViewState": "AgIAADoAAAAAAAAAAABBwDsAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
+              "WhenOpened": "2026-08-05T19:35:46.599Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 36,
+              "Title": "CommunityPage.tsx",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\pages\\CommunityPage.tsx",
+              "RelativeDocumentMoniker": "client\\src\\pages\\CommunityPage.tsx",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\pages\\CommunityPage.tsx",
+              "RelativeToolTip": "client\\src\\pages\\CommunityPage.tsx",
+              "ViewState": "AgIAAHMAAAAAAAAAAABBwAcAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
+              "WhenOpened": "2026-08-05T19:59:25.875Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 35,
+              "Title": "ChatPage.tsx",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\pages\\ChatPage.tsx",
+              "RelativeDocumentMoniker": "client\\src\\pages\\ChatPage.tsx",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\pages\\ChatPage.tsx",
+              "RelativeToolTip": "client\\src\\pages\\ChatPage.tsx",
+              "ViewState": "AgIAAFYAAAAAAAAAAABBwFoAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
+              "WhenOpened": "2026-08-05T19:55:45.511Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 34,
+              "Title": "HelpRequestsPage.tsx",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\pages\\HelpRequestsPage.tsx",
+              "RelativeDocumentMoniker": "client\\src\\pages\\HelpRequestsPage.tsx",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\pages\\HelpRequestsPage.tsx",
+              "RelativeToolTip": "client\\src\\pages\\HelpRequestsPage.tsx",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAC8AAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
+              "WhenOpened": "2026-08-05T19:55:26.852Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 33,
+              "Title": "MessageContext.tsx",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\contexts\\MessageContext.tsx",
+              "RelativeDocumentMoniker": "client\\src\\contexts\\MessageContext.tsx",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\contexts\\MessageContext.tsx",
+              "RelativeToolTip": "client\\src\\contexts\\MessageContext.tsx",
+              "ViewState": "AgIAAJAAAAAAAAAAAABBwNMAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
+              "WhenOpened": "2026-08-05T19:54:38.292Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 32,
+              "Title": "LastikciPage.tsx",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\pages\\LastikciPage.tsx",
+              "RelativeDocumentMoniker": "client\\src\\pages\\LastikciPage.tsx",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\pages\\LastikciPage.tsx",
+              "RelativeToolTip": "client\\src\\pages\\LastikciPage.tsx",
+              "ViewState": "AgIAADMAAAAAAAAAAABBwDQAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
+              "WhenOpened": "2026-08-05T19:36:30.952Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 31,
+              "Title": "BenzinlikPage.tsx",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\pages\\BenzinlikPage.tsx",
+              "RelativeDocumentMoniker": "client\\src\\pages\\BenzinlikPage.tsx",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\pages\\BenzinlikPage.tsx",
+              "RelativeToolTip": "client\\src\\pages\\BenzinlikPage.tsx",
+              "ViewState": "AgIAADMAAAAAAAAAAABBwDQAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
+              "WhenOpened": "2026-08-05T19:36:21.02Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 30,
+              "Title": "CekiciPage.tsx",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\pages\\CekiciPage.tsx",
+              "RelativeDocumentMoniker": "client\\src\\pages\\CekiciPage.tsx",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\pages\\CekiciPage.tsx",
+              "RelativeToolTip": "client\\src\\pages\\CekiciPage.tsx",
+              "ViewState": "AgIAADMAAAAAAAAAAABBwDQAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
+              "WhenOpened": "2026-08-05T19:36:02.916Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 24,
+              "Title": "BottomNav.tsx",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\components\\BottomNav.tsx",
+              "RelativeDocumentMoniker": "client\\src\\components\\BottomNav.tsx",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\components\\BottomNav.tsx",
+              "RelativeToolTip": "client\\src\\components\\BottomNav.tsx",
+              "ViewState": "AgIAAAMAAAAAAAAAAABBwAQAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
+              "WhenOpened": "2026-08-05T17:47:54.442Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 22,
+              "Title": "const.ts",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\const.ts",
+              "RelativeDocumentMoniker": "client\\src\\const.ts",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\client\\src\\const.ts",
+              "RelativeToolTip": "client\\src\\const.ts",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
+              "WhenOpened": "2026-08-02T20:34:20.526Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 23,
+              "Title": "index.js",
+              "DocumentMoniker": "C:\\Users\\pc\\Desktop\\motosos (1)\\dist\\index.js",
+              "RelativeDocumentMoniker": "dist\\index.js",
+              "ToolTip": "C:\\Users\\pc\\Desktop\\motosos (1)\\dist\\index.js",
+              "RelativeToolTip": "dist\\index.js",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAMAAAAYAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001646|",
+              "WhenOpened": "2026-08-02T17:54:21.89Z"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

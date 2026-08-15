@@ -1,0 +1,74 @@
+﻿import { initializeApp } from "firebase/app";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut, onAuthStateChanged } from "firebase/auth";
+import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from "firebase/firestore";
+
+// Read config from Vite environment variables
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "",
+};
+
+if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+  console.warn("Firebase config incomplete — set VITE_FIREBASE_* vars in .env.local for realtime features to work.");
+}
+
+const app = initializeApp(firebaseConfig);
+export const auth = getAuth(app);
+export const db = getFirestore(app);
+
+// Authentication helpers
+// Use these wrappers from your React components instead of importing firebase/auth directly.
+export function signIn(email, password) {
+  return signInWithEmailAndPassword(auth, email, password);
+}
+
+export function signUp(email, password) {
+  return createUserWithEmailAndPassword(auth, email, password);
+}
+
+export function signOutUser() {
+  return firebaseSignOut(auth);
+}
+
+export function onAuthStateChangedListener(callback) {
+  return onAuthStateChanged(auth, callback);
+}
+
+// Realtime helpers (Firestore)
+export function subscribeHelpRequestsRealtime(onUpdate) {
+  try {
+	const q = query(collection(db, "helpRequests"), orderBy("createdAt", "desc"));
+	return onSnapshot(q, (snap) => {
+	  const arr = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+	  onUpdate(arr);
+	});
+  } catch (e) {
+	console.error("subscribeHelpRequestsRealtime error", e);
+	return () => {};
+  }
+}
+
+export async function createHelpRequestRealtime(data) {
+  return addDoc(collection(db, "helpRequests"), { ...data, createdAt: serverTimestamp(), active: true });
+}
+
+export function subscribeMessagesRealtime(requestId, onUpdate) {
+  try {
+	const q = query(collection(db, "helpRequests", requestId, "messages"), orderBy("ts", "asc"));
+	return onSnapshot(q, (snap) => {
+	  const arr = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+	  onUpdate(arr);
+	});
+  } catch (e) {
+	console.error("subscribeMessagesRealtime error", e);
+	return () => {};
+  }
+}
+
+export async function sendMessageRealtime(requestId, msg) {
+  return addDoc(collection(db, "helpRequests", requestId, "messages"), { ...msg, ts: serverTimestamp() });
+}

@@ -1,0 +1,29 @@
+﻿import { Card } from "@/components/ui/card";
+import { Fuel, ChevronRight } from "lucide-react";
+import { Link } from "wouter";
+
+export default function BenzinlikPage() {
+  const items = [
+	{ name: "Petrol Ofisi", location: "Alsancak", open: "24/7" },
+	{ name: "Opet", location: "Konak", open: "06:00-22:00" },
+  ];
+
+  return (
+	<div className="min-h-screen bg-asphalt px-4 pt-6">
+	  <h1 className="font-display text-2xl font-bold text-white mb-4">Benzinlikler</h1>
+	  <div className="space-y-3">
+		{items.map((it, i) => (
+		  <Link key={i} href={`/harita?place=${encodeURIComponent(it.name)}`}>
+			<Card className="p-4 bg-card-gradient border-border flex items-center justify-between">
+			  <div>
+				<p className="font-semibold text-foreground">{it.name}</p>
+				<p className="text-xs text-muted-foreground">{it.location} • {it.open}</p>
+			  </div>
+			  <ChevronRight className="w-5 h-5 text-muted-foreground" />
+			</Card>
+		  </Link>
+		))}
+	  </div>
+	</div>
+  );
+}

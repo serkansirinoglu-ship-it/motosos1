@@ -1,0 +1,84 @@
+﻿import AuthModal from './AuthModal';
+import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import NotFound from "@/pages/NotFound";
+import { Route, Switch } from "wouter";
+import ErrorBoundary from "./components/ErrorBoundary";
+import { ThemeProvider } from "./contexts/ThemeContext";
+import Home from "./pages/Home";
+import MapPage from "./pages/MapPage";
+import SOSPage from "./pages/SOSPage";
+import CommunityPage from "./pages/CommunityPage";
+import ProfilePage from "./pages/ProfilePage";
+import MarketplacePage from "./pages/MarketplacePage";
+import EventsPage from "./pages/EventsPage";
+import BottomNav from "./components/BottomNav";
+
+function AppLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-screen bg-asphalt flex flex-col">
+      <div className="flex-1 pb-20">{children}</div>
+      <BottomNav />
+    </div>
+  );
+}
+
+function Router() {
+  return (
+    <Switch>
+      <Route path="/">
+        <AppLayout>
+          <Home />
+        </AppLayout>
+      </Route>
+      <Route path="/harita">
+        <AppLayout>
+          <MapPage />
+        </AppLayout>
+      </Route>
+      <Route path="/sos">
+        <AppLayout>
+          <SOSPage />
+        </AppLayout>
+      </Route>
+      <Route path="/topluluk">
+        <AppLayout>
+          <CommunityPage />
+        </AppLayout>
+      </Route>
+      <Route path="/profil">
+        <AppLayout>
+          <ProfilePage />
+        </AppLayout>
+      </Route>
+      <Route path="/ikinci-el">
+        <AppLayout>
+          <MarketplacePage />
+        </AppLayout>
+      </Route>
+      <Route path="/etkinlikler">
+        <AppLayout>
+          <EventsPage />
+        </AppLayout>
+      </Route>
+      <Route path="/404" component={NotFound} />
+      <Route component={NotFound} />
+    </Switch>
+  );
+}
+
+ function App() {
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+
+  return (
+    <ErrorBoundary>
+      <ThemeProvider defaultTheme="dark">
+        <TooltipProvider>
+          <Toaster />
+          <Router />
+          <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
+        </TooltipProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
+  );
+}

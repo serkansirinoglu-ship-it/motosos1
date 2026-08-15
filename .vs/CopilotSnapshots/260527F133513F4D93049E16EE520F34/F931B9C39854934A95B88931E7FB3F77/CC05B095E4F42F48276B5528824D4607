@@ -1,0 +1,413 @@
+﻿import { useState, useEffect } from "react";
+import { Shield, Wrench, Fuel, Bike, Phone, X, Check, Award, Clock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
+import { useMessages } from "@/contexts/MessageContext";
+
+/**
+ * Design: Asphalt & Steel
+ * Acil Yardım / Koruyucu Kardeş Sistemi — tek tuşla yardım çağrısı
+ */
+export default function SOSPage() {
+  const [sosActive, setSosActive] = useState(false);
+  const [helpType, setHelpType] = useState<string | null>(null);
+  const [nearbyHelpers, setNearbyHelpers] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
+  const [position, setPosition] = useState<{ lat: number; lng: number } | null>(null);
+  const [nearbyServices, setNearbyServices] = useState<Array<{ key: string; label: string; query: string; searchUrl?: string; directionsUrl?: string }>>([]);
+
+  useEffect(() => {
+    if (sosActive) {
+      const timer = setInterval(() => setElapsed((e) => e + 1), 1000);
+      const helperTimer = setInterval(() => {
+        setNearbyHelpers((n) => Math.min(n + Math.floor(Math.random() * 2), 7));
+      }, 2000);
+      return () => {
+        clearInterval(timer);
+        clearInterval(helperTimer);
+      };
+    }
+  }, [sosActive]);
+
+  const handleSOS = async () => {
+    setNearbyHelpers(0);
+    setElapsed(0);
+
+    if (!navigator.geolocation) {
+      toast.error("Konum özelliği tarayıcınız tarafından desteklenmiyor.");
+      return;
+    }
+
+    toast.loading("Konum alınıyor...");
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        setPosition({ lat, lng });
+
+        // Prepare nearby services searches (Google Maps search URLs centered at coords)
+        const categories = [
+          { key: "usta", label: "Usta", query: "motosiklet usta" },
+          { key: "cekici", label: "Çekici", query: "çekici" },
+          { key: "benzinlik", label: "Benzinlik", query: "benzinlik" },
+          { key: "lastikci", label: "Lastikçi", query: "lastikçi" },
+        ];
+
+        const services = categories.map((c) => {
+          const searchUrl = `https://www.google.com/maps/search/${encodeURIComponent(c.query)}/@${lat},${lng},14z`;
+          const directionsUrl = `https://www.google.com/maps/dir/?api=1&origin=${lat},${lng}&destination=${encodeURIComponent(c.query)}`;
+          return { ...c, searchUrl, directionsUrl };
+        });
+
+        setNearbyServices(services);
+
+        setSosActive(true);
+        toast.success("Yardım çağrısı gönderildi! Konum paylaşıldı, yakınlarınıza bildirim gidiyor.");
+      },
+      (err) => {
+        console.error("Geolocation error", err);
+        toast.error("Konum alınamadı. Lütfen tarayıcı konum izinlerini kontrol edin.");
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  const handleCancel = () => {
+    setSosActive(false);
+    setNearbyHelpers(0);
+    setElapsed(0);
+    setHelpType(null);
+    toast.info("Yardım çağrısı iptal edildi.");
+  };
+
+  const handleResolve = () => {
+    setSosActive(false);
+    setNearbyHelpers(0);
+    setElapsed(0);
+    setHelpType(null);
+    toast.success("Yardım tamamlandı! Yardım eden kardeşine puan ver.", {
+      duration: 4000,
+    });
+  };
+
+  if (sosActive) {
+    return (
+      <div className="min-h-screen bg-asphalt px-4 pt-6">
+        {/* Aktif SOS durumu */}
+        <div className="flex flex-col items-center mt-4">
+          <div className="relative w-32 h-32 flex items-center justify-center mb-6">
+            <div className="absolute inset-0 sos-pulse rounded-full bg-primary/20" />
+            <div className="absolute inset-4 rounded-full bg-primary/30 animate-ping" />
+            <div className="relative w-24 h-24 rounded-full bg-primary flex items-center justify-center">
+              <Shield className="w-12 h-12 text-white" />
+            </div>
+          </div>
+
+          <h1 className="font-display text-2xl font-bold text-white uppercase tracking-wider">
+            Yardım Çağrısı Aktif
+          </h1>
+          <p className="text-muted-foreground mt-1 text-sm">
+            {String(Math.floor(elapsed / 60)).padStart(2, "0")}:
+            {String(elapsed % 60).padStart(2, "0")} geçti
+          </p>
+
+          {/* Yakındaki yardımcılar */}
+          <Card className="w-full max-w-md mt-6 bg-card-gradient border-border p-4">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-semibold text-foreground">
+                Yakındaki Koruyucu Kardeşler
+              </span>
+              <span className="text-2xl font-display font-bold text-primary">
+                {nearbyHelpers}
+              </span>
+            </div>
+            <div className="flex gap-1">
+              {Array.from({ length: 7 }).map((_, i) => (
+                <div
+                  key={i}
+                  className={`flex-1 h-2 rounded-full transition-colors duration-500 ${
+                    i < nearbyHelpers ? "bg-primary" : "bg-muted"
+                  }`}
+                />
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              {nearbyHelpers > 0
+                ? `${nearbyHelpers} motorcu çağrını aldı!`
+                : "Çağrı yakındaki motorculara iletiliyor..."}
+            </p>
+          </Card>
+
+          {/* Konum bilgisi */}
+          <Card className="w-full max-w-md mt-3 bg-card-gradient border-border p-4">
+            {position ? (
+              <div className="flex flex-col gap-3">
+                <div className="w-full h-48 overflow-hidden rounded-md">
+                  <iframe
+                    title="Konum Haritası"
+                    className="w-full h-full border-0"
+                    src={`https://www.google.com/maps?q=${position.lat},${position.lng}&z=15&output=embed`}
+                  />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Konumun</p>
+                  <p className="text-sm font-medium text-foreground">
+                    {position.lat.toFixed(5)}, {position.lng.toFixed(5)}
+                  </p>
+                </div>
+                <div className="flex flex-col gap-2">
+                  {nearbyServices.map((s) => (
+                    <div key={s.key} className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-foreground">{s.label}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <a
+                          className="text-xs text-primary underline"
+                          href={s.searchUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Haritada Göster
+                        </a>
+                        <a
+                          className="text-xs text-green-500 underline"
+                          href={s.directionsUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Yol Tarifi
+                        </a>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-primary/15 flex items-center justify-center">
+                  <MapPin className="w-5 h-5 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs text-muted-foreground">Konumun</p>
+                  <p className="text-sm font-medium text-foreground">Konum alınmadı</p>
+                </div>
+                <button onClick={handleSOS} className="text-xs text-primary underline">Konum Al</button>
+              </div>
+            )}
+          </Card>
+
+          {/* Aksiyon butonları */}
+          <div className="w-full max-w-md mt-6 flex gap-3">
+            <Button
+              onClick={handleResolve}
+              className="flex-1 h-12 bg-green-600 hover:bg-green-700 text-white font-semibold"
+            >
+              <Check className="w-5 h-5 mr-2" />
+              Yardım Geldi
+            </Button>
+            <Button
+              onClick={handleCancel}
+              variant="outline"
+              className="flex-1 h-12 border-destructive text-destructive hover:bg-destructive/10"
+            >
+              <X className="w-5 h-5 mr-2" />
+              İptal Et
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-asphalt px-4 pt-6">
+      <div className="flex flex-col items-center mt-2">
+        <h1 className="font-display text-3xl font-bold text-white uppercase tracking-wider">
+          Acil Yardım
+        </h1>
+        <p className="text-muted-foreground mt-2 text-center text-sm max-w-xs">
+          Tek tuşla yakındaki Koruyucu Kardeşlere yardım çağrısı gönder.
+        </p>
+
+        {/* Büyük Acil Yardım butonu */}
+        <button
+          onClick={handleSOS}
+          className="relative mt-10 w-48 h-48 rounded-full bg-primary flex items-center justify-center active:scale-95 transition-transform group"
+        >
+          <div className="absolute inset-0 sos-pulse rounded-full" />
+          <div className="absolute -inset-2 rounded-full border-2 border-primary/30" />
+          <div className="relative flex flex-col items-center">
+            <Shield className="w-16 h-16 text-white mb-1" />
+            <span className="font-display text-3xl font-bold text-white tracking-widest text-center">
+              Acil Yardım
+            </span>
+          </div>
+        </button>
+
+        <p className="text-xs text-muted-foreground mt-4">
+          Dokun ve yardım çağır
+        </p>
+
+        {/* Yardım kategorileri */}
+        <div className="w-full max-w-md mt-10">
+          <h2 className="font-display text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+            Durum Seç
+          </h2>
+          <div className="grid grid-cols-2 gap-3">
+            <HelpCategory
+              icon={Wrench}
+              title="Arıza"
+              desc="Motor çalışmıyor"
+              onClick={() => {
+                setHelpType("ariza");
+                handleSOS();
+              }}
+            />
+            <HelpCategory
+              icon={Fuel}
+              title="Yakıt"
+              desc="Benzin bitti"
+              onClick={() => {
+                setHelpType("yakit");
+                handleSOS();
+              }}
+            />
+            <HelpCategory
+              icon={Bike}
+              title="Lastik"
+              desc="Patlak lastik"
+              onClick={() => {
+                setHelpType("lastik");
+                handleSOS();
+              }}
+            />
+            <HelpCategory
+              icon={Phone}
+              title="Kaza"
+              desc="Kaza yaptım"
+              onClick={() => {
+                setHelpType("kaza");
+                handleSOS();
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Koruyucu Kardeş rozet bilgisi */}
+        <Card className="w-full max-w-md mt-6 bg-card-gradient border-border p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-amber-500/15 flex items-center justify-center">
+              <Award className="w-6 h-6 text-amber-500" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-foreground">
+                Koruyucu Kardeş Sistemi
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Yardıma giden motorcular puan ve rozet kazanır. Sen de yardım et!
+              </p>
+            </div>
+          </div>
+        </Card>
+
+        {/* Son yardımlar */}
+        <div className="w-full max-w-md mt-6">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-display text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+              Son Yardım Çağrıları
+            </h2>
+            <Clock className="w-4 h-4 text-muted-foreground" />
+          </div>
+          <div className="space-y-2">
+            <RecentCall name="Mehmet K." type="Arıza" time="2 saat önce" status="Çözüldü" />
+            <RecentCall name="Ayşe D." type="Lastik" time="Dün" status="Çözüldü" />
+            <RecentCall name="Burak S." type="Yakıt" time="3 gün önce" status="Çözüldü" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MapPinIcon() {
+  return (
+    <svg
+      className="w-5 h-5 text-primary"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+      />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+      />
+    </svg>
+  );
+}
+
+function HelpCategory({
+  icon: Icon,
+  title,
+  desc,
+  onClick,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  desc: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="bg-card-gradient border border-border rounded-xl p-4 flex flex-col items-start gap-2 active:scale-95 transition-transform hover:border-primary/50"
+    >
+      <Icon className="w-6 h-6 text-primary" />
+      <span className="font-semibold text-foreground text-sm">{title}</span>
+      <span className="text-xs text-muted-foreground">{desc}</span>
+    </button>
+  );
+}
+
+function RecentCall({
+  name,
+  type,
+  time,
+  status,
+}: {
+  name: string;
+  type: string;
+  time: string;
+  status: string;
+}) {
+  return (
+    <div className="flex items-center justify-between bg-card-gradient border border-border rounded-lg px-4 py-3">
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center">
+          <span className="text-xs font-bold text-primary">
+            {name.charAt(0)}
+          </span>
+        </div>
+        <div>
+          <p className="text-sm font-medium text-foreground">{name}</p>
+          <p className="text-xs text-muted-foreground">
+            {type} · {time}
+          </p>
+        </div>
+      </div>
+      <span className="text-xs font-medium text-green-500 bg-green-500/10 px-2 py-1 rounded-full">
+        {status}
+      </span>
+    </div>
+  );
+}
