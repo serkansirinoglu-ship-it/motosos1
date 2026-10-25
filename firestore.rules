@@ -262,7 +262,7 @@ service cloud.firestore {
       allow read: if true;
       allow create: if isSignedIn()
         && request.resource.data.keys().hasOnly([
-          'id', 'authorId', 'authorName', 'authorEmail', 'authorPhoto',
+          'id', 'authorId', 'authorName', 'authorPhoto',
           'city', 'content', 'image', 'tag', 'likes', 'comments', 'createdAt'
         ])
         && request.resource.data.authorId == request.auth.uid
@@ -270,13 +270,17 @@ service cloud.firestore {
         && request.resource.data.content.size() > 0
         && request.resource.data.content.size() <= 5000
         && request.resource.data.city is string
+        && request.resource.data.city.size() > 0
         && request.resource.data.city.size() <= 100
-        && (!('authorName' in request.resource.data) || (request.resource.data.authorName is string && request.resource.data.authorName.size() <= 80))
-        && (!('authorEmail' in request.resource.data) || (request.resource.data.authorEmail is string && request.resource.data.authorEmail.size() <= 254))
+        && request.resource.data.authorName is string
+        && request.resource.data.authorName.size() > 0
+        && request.resource.data.authorName.size() <= 80
+        && request.resource.data.createdAt == request.time
+        && (!('authorPhoto' in request.resource.data) || (request.resource.data.authorPhoto is string && request.resource.data.authorPhoto.size() <= 2048))
         && (!('image' in request.resource.data) || (request.resource.data.image is string && request.resource.data.image.size() <= 2048))
         && (!('tag' in request.resource.data) || (request.resource.data.tag is string && request.resource.data.tag.size() <= 80))
-        && (!('likes' in request.resource.data) || request.resource.data.likes is list)
-        && (!('comments' in request.resource.data) || request.resource.data.comments is list);
+        && (!('likes' in request.resource.data) || (request.resource.data.likes is list && request.resource.data.likes.size() == 0))
+        && (!('comments' in request.resource.data) || (request.resource.data.comments is list && request.resource.data.comments.size() == 0));
       allow update: if isAdmin()
         || (isSignedIn()
           && resource.data.authorId == request.auth.uid
