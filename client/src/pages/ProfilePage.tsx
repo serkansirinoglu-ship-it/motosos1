@@ -87,9 +87,10 @@ export default function ProfilePage() {
   };
 
   const handleDeleteAccount = () => {
-    toast.error("Hesap silme talebiniz alındı. Güvenlik doğrulaması tamamlandıktan sonra verileriniz silinecektir.");
+    // Do not imply that deletion was requested or completed: no verified server-side
+    // account/data deletion workflow is currently wired to this control.
+    toast.error("Hesabınız silinmedi. Kalıcı hesap silme şu anda otomatik olarak kullanılamıyor.");
     setIsDeleteOpen(false);
-    signOut();
   };
 
   const helpCount = profile?.helpCount || 0;
