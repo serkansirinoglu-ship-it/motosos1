@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, getDocs, limit, doc, setDoc, getDoc, updateDoc, deleteDoc, where, Timestamp } from "firebase/firestore";
+import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, getDocs, limit, doc, setDoc, getDoc, updateDoc, deleteDoc, where, Timestamp, writeBatch } from "firebase/firestore";
 
 // Read config from Vite environment variables
 const firebaseConfig = {
@@ -187,14 +187,16 @@ export async function createSOSRequest(data) {
     if (!activeSnap.empty) {
       return { id: null, error: "active_duplicate" };
     }
+    const batch = writeBatch(db);
+    const sosRef = doc(collection(db, "sosRequests"));
     const now = serverTimestamp();
+    // Public active SOS documents expose only an approximate location (~1 km grid).
+    // Exact coordinates, contact email and free-text notes stay in an owner-only subdocument.
     const payload = {
       requesterId: data.requesterId,
-      requesterEmail: data.requesterEmail || "",
       helpType: data.helpType || "other",
-      latitude: data.latitude || 0,
-      longitude: data.longitude || 0,
-      note: data.note || "",
+      latitude: Math.round(Number(data.latitude || 0) * 100) / 100,
+      longitude: Math.round(Number(data.longitude || 0) * 100) / 100,
       status: "active",
       acceptedBy: null,
       createdAt: now,
@@ -202,8 +204,16 @@ export async function createSOSRequest(data) {
       resolvedAt: null,
       cancelledAt: null,
     };
-    const ref = await addDoc(collection(db, "sosRequests"), payload);
-    return { id: ref.id, error: null };
+    batch.set(sosRef, payload);
+    batch.set(doc(db, "sosRequests", sosRef.id, "privateDetails", "owner"), {
+      requesterEmail: data.requesterEmail || "",
+      latitude: Number(data.latitude || 0),
+      longitude: Number(data.longitude || 0),
+      note: typeof data.note === "string" ? data.note : "",
+      createdAt: now,
+    });
+    await batch.commit();
+    return { id: sosRef.id, error: null };
   } catch (e) {
     console.error("createSOSRequest error", e);
     return { id: null, error: "network" };
