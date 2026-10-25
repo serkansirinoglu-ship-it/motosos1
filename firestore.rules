@@ -55,6 +55,12 @@ service cloud.firestore {
         && request.resource.data.requesterId == request.auth.uid
         && request.resource.data.requesterEmail == request.auth.token.email
         && request.resource.data.status == 'active'
+        && request.resource.data.helpType in ['lastik', 'aku', 'yakit', 'ariza', 'kaza', 'cekici', 'diger', 'other']
+        && request.resource.data.note is string
+        && request.resource.data.note.size() <= 1000
+        && request.resource.data.acceptedBy == null
+        && request.resource.data.resolvedAt == null
+        && request.resource.data.cancelledAt == null
         && request.resource.data.latitude is number
         && request.resource.data.longitude is number
         && request.resource.data.latitude >= -90
