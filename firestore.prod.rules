@@ -110,10 +110,12 @@ service cloud.firestore {
         || (isSignedIn()
           && resource.data.user == request.auth.token.email
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['active', 'updatedAt'])
-          && request.resource.data.active == false)
+          && request.resource.data.active == false
+          && request.resource.data.updatedAt == request.time)
         || (isSignedIn()
           && resource.data.active == true
           && request.auth.token.email != null
+          && resource.data.helpers is list
           && !(request.auth.token.email in resource.data.helpers)
           && resource.data.user != request.auth.token.email
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['helpers', 'updatedAt'])
