@@ -124,6 +124,7 @@ service cloud.firestore {
           && request.auth.token.email in request.resource.data.helpers)
         || (isSignedIn()
           && request.auth.token.email != null
+          && resource.data.helpers is list
           && request.auth.token.email in resource.data.helpers
           && resource.data.active == true
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['active', 'resolvedBy', 'resolvedAt', 'updatedAt'])
