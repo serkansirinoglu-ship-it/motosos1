@@ -133,3 +133,8 @@ Firestore rules now require a help request to remain active before a non-admin c
 ## SOS private-details path restriction
 
 Non-admin access to SOS private details is restricted to the designated `privateDetails/owner` document. This prevents an accepted helper from reading other documents that might later be added under the same subcollection. The emulator suite verifies that the accepted helper can read `owner` while being denied `unexpected`.
+
+
+## SOS private-details ownership regression
+
+The emulator suite also verifies that a different authenticated rider cannot create `privateDetails/owner` under an SOS request they do not own. This checks the atomic parent/subdocument ownership binding, not just read restrictions.

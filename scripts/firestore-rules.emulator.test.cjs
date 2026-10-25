@@ -36,6 +36,12 @@ async function main() {
         acceptedBy: null, createdAt: new Date(), updatedAt: new Date(),
         resolvedAt: null, cancelledAt: null,
       });
+      await setDoc(doc(db, "sosRequests", "active-no-private"), {
+        requesterId: "owner", status: "active",
+        helpType: "ariza", latitude: 40, longitude: 29,
+        acceptedBy: null, createdAt: new Date(), updatedAt: new Date(),
+        resolvedAt: null, cancelledAt: null,
+      });
       await setDoc(doc(db, "sosRequests", "active-sos", "privateDetails", "owner"), {
         requesterEmail: "owner@example.test", latitude: 40.12345, longitude: 29.54321,
         note: "Exact meeting point", createdAt: new Date(),
@@ -86,6 +92,11 @@ async function main() {
     assert.notEqual(publicSOS.data().longitude, 29.54321);
     await assertFails(getDoc(doc(outsider, "sosRequests", "active-sos", "privateDetails", "owner")));
     await assertSucceeds(getDoc(doc(owner, "sosRequests", "active-sos", "privateDetails", "owner")));
+    await assertFails(setDoc(doc(outsider, "sosRequests", "active-no-private", "privateDetails", "owner"), {
+      requesterEmail: "outsider@example.test", latitude: 40.11111, longitude: 29.22222,
+      note: "forged private details", createdAt: serverTimestamp(),
+    }));
+    console.log("PASS: another rider cannot create private SOS details for the request owner");
     await assertSucceeds(updateDoc(doc(helper, "sosRequests", "active-sos"), {
       acceptedBy: "helper", updatedAt: serverTimestamp(),
     }));
