@@ -6,7 +6,7 @@ const { createRequire } = require("node:module");
 const moduleRoot = path.resolve(".firestore-test-runtime/node_modules");
 const testRequire = createRequire(path.join(path.dirname(moduleRoot), "package.json"));
 const { initializeTestEnvironment, assertSucceeds, assertFails } = testRequire("@firebase/rules-unit-testing");
-const { doc, getDoc, setDoc, updateDoc, serverTimestamp } = testRequire("firebase/firestore");
+const { doc, getDoc, setDoc, updateDoc, serverTimestamp, writeBatch } = testRequire("firebase/firestore");
 
 async function main() {
   const rulesFile = process.env.FIRESTORE_RULES_FILE || "firestore.rules";
@@ -25,16 +25,20 @@ async function main() {
     await env.withSecurityRulesDisabled(async (context) => {
       const db = context.firestore();
       await setDoc(doc(db, "sosRequests", "private-sos"), {
-        requesterId: "owner", requesterEmail: "owner@example.test", status: "resolved",
-        helpType: "repair", latitude: 40, longitude: 29,
-        note: "", acceptedBy: null, createdAt: new Date(), updatedAt: new Date(),
+        requesterId: "owner", status: "resolved",
+        helpType: "ariza", latitude: 40, longitude: 29,
+        acceptedBy: null, createdAt: new Date(), updatedAt: new Date(),
         resolvedAt: null, cancelledAt: null,
       });
       await setDoc(doc(db, "sosRequests", "active-sos"), {
-        requesterId: "owner", requesterEmail: "owner@example.test", status: "active",
-        helpType: "repair", latitude: 40, longitude: 29,
-        note: "", acceptedBy: null, createdAt: new Date(), updatedAt: new Date(),
+        requesterId: "owner", status: "active",
+        helpType: "ariza", latitude: 40, longitude: 29,
+        acceptedBy: null, createdAt: new Date(), updatedAt: new Date(),
         resolvedAt: null, cancelledAt: null,
+      });
+      await setDoc(doc(db, "sosRequests", "active-sos", "privateDetails", "owner"), {
+        requesterEmail: "owner@example.test", latitude: 40.12345, longitude: 29.54321,
+        note: "Exact meeting point", createdAt: new Date(),
       });
       await setDoc(doc(db, "helpRequests", "private-help"), {
         id: "private-help", user: "owner@example.test", title: "Private help",
@@ -69,7 +73,9 @@ async function main() {
     await assertFails(getDoc(doc(outsider, "sosRequests", "private-sos")));
     console.log("PASS: outsider cannot read inactive SOS");
     await assertSucceeds(getDoc(doc(outsider, "sosRequests", "active-sos")));
-    console.log("PASS: signed-in helper can discover active SOS");
+    await assertFails(getDoc(doc(outsider, "sosRequests", "active-sos", "privateDetails", "owner")));
+    await assertSucceeds(getDoc(doc(owner, "sosRequests", "active-sos", "privateDetails", "owner")));
+    console.log("PASS: helpers see approximate SOS location only; exact coordinates and contact details are owner-only");
     await assertFails(updateDoc(doc(outsider, "sosRequests", "active-sos"), {
       status: "resolved", resolvedAt: serverTimestamp(), updatedAt: serverTimestamp(),
     }));
@@ -77,11 +83,17 @@ async function main() {
       status: "cancelled", cancelledAt: serverTimestamp(), updatedAt: serverTimestamp(),
     }));
     console.log("PASS: only the SOS owner can make an allowed active-to-terminal transition");
-    await assertSucceeds(setDoc(doc(owner, "sosRequests", "valid-sos"), {
-      requesterId: "owner", requesterEmail: "owner@example.test", status: "active",
-      helpType: "ariza", latitude: 40, longitude: 29, note: "", acceptedBy: null,
+    const sosBatch = writeBatch(owner);
+    sosBatch.set(doc(owner, "sosRequests", "valid-sos"), {
+      requesterId: "owner", status: "active", helpType: "ariza",
+      latitude: 40.12, longitude: 29.54, acceptedBy: null,
       createdAt: serverTimestamp(), updatedAt: serverTimestamp(), resolvedAt: null, cancelledAt: null,
-    }));
+    });
+    sosBatch.set(doc(owner, "sosRequests", "valid-sos", "privateDetails", "owner"), {
+      requesterEmail: "owner@example.test", latitude: 40.12345, longitude: 29.54321,
+      note: "Exact meeting point", createdAt: serverTimestamp(),
+    });
+    await assertSucceeds(sosBatch.commit());
     console.log("PASS: owner can create a valid SOS with server timestamps");
 
     await assertSucceeds(getDoc(doc(outsider, "helpRequests", "private-help")));
@@ -178,8 +190,9 @@ async function main() {
     }));
     console.log("PASS: public content ownership fields cannot be forged or transferred");
     await assertFails(setDoc(doc(outsider, "sosRequests", "spoofed-sos"), {
-      requesterId: "owner", requesterEmail: "owner@example.test", status: "active",
-      helpType: "repair", latitude: 0, longitude: 0,
+      requesterId: "owner", status: "active", helpType: "ariza",
+      latitude: 0, longitude: 0, acceptedBy: null,
+      createdAt: serverTimestamp(), updatedAt: serverTimestamp(), resolvedAt: null, cancelledAt: null,
     }));
     console.log("PASS: user cannot create an SOS on behalf of another rider");
     console.log(`PASS: Firestore authorization tests completed for ${rulesFile}`);
