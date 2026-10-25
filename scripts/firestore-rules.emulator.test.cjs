@@ -89,8 +89,14 @@ async function main() {
     await assertFails(updateDoc(doc(outsider, "sosRequests", "active-sos"), {
       status: "resolved", resolvedAt: serverTimestamp(), updatedAt: serverTimestamp(),
     }));
+    await assertFails(updateDoc(doc(helper, "sosRequests", "active-sos"), {
+      status: "resolved", resolvedAt: serverTimestamp(), updatedAt: serverTimestamp(),
+    }));
     await assertSucceeds(updateDoc(doc(owner, "sosRequests", "active-sos"), {
       status: "cancelled", cancelledAt: serverTimestamp(), updatedAt: serverTimestamp(),
+    }));
+    await assertFails(updateDoc(doc(owner, "sosRequests", "active-sos"), {
+      status: "active", updatedAt: serverTimestamp(),
     }));
     await assertFails(getDoc(doc(helper, "sosRequests", "active-sos", "privateDetails", "owner")));
     await assertSucceeds(getDoc(doc(owner, "sosRequests", "active-sos", "privateDetails", "owner")));
