@@ -48,6 +48,7 @@ async function main() {
         uid: "owner", email: "owner@example.test", points: 10, badges: [],
       });
       await setDoc(doc(db, "internalPrivate", "secret"), { value: "not public" });
+      await setDoc(doc(db, "products", "public-product"), { name: "Public catalog fixture" });
     });
 
     const outsider = env.authenticatedContext("outsider", { email: "outsider@example.test" }).firestore();
@@ -65,10 +66,14 @@ async function main() {
       id: "spoofed-help", user: "owner@example.test", title: "spoofed", description: "test", active: true,
     }), true);
     await check("profile owner edits server-controlled points", updateDoc(doc(owner, "users", "owner"), { points: 999999 }), true);
-    await check("anonymous user reads an unmatched private collection", getDoc(doc(anonymous, "internalPrivate", "secret")), true);
+    await assertFails(getDoc(doc(anonymous, "internalPrivate", "secret")));
+    console.log("DENIED as expected: anonymous user reads an unmatched private collection");
 
     // A couple of existing restrictions are also characterized.
-    await check("anonymous user reads a private user profile because the catch-all grants public read", getDoc(doc(anonymous, "users", "owner")), true);
+    await assertFails(getDoc(doc(anonymous, "users", "owner")));
+    console.log("DENIED as expected: anonymous user reads a private user profile");
+    await assertSucceeds(getDoc(doc(anonymous, "products", "public-product")));
+    console.log("PUBLIC READ preserved: explicit public product catalog");
     await assertFails(setDoc(doc(outsider, "sosRequests", "spoofed-sos"), {
       requesterId: "owner", status: "active", helpType: "repair", latitude: 0, longitude: 0,
     }));
