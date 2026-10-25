@@ -23,14 +23,17 @@ export function planLegacyHelpMigration(records, emailToUid) {
     else if (!mapping.has(key)) mapping.set(key, normalizedUid);
   }
 
-  const seenIds = new Set();
+  const idCounts = new Map();
+  for (const record of records) {
+    const id = typeof record?.id === "string" ? record.id : "";
+    if (id) idCounts.set(id, (idCounts.get(id) || 0) + 1);
+  }
   const items = records.map((record) => {
     const data = record?.data && typeof record.data === "object" ? record.data : record;
     const id = typeof record?.id === "string" ? record.id : "";
     const reasons = [];
     if (!id) reasons.push("missing_document_id");
-    if (id && seenIds.has(id)) reasons.push("duplicate_document_id");
-    if (id) seenIds.add(id);
+    if (id && idCounts.get(id) > 1) reasons.push("duplicate_document_id");
     if (!data || typeof data !== "object" || Array.isArray(data)) {
       reasons.push("invalid_document_data");
       return { id: id || null, status: "blocked", reasonCodes: reasons };

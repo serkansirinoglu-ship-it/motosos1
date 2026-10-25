@@ -41,4 +41,13 @@ describe("planLegacyHelpMigration", () => {
     expect(result.items[1].reasonCodes).toContain("duplicate_document_id");
     expect(result.summary.blocked).toBe(2);
   });
+  it("blocks every occurrence of a duplicated document ID", () => {
+    const result = planLegacyHelpMigration([
+      { id: "duplicate", data: { ownerId: "owner-uid", helpers: [] } },
+      { id: "duplicate", data: { ownerId: "owner-uid", helpers: [] } },
+    ], {});
+    expect(result.summary.blocked).toBe(2);
+    expect(result.items.every((item) => item.reasonCodes.includes("duplicate_document_id"))).toBe(true);
+  });
+
 });
