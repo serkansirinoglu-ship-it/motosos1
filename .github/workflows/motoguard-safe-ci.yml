@@ -1,0 +1,47 @@
+name: MotoGuard Safe CI
+
+on:
+  pull_request:
+    branches:
+      - main
+      - fix/remove-community-family-banner
+  push:
+    branches:
+      - audit/add-nonprod-ci-gates
+
+permissions:
+  contents: read
+
+concurrency:
+  group: motoguard-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Typecheck and build (no deployment)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.4.1
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Temporary non-frozen install because the current lockfile is known to
+      # be out of sync with package.json. A separate fix must restore frozen installs.
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: TypeScript check
+        run: pnpm check
+
+      - name: Production build (does not deploy)
+        run: pnpm build
