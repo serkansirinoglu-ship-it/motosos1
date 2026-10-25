@@ -110,34 +110,70 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   function createHelpRequest(r: Omit<HelpRequest, "id" | "createdAt" | "active">) {
-	// Try realtime first
-	try {
-	  createHelpRequestRealtime(r);
-	  // Firestore snapshot will update local state
-	  const id = nanoid();
-	  setMessages((m) => ({ ...m, [id]: [] }));
-	  return { ...r, id, createdAt: Date.now(), active: true } as HelpRequest;
-	} catch (e) {
-	  const id = nanoid();
-		const hr: HelpRequest = { ...r, id, createdAt: Date.now(), active: true, helpers: [], resolvedBy: null, resolvedAt: null };
-	  setHelpRequests((s) => [hr, ...s]);
-	  setMessages((m) => ({ ...m, [id]: [] }));
-	  return hr;
-	}
+    const id = nanoid();
+    const hr: HelpRequest = {
+      ...r,
+      id,
+      createdAt: Date.now(),
+      active: true,
+      helpers: [],
+      resolvedBy: null,
+      resolvedAt: null,
+    };
+
+    // Firebase calls are asynchronous: a surrounding try/catch does not catch
+    // permission/network rejections unless the returned promise is observed.
+    try {
+      const pending = createHelpRequestRealtime(r);
+      void Promise.resolve(pending).catch((error) => {
+        console.warn("Realtime help request failed; keeping a local copy", error);
+        setHelpRequests((current) =>
+          current.some((item) => item.id === hr.id) ? current : [hr, ...current]
+        );
+      });
+      setMessages((current) => ({ ...current, [id]: [] }));
+      return hr;
+    } catch (error) {
+      console.warn("Realtime help request unavailable; keeping a local copy", error);
+      setHelpRequests((current) => [hr, ...current]);
+      setMessages((current) => ({ ...current, [id]: [] }));
+      return hr;
+    }
   }
 
   // accept helping a request
   function acceptHelp(requestId: string, helperEmail: string) {
 	// update local
 	setHelpRequests((s) => s.map(hr => hr.id === requestId ? { ...hr, helpers: Array.from(new Set([...(hr.helpers||[]), helperEmail])) } : hr));
-	try { updateHelpRequestRealtime(requestId, { helpers: (helpRequests.find(h=>h.id===requestId)?.helpers||[])}); } catch(e){}
+    try {
+      const helpers = Array.from(
+        new Set([...(helpRequests.find((item) => item.id === requestId)?.helpers || []), helperEmail])
+      );
+      void Promise.resolve(updateHelpRequestRealtime(requestId, { helpers })).catch((error) => {
+        console.warn("Realtime helper acceptance failed; local state retained", error);
+      });
+    } catch (error) {
+      console.warn("Realtime helper acceptance unavailable; local state retained", error);
+    }
   }
 
   // resolve help: credit helper and mark resolved
   function resolveHelp(requestId: string, helperEmail: string) {
 	setHelpRequests((s) => s.map(hr => hr.id === requestId ? { ...hr, resolvedBy: helperEmail, resolvedAt: Date.now(), active: false } : hr));
 	incrementHelpCount(helperEmail);
-	try { updateHelpRequestRealtime(requestId, { resolvedBy: helperEmail, resolvedAt: Date.now(), active: false }); } catch(e){}
+    try {
+      void Promise.resolve(
+        updateHelpRequestRealtime(requestId, {
+          resolvedBy: helperEmail,
+          resolvedAt: Date.now(),
+          active: false,
+        })
+      ).catch((error) => {
+        console.warn("Realtime help resolution failed; local state retained", error);
+      });
+    } catch (error) {
+      console.warn("Realtime help resolution unavailable; local state retained", error);
+    }
 	  // after increment, check thresholds and award badges
 	const newCount = (helpCounts[helperEmail] || 0) + 1;
 	// Koruyucu Kardeş at 1, Yol Meleği at 5
@@ -160,17 +196,28 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
   }
 
   function sendMessage(requestId: string, text: string, from: string | null = null) {
-	const msg: Message = { id: nanoid(), from, text, ts: Date.now() };
-	try {
-	  sendMessageRealtime(requestId, msg);
-	  return msg; // Firestore snapshot will sync
-	} catch (e) {
-	  setMessages((m) => {
-		const arr = m[requestId] ? [...m[requestId], msg] : [msg];
-		return { ...m, [requestId]: arr };
-	  });
-	  return msg;
-	}
+    const msg: Message = { id: nanoid(), from, text, ts: Date.now() };
+    const keepLocal = () => {
+      setMessages((current) => {
+        const existing = current[requestId] || [];
+        return existing.some((item) => item.id === msg.id)
+          ? current
+          : { ...current, [requestId]: [...existing, msg] };
+      });
+    };
+
+    try {
+      const pending = sendMessageRealtime(requestId, msg);
+      void Promise.resolve(pending).catch((error) => {
+        console.warn("Realtime message failed; keeping a local copy", error);
+        keepLocal();
+      });
+      return msg;
+    } catch (error) {
+      console.warn("Realtime message unavailable; keeping a local copy", error);
+      keepLocal();
+      return msg;
+    }
   }
 
   // Allow components to subscribe to realtime messages for a specific request
