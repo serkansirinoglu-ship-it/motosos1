@@ -1,8 +1,8 @@
 # Firestore Security Audit — isolated branch
 
-Date: 2026-10-25  
+Date: 2026-10-26  
 Scope: source review of `firestore.rules`, `firestore.prod.rules`, and current client calls.  
-Status: restrictive rules changes, strict emulator authorization tests, and offline migration-assessment tooling are implemented on the isolated audit branch. The latest recorded PR and push CI runs for commit `fe65d1e2f0a4110108a0fd8bbce070fac678f1e8` completed successfully, including TypeScript, unit tests, production build, static audit, strict static gate, and emulator authorization tests for both rule files. No rules have been published to Firebase.
+Status: restrictive rules, strict static checks, emulator authorization tests, and offline migration-assessment tooling are implemented on the isolated audit branch. Commit `34f002f9d9bb1d2374656d56e20fdb3ae930e147` passed both push CI ([run](https://github.com/serkansirinoglu-ship-it/motosos1/actions/runs/40233836900)) and pull-request CI ([run](https://github.com/serkansirinoglu-ship-it/motosos1/actions/runs/40233841314)), including TypeScript, unit tests, build, strict static checks, and emulator authorization tests against both rules files. No rules have been published to Firebase.
 
 ## Findings and changes on the audit branch
 
@@ -21,7 +21,7 @@ The initial emulator characterization confirmed permissive cross-user access and
 
 ## Remaining release gates
 
-Rules are enforced server-side, so the client query/state transitions were updated alongside the rules. The test suite must pass against the dedicated demo Firestore Emulator for both rule files before this branch is considered validated. The latest audited branch commit has passing CI, including the non-production emulator authorization suite. This validates the checked-in branch only; it does not mean the rules are deployed. Production publishing remains a separate release decision and is not part of this work.
+Rules are enforced server-side, so the client query/state transitions were updated alongside the rules. The strict test suite passes against the dedicated demo Firestore Emulator for both rule files on the latest audited commit. This validates the checked-in branch only; it does not mean the rules are deployed. Production publishing remains a separate release decision and is not part of this work.
 
 ## Required emulator authorization test matrix
 
@@ -39,11 +39,11 @@ Rules are enforced server-side, so the client query/state transitions were updat
 
 ## Next implementation gate
 
-1. Add the Firebase Emulator and rules-unit-testing harness as development-only tooling, with a reproducible lockfile update.
-2. Encode the matrix above as automated tests and confirm the current rules fail the intended negative cases.
-3. Map every client query and state transition to the authorization model.
-4. Tighten both checked-in rules files together, run emulator tests, TypeScript/unit/build CI, and a non-production preview.
-5. Publish rules only after a separate explicit production release decision.
+1. Continue schema-level review of public community, event, listing, and presence documents; add field-level restrictions only where confirmed against client usage.
+2. Resolve the documented legacy help-record identity exposure through an authorized, reviewed migration plan; do not infer identity mappings or access production data as part of this branch.
+3. Keep both rules files byte-identical and preserve the strict emulator, static-analysis, TypeScript, unit-test, build, and homepage-diff gates on every change.
+4. Perform a separate non-production integration review before release consideration.
+5. Publish rules or migrate production data only after separate explicit approval.
 
 ## Release safety
 
@@ -56,15 +56,9 @@ Rules are enforced server-side, so the client query/state transitions were updat
 
 The Safe CI workflow now installs pinned Firebase Emulator test tooling into a temporary CI-only directory (not into the app dependency tree) and runs `scripts/firestore-rules.emulator.test.cjs` against the Firestore Emulator with the demo project ID `demo-motoguard-firestore-rules`. It does not connect to the production Firebase project.
 
-The current test mode is **baseline characterization**: tests intentionally reproduce the known permissive behaviors and print each as `KNOWN RISK reproduced`. This makes the current exposure executable and repeatable without pretending the current rules are secure. The suite also checks a small number of existing denials. When rules are hardened, invert the vulnerable cases to expected denials and switch CI to strict mode.
+The suite is now in **strict authorization mode**: known vulnerable behaviors are asserted as denials, and CI fails if those operations unexpectedly succeed. `pnpm security:rules` remains a diagnostic report; `pnpm security:rules:strict` is the blocking static gate. Passing these checks validates only the checked-in rules and tested cases; it is not a guarantee that every application path is secure or that rules are deployed. The emulator harness does not publish rules to Firebase, and both checked-in rules files are kept byte-identical.
 
-The static scanner has two modes:
-- `pnpm security:rules`: reports current findings without blocking baseline CI; this is an audit report, **not** a security pass.
-- `pnpm security:rules:strict`: fails while the known risky patterns remain. Do not treat the branch as release-ready until strict static checks and strict emulator authorization tests pass.
-
-This harness is transitional by design. It verifies the checked-in rules only and does not publish them to Firebase. Development and production rule files are kept aligned on the branch.
-
-The emulator configuration is explicitly checked into `firebase.json` and points the local Firestore Emulator at `firestore.rules`. This avoids the dangerous Firebase CLI default of allowing all emulator reads/writes when no rules path is configured. The emulator characterization must not be considered valid unless startup logs confirm the configured rules file is loaded.
+The emulator configuration is explicitly checked into `firebase.json` and points the local Firestore Emulator at `firestore.rules`. This avoids the dangerous Firebase CLI default of allowing all emulator reads/writes when no rules path is configured. The emulator test run must not be considered valid unless startup logs confirm the configured rules file is loaded.
 
 The emulator characterization is now run twice in the same CI step: once with `firestore.rules`, then with `FIRESTORE_RULES_FILE=firestore.prod.rules`. Both are supplied directly to `initializeTestEnvironment`; no production Firebase project is used.
 
@@ -79,7 +73,7 @@ The strict emulator suite now explicitly checks the lifecycle on both `firestore
 - The request owner can close an unresolved request but cannot claim the helper's identity in the resolution fields.
 - An unrelated user cannot close another rider's request.
 
-These are emulator-only authorization tests. They do not read, migrate, or modify production records. The CI run for this test expansion must pass before the expanded lifecycle coverage is considered verified.
+These are emulator-only authorization tests. They do not read, migrate, or modify production records. The latest audited commit's push and pull-request CI runs passed this suite for both rule files.
 
 
 ## Legacy help-record migration preparation — 2026-10-25
