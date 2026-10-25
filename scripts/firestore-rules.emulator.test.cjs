@@ -63,10 +63,10 @@ async function main() {
     await assertSucceeds(getDoc(doc(outsider, "sosRequests", "active-sos")));
     console.log("PASS: signed-in helper can discover active SOS");
     await assertFails(updateDoc(doc(outsider, "sosRequests", "active-sos"), {
-      status: "resolved", updatedAt: serverTimestamp(),
+      status: "resolved", resolvedAt: serverTimestamp(), updatedAt: serverTimestamp(),
     }));
     await assertSucceeds(updateDoc(doc(owner, "sosRequests", "active-sos"), {
-      status: "cancelled", updatedAt: serverTimestamp(),
+      status: "cancelled", cancelledAt: serverTimestamp(), updatedAt: serverTimestamp(),
     }));
     console.log("PASS: only the SOS owner can make an allowed active-to-terminal transition");
     await assertSucceeds(setDoc(doc(owner, "sosRequests", "valid-sos"), {
