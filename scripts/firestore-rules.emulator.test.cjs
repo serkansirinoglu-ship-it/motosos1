@@ -140,10 +140,13 @@ async function main() {
       id: "oversized-message", from: "outsider", fromName: "Outsider", text: "x".repeat(2001), ts: serverTimestamp(),
     }));
     console.log("PASS: chat rejects spoofed sender IDs and oversized messages");
+    await assertFails(updateDoc(doc(outsider, "helpRequests", "private-help"), {
+      active: false, resolvedBy: "outsider", resolvedAt: serverTimestamp(), updatedAt: Date.now(),
+    }));
     await assertSucceeds(updateDoc(doc(outsider, "helpRequests", "private-help"), {
       active: false, resolvedBy: "outsider", resolvedAt: serverTimestamp(), updatedAt: serverTimestamp(),
     }));
-    console.log("PASS: accepted helper can resolve the request with their own UID");
+    console.log("PASS: accepted helper must use server timestamps to resolve the request");
     await assertFails(updateDoc(doc(owner, "helpRequests", "private-help"), {
       active: false, resolvedBy: "owner", resolvedAt: serverTimestamp(), updatedAt: serverTimestamp(),
     }));

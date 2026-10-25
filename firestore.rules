@@ -184,7 +184,8 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['active', 'resolvedBy', 'resolvedAt', 'updatedAt'])
           && request.resource.data.active == false
           && request.resource.data.resolvedBy == request.auth.uid
-          && request.resource.data.resolvedAt == request.time);
+          && request.resource.data.resolvedAt == request.time
+          && request.resource.data.updatedAt == request.time);
       allow delete: if isAdmin();
 
       // Only the request owner or a listed helper can read/send messages in that request.
