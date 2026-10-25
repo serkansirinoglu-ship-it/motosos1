@@ -115,7 +115,7 @@ export default function SOSPage() {
           // Legacy chat sync
           createHelpRequest({
             title: `Acil Yardım - ${CATEGORY_LABELS[category].label}`,
-            description: `Konum: ${lat.toFixed(5)}, ${lng.toFixed(5)}`,
+            description: "Acil yardım talebi. Kesin konum yalnızca yetkili katılımcılarla paylaşılır.",
             user: user.email,
           });
         }
