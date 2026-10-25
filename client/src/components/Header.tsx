@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Logo from "./Logo";
 import { Bell, User, ShieldAlert } from "lucide-react";
 import NotificationModal from "./NotificationModal";
 import { notificationService } from "@/services/notificationService";
 import { useAuth } from "@/contexts/AuthContext";
+import { subscribeOnlineMembers } from "../../../firebase";
 import { Link } from "wouter";
 
 interface HeaderProps {
@@ -14,6 +15,13 @@ export default function Header({ onAuthOpen }: HeaderProps) {
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(notificationService.getUnreadCount());
   const { user } = useAuth();
+  const [onlineCount, setOnlineCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    setOnlineCount(null);
+    if (!user?.uid) return;
+    return subscribeOnlineMembers(user.uid, setOnlineCount);
+  }, [user?.uid]);
 
   return (
     <>
@@ -22,11 +30,17 @@ export default function Header({ onAuthOpen }: HeaderProps) {
           <Logo size="md" />
 
           <div className="flex items-center gap-3">
-            {/* Live Online Badge */}
-            <div className="hidden xs:flex items-center gap-1.5 bg-primary/10 border border-primary/20 px-2.5 py-1 rounded-full">
-              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-[11px] font-medium text-foreground">Topluluk Aktif</span>
-            </div>
+            {/* Verified online member count; hidden until realtime presence is available. */}
+            {onlineCount !== null && (
+              <div
+                className="hidden xs:flex items-center gap-1.5 bg-primary/10 border border-primary/20 px-2.5 py-1 rounded-full"
+                aria-label={`${onlineCount} aktif üye`}
+                title="Son 2 dakika içinde çevrimiçi olan giriş yapmış üyeler"
+              >
+                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                <span className="text-[11px] font-medium text-foreground">{onlineCount} aktif üye</span>
+              </div>
+            )}
 
             {/* Notification Bell */}
             <button
