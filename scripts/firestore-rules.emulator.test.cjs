@@ -6,7 +6,7 @@ const { createRequire } = require("node:module");
 const moduleRoot = path.resolve(".firestore-test-runtime/node_modules");
 const testRequire = createRequire(path.join(path.dirname(moduleRoot), "package.json"));
 const { initializeTestEnvironment, assertSucceeds, assertFails } = testRequire("@firebase/rules-unit-testing");
-const { doc, getDoc, setDoc, updateDoc } = testRequire("firebase/firestore");
+const { doc, getDoc, setDoc, updateDoc, serverTimestamp } = testRequire("firebase/firestore");
 
 const mode = process.env.FIRESTORE_RULES_TEST_MODE || "baseline";
 if (!["baseline", "strict"].includes(mode)) throw new Error(`Unknown FIRESTORE_RULES_TEST_MODE: ${mode}`);
@@ -73,9 +73,9 @@ async function main() {
     await check("signed-in outsider creates a help request claiming another user", setDoc(doc(outsider, "helpRequests", "spoofed-help"), {
       id: "spoofed-help", user: "owner@example.test", title: "spoofed", description: "test", active: true,
     }), true);
-    await assertFails(updateDoc(doc(owner, "users", "owner"), { points: 999999, updatedAt: new Date() }));
+    await assertFails(updateDoc(doc(owner, "users", "owner"), { points: 999999, updatedAt: serverTimestamp() }));
     console.log("DENIED as expected: profile owner edits server-controlled points");
-    await assertSucceeds(updateDoc(doc(owner, "users", "owner"), { displayName: "Owner Updated", updatedAt: new Date() }));
+    await assertSucceeds(updateDoc(doc(owner, "users", "owner"), { displayName: "Owner Updated", updatedAt: serverTimestamp() }));
     console.log("ALLOWED as expected: profile owner edits an approved profile field");
     await assertFails(getDoc(doc(anonymous, "internalPrivate", "secret")));
     console.log("DENIED as expected: anonymous user reads an unmatched private collection");
@@ -85,6 +85,12 @@ async function main() {
     console.log("DENIED as expected: anonymous user reads a private user profile");
     await assertSucceeds(getDoc(doc(anonymous, "products", "public-product")));
     console.log("PUBLIC READ preserved: explicit public product catalog");
+    await assertFails(setDoc(doc(outsider, "users", "outsider"), {
+      uid: "outsider", email: "outsider@example.test", displayName: "Spoofed",
+      points: 999999, helpCount: 0, receivedHelpCount: 0, badges: [],
+      createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+    }));
+    console.log("DENIED as expected: user cannot create a profile with forged points");
     await assertFails(setDoc(doc(outsider, "sosRequests", "spoofed-sos"), {
       requesterId: "owner", status: "active", helpType: "repair", latitude: 0, longitude: 0,
     }));
