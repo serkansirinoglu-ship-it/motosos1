@@ -121,6 +121,12 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
       resolvedAt: null,
     };
 
+    // Render optimistically so a slow or unavailable realtime connection does
+    // not leave the newly created request invisible in the current session.
+    setHelpRequests((current) =>
+      current.some((item) => item.id === hr.id) ? current : [hr, ...current]
+    );
+
     // Firebase calls are asynchronous: a surrounding try/catch does not catch
     // permission/network rejections unless the returned promise is observed.
     try {
