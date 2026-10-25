@@ -15,7 +15,8 @@ export default function SOSPage() {
   const [selectedCategory, setSelectedCategory] = useState<SOSHelpCategory | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [position, setPosition] = useState<{ lat: number; lng: number } | null>(null);
-  const [sosId, setSosId] = useState<string | null>(null);
+  const [sosId, setSosId] = useState<string | null>(null); // Firebase document ID, when persisted
+  const [localSosId, setLocalSosId] = useState<string | null>(null);
   const [status, setStatus] = useState<SOSStatus>("bekleniyor");
   const [submitting, setSubmitting] = useState(false);
   const [nearbyServices, setNearbyServices] = useState<Array<{ key: string; label: string; searchUrl: string; directionsUrl: string }>>([]);
@@ -78,8 +79,10 @@ export default function SOSPage() {
           longitude: lng,
         });
 
-        setSosId(localReq.id);
+        setLocalSosId(localReq.id);
+        setSosId(null);
         setStatus("bekleniyor");
+        let firebaseSaved = false;
 
         // Save to Firebase if online & user logged in
         if (user?.uid && user?.email) {
@@ -93,6 +96,9 @@ export default function SOSPage() {
             });
             if (res?.id) {
               setSosId(res.id);
+              firebaseSaved = true;
+            } else {
+              console.warn("SOS was not persisted to Firebase", res?.error || "Firebase unavailable");
             }
           } catch (e) {
             console.error("Firebase SOS save fallback to local mode", e);
@@ -108,7 +114,11 @@ export default function SOSPage() {
 
         setSosActive(true);
         setSubmitting(false);
-        toast.success("SOS talebiniz oluşturuldu. Yakındaki motorculara otomatik bildirim gönderildiği henüz doğrulanamıyor.");
+        toast.success(
+          firebaseSaved
+            ? "SOS talebiniz kaydedildi. Yakındaki motorculara otomatik bildirim gönderildiği henüz doğrulanamıyor."
+            : "SOS talebiniz bu oturumda yerel olarak oluşturuldu; sunucuya kaydedildiği doğrulanamadı."
+        );
       },
       (err) => {
         toast.dismiss();
@@ -121,27 +131,53 @@ export default function SOSPage() {
   };
 
   const handleCancel = async () => {
+    if (localSosId) sosService.updateStatus(localSosId, "iptal_edildi");
+
+    let remoteUpdated = true;
     if (sosId) {
-      sosService.updateStatus(sosId, "iptal_edildi");
-      await updateSOSRequest(sosId, { status: "cancelled" }).catch(() => {});
+      try {
+        remoteUpdated = (await updateSOSRequest(sosId, { status: "cancelled" })) === true;
+      } catch (error) {
+        console.error("Firebase SOS cancellation failed", error);
+        remoteUpdated = false;
+      }
     }
+
     setSosActive(false);
     setSosId(null);
+    setLocalSosId(null);
     setElapsed(0);
     setSelectedCategory(null);
-    toast.info("Yardım çağrısı iptal edildi.");
+    if (remoteUpdated) {
+      toast.info(sosId ? "Yardım çağrısı iptal edildi." : "Yerel yardım çağrısı iptal edildi; sunucu kaydı doğrulanmadı.");
+    } else {
+      toast.error("Yerel çağrı iptal edildi ancak sunucu kaydı güncellenemedi. Bağlantınızı kontrol edin.");
+    }
   };
 
   const handleResolve = async () => {
+    if (localSosId) sosService.updateStatus(localSosId, "tamamlandi");
+
+    let remoteUpdated = true;
     if (sosId) {
-      sosService.updateStatus(sosId, "tamamlandi");
-      await updateSOSRequest(sosId, { status: "resolved" }).catch(() => {});
+      try {
+        remoteUpdated = (await updateSOSRequest(sosId, { status: "resolved" })) === true;
+      } catch (error) {
+        console.error("Firebase SOS completion failed", error);
+        remoteUpdated = false;
+      }
     }
+
     setSosActive(false);
     setSosId(null);
+    setLocalSosId(null);
     setElapsed(0);
     setSelectedCategory(null);
-    toast.success("Yardım talebiniz tamamlandı olarak işaretlendi. Puan ve rozet güncellemesi henüz doğrulanmadı.");
+    if (remoteUpdated) {
+      toast.success("Yardım talebiniz tamamlandı olarak işaretlendi. Puan ve rozet güncellemesi henüz doğrulanmadı.");
+    } else {
+      toast.error("Yerel çağrı tamamlandı olarak işaretlendi ancak sunucu kaydı güncellenemedi. Bağlantınızı kontrol edin.");
+    }
   };
 
   if (sosActive) {
