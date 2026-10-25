@@ -76,6 +76,10 @@ async function main() {
     const publicSOS = await getDoc(doc(outsider, "sosRequests", "active-sos"));
     assert.equal("requesterEmail" in publicSOS.data(), false);
     assert.equal("note" in publicSOS.data(), false);
+    assert.equal(publicSOS.data().latitude, 40);
+    assert.equal(publicSOS.data().longitude, 29);
+    assert.notEqual(publicSOS.data().latitude, 40.12345);
+    assert.notEqual(publicSOS.data().longitude, 29.54321);
     await assertFails(getDoc(doc(outsider, "sosRequests", "active-sos", "privateDetails", "owner")));
     await assertSucceeds(getDoc(doc(owner, "sosRequests", "active-sos", "privateDetails", "owner")));
     await assertSucceeds(updateDoc(doc(helper, "sosRequests", "active-sos"), {
