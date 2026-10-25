@@ -71,7 +71,7 @@ async function main() {
     console.log("PASS: only the SOS owner can make an allowed active-to-terminal transition");
     await assertSucceeds(setDoc(doc(owner, "sosRequests", "valid-sos"), {
       requesterId: "owner", requesterEmail: "owner@example.test", status: "active",
-      helpType: "repair", latitude: 40, longitude: 29, note: "", acceptedBy: null,
+      helpType: "ariza", latitude: 40, longitude: 29, note: "", acceptedBy: null,
       createdAt: serverTimestamp(), updatedAt: serverTimestamp(), resolvedAt: null, cancelledAt: null,
     }));
     console.log("PASS: owner can create a valid SOS with server timestamps");
