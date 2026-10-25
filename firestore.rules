@@ -158,6 +158,7 @@ service cloud.firestore {
       ));
       allow update: if isAdmin()
         || (isSignedIn()
+          && resource.data.active == true
           && (resource.data.ownerId == request.auth.uid
             || (request.auth.token.email != null && 'user' in resource.data && resource.data.user == request.auth.token.email))
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['active', 'updatedAt'])

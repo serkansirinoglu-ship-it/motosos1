@@ -164,7 +164,10 @@ async function main() {
     await assertSucceeds(updateDoc(doc(owner, "helpRequests", "valid-help"), {
       active: false, updatedAt: serverTimestamp(),
     }));
-    console.log("PASS: only the request owner can close an unresolved help request");
+    await assertFails(updateDoc(doc(owner, "helpRequests", "closed-help"), {
+      active: false, updatedAt: serverTimestamp(),
+    }));
+    console.log("PASS: only the owner can close an active request; closed requests cannot be re-closed");
     await assertFails(setDoc(doc(outsider, "helpRequests", "spoofed-help"), {
       id: "spoofed-help", ownerId: "owner", title: "spoofed",
       description: "test", active: true, helpers: [], resolvedBy: null, resolvedAt: null,
