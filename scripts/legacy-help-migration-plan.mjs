@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import { pathToFileURL } from "node:url";
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;\nconst SAFE_UID_RE = /^[A-Za-z0-9_-]{1,128}$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const SAFE_UID_RE = /^[A-Za-z0-9_-]{1,128}$/;
 
 function normalizeEmail(value) {
   return typeof value === "string" ? value.trim().toLowerCase() : "";
@@ -17,7 +18,7 @@ export function planLegacyHelpMigration(records, emailToUid) {
   const mapping = new Map();
   for (const [email, uid] of Object.entries(emailToUid)) {
     const key = normalizeEmail(email);
-    if (!EMAIL_RE.test(key) || typeof uid !== "string" || !uid.trim()) continue;
+    if (!EMAIL_RE.test(key) || typeof uid !== "string" || !SAFE_UID_RE.test(uid.trim())) continue;
     const normalizedUid = uid.trim();
     if (mapping.has(key) && mapping.get(key) !== normalizedUid) mapping.set(key, null);
     else if (!mapping.has(key)) mapping.set(key, normalizedUid);
@@ -28,25 +29,30 @@ export function planLegacyHelpMigration(records, emailToUid) {
     const id = typeof record?.id === "string" ? record.id : "";
     if (id) idCounts.set(id, (idCounts.get(id) || 0) + 1);
   }
+
   const items = records.map((record) => {
     const data = record?.data && typeof record.data === "object" ? record.data : record;
     const id = typeof record?.id === "string" ? record.id : "";
     const reasons = [];
     if (!id) reasons.push("missing_document_id");
-    if (id && idCounts.get(id) > 1) reasons.push("duplicate_document_id");\n    if (id && id.length > 1500) reasons.push("invalid_document_id");
+    if (id && idCounts.get(id) > 1) reasons.push("duplicate_document_id");
+    if (id && id.length > 1500) reasons.push("invalid_document_id");
     if (!data || typeof data !== "object" || Array.isArray(data)) {
       reasons.push("invalid_document_data");
-      return { id: id || null, status: "blocked", reasonCodes: reasons };
+      return { id: id || null, status: "blocked", reasonCodes: [...new Set(reasons)] };
     }
 
     const legacyOwnerEmail = normalizeEmail(data.user);
     let ownerId = typeof data.ownerId === "string" && data.ownerId.trim() ? data.ownerId.trim() : "";
-    if (ownerId && !SAFE_UID_RE.test(ownerId)) reasons.push("invalid_owner_uid");\n    if (!ownerId && legacyOwnerEmail) {
+    if (ownerId && !SAFE_UID_RE.test(ownerId)) reasons.push("invalid_owner_uid");
+    if (!ownerId && legacyOwnerEmail) {
       if (!EMAIL_RE.test(legacyOwnerEmail)) reasons.push("invalid_legacy_owner_email");
       else if (!mapping.has(legacyOwnerEmail)) reasons.push("owner_uid_mapping_missing");
       else if (!mapping.get(legacyOwnerEmail)) reasons.push("owner_uid_mapping_ambiguous");
       else ownerId = mapping.get(legacyOwnerEmail);
-    } else if (!ownerId) reasons.push("owner_identity_missing");
+    } else if (!ownerId) {
+      reasons.push("owner_identity_missing");
+    }
 
     const helpers = Array.isArray(data.helpers) ? data.helpers : [];
     if (!Array.isArray(data.helpers)) reasons.push("helpers_not_a_list");
@@ -58,7 +64,8 @@ export function planLegacyHelpMigration(records, emailToUid) {
       }
       const value = helper.trim();
       if (!value.includes("@")) {
-        mappedHelpers.push(value);
+        if (!SAFE_UID_RE.test(value)) reasons.push("invalid_helper_uid");
+        else mappedHelpers.push(value);
         continue;
       }
       const email = normalizeEmail(value);
@@ -70,8 +77,8 @@ export function planLegacyHelpMigration(records, emailToUid) {
 
     if (mappedHelpers.length !== new Set(mappedHelpers).size) reasons.push("duplicate_helper_identity_after_mapping");
     const uniqueHelpers = [...new Set(mappedHelpers)];
-    const alreadyModern = Boolean(data.ownerId) && !("user" in data) &&
-      helpers.every((helper) => typeof helper === "string" && !helper.includes("@"));
+    const alreadyModern = Boolean(data.ownerId) && SAFE_UID_RE.test(String(data.ownerId)) &&
+      !("user" in data) && helpers.every((helper) => typeof helper === "string" && SAFE_UID_RE.test(helper.trim()));
     const status = reasons.length ? "blocked" : alreadyModern ? "already_modern" : "ready_for_review";
     return {
       id: id || null,

@@ -50,4 +50,27 @@ describe("planLegacyHelpMigration", () => {
     expect(result.items.every((item) => item.reasonCodes.includes("duplicate_document_id"))).toBe(true);
   });
 
+
+  it("rejects malformed UIDs in mappings and existing identity fields", () => {
+    const result = planLegacyHelpMigration([
+      { id: "bad-owner", data: { ownerId: "owner/invalid", helpers: [] } },
+      { id: "bad-helper", data: { ownerId: "owner-uid", helpers: ["helper invalid"] } },
+      { id: "bad-map", data: { user: "owner@example.test", helpers: [] } },
+    ], { "owner@example.test": "uid/with/slash" });
+    expect(result.items[0].reasonCodes).toContain("invalid_owner_uid");
+    expect(result.items[1].reasonCodes).toContain("invalid_helper_uid");
+    expect(result.items[2].reasonCodes).toContain("owner_uid_mapping_missing");
+    expect(result.summary.blocked).toBe(3);
+  });
+
+  it("blocks malformed records and missing document IDs without throwing", () => {
+    const result = planLegacyHelpMigration([
+      null,
+      { id: "", data: { ownerId: "owner-uid", helpers: [] } },
+      { id: "bad-data", data: [] },
+    ], {});
+    expect(result.summary.blocked).toBe(3);
+    expect(result.items.some((item) => item.reasonCodes.includes("missing_document_id"))).toBe(true);
+    expect(result.items.some((item) => item.reasonCodes.includes("invalid_document_data"))).toBe(true);
+  });
 });
