@@ -195,27 +195,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Topluluk Banner */}
-      <section className="px-4 mt-6 max-w-lg mx-auto">
-        <Link href="/topluluk">
-          <Card className="bg-gradient-to-r from-card via-card to-primary/10 border-primary/30 p-4 rounded-xl active:scale-[0.98] transition-transform cursor-pointer">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary flex-shrink-0">
-                <Users className="w-6 h-6" />
-              </div>
-              <div className="flex-1">
-                <p className="font-display font-bold text-foreground uppercase tracking-wide text-sm">
-                  Şehrinin Motorcularına Katıl
-                </p>
-                <p className="text-xs text-muted-foreground mt-0.5 leading-snug">
-                  81 ilin motosiklet grupları, sürüş rotaları ve bilgi paylaşımı.
-                </p>
-              </div>
-              <ChevronRight className="w-5 h-5 text-muted-foreground" />
-            </div>
-          </Card>
-        </Link>
-      </section>
     </div>
   );
 }
