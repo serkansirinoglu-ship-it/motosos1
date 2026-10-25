@@ -12,7 +12,9 @@ const mode = process.env.FIRESTORE_RULES_TEST_MODE || "baseline";
 if (!["baseline", "strict"].includes(mode)) throw new Error(`Unknown FIRESTORE_RULES_TEST_MODE: ${mode}`);
 
 async function main() {
-  const rules = fs.readFileSync("firestore.rules", "utf8");
+  const rulesFile = process.env.FIRESTORE_RULES_FILE || "firestore.rules";
+  const rules = fs.readFileSync(rulesFile, "utf8");
+  console.log(`Testing rules file: ${rulesFile}`);
   const env = await initializeTestEnvironment({
     projectId: "demo-motoguard-firestore-rules",
     firestore: { rules },
