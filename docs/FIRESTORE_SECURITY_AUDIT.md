@@ -2,7 +2,7 @@
 
 Date: 2026-10-25  
 Scope: source review of `firestore.rules`, `firestore.prod.rules`, and current client calls.  
-Status: restrictive rules changes and emulator authorization tests are implemented on the audit branch; CI verification is pending. No rules have been published to Firebase.
+Status: restrictive rules changes and emulator authorization tests are implemented on the audit branch. Earlier CI passed; the current exact-location privacy changes require a fresh CI run. No rules have been published to Firebase.
 
 ## Findings and changes on the audit branch
 
@@ -15,9 +15,11 @@ The initial emulator characterization confirmed permissive cross-user access and
 5. **Chat messages:** read/send access is limited to the request owner or accepted helpers. Message sender must match the authenticated email; text length and server timestamp are validated.
 6. **Presence:** public read remains intentional for the online-count feature, with writes limited to the owner and documents restricted to `uid`/`lastSeen`. Revisit if the UI starts exposing anything beyond this minimal heartbeat.
 
+7. **Exact SOS location and contact details:** active SOS documents are visible to signed-in riders for discovery, so putting exact GPS coordinates, requester email, or free-text notes on the parent document would disclose them to every signed-in user. The audit branch now stores only a rounded location on the public parent document and moves exact coordinates, requester email, and notes into `sosRequests/{id}/privateDetails/owner`. Rules allow the owner and the helper who successfully claims the active SOS to read that subdocument. Claiming an SOS is a one-time transition from `acceptedBy: null` to the authenticated helper UID. The legacy help-request mirror no longer copies exact GPS coordinates into its public description.
+
 ## Remaining release gates
 
-Rules are enforced server-side, so the client query/state transitions were updated alongside the rules. The test suite must pass against the dedicated demo Firestore Emulator for both rule files before this branch is considered validated. CI has not yet confirmed the latest changes. Production publishing remains a separate release decision and is not part of this work.
+Rules are enforced server-side, so the client query/state transitions were updated alongside the rules. The test suite must pass against the dedicated demo Firestore Emulator for both rule files before this branch is considered validated. The latest exact-location privacy changes are awaiting fresh CI confirmation. Production publishing remains a separate release decision and is not part of this work.
 
 ## Required emulator authorization test matrix
 
