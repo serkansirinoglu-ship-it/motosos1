@@ -153,6 +153,20 @@ async function main() {
     }));
     console.log("PASS: SOS creation rejects out-of-range coordinates");
 
+    const precisePublicSOSBatch = writeBatch(owner);
+    precisePublicSOSBatch.set(doc(owner, "sosRequests", "precise-public-sos"), {
+      requesterId: "owner", status: "active", helpType: "ariza",
+      latitude: 40.12345, longitude: 29.54321, acceptedBy: null,
+      createdAt: serverTimestamp(), updatedAt: serverTimestamp(), resolvedAt: null, cancelledAt: null,
+    });
+    precisePublicSOSBatch.set(doc(owner, "sosRequests", "precise-public-sos", "privateDetails", "owner"), {
+      requesterEmail: "owner@example.test", latitude: 40.12345, longitude: 29.54321,
+      note: "Exact meeting point", createdAt: serverTimestamp(),
+    });
+    await assertFails(precisePublicSOSBatch.commit());
+    await assertFails(getDoc(doc(owner, "sosRequests", "precise-public-sos")));
+    console.log("PASS: server rules reject precise coordinates on public SOS documents atomically");
+
     const publicHelp = await getDoc(doc(outsider, "helpRequests", "private-help"));
     assert.equal("user" in publicHelp.data(), false);
     assert.equal(publicHelp.data().ownerId, "owner");

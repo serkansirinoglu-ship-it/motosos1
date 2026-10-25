@@ -63,6 +63,10 @@ service cloud.firestore {
         && request.resource.data.latitude <= 90
         && request.resource.data.longitude >= -180
         && request.resource.data.longitude <= 180
+        // Public SOS coordinates must already be rounded to a 0.01-degree grid.
+        // Enforce this server-side; client-side rounding alone is not a privacy boundary.
+        && (request.resource.data.latitude * 100) % 1 == 0
+        && (request.resource.data.longitude * 100) % 1 == 0
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time;
       // Active SOS calls are visible to authenticated helpers; inactive records stay private.
