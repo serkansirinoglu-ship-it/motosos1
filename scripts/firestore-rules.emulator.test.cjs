@@ -324,7 +324,16 @@ async function main() {
       authorId: "owner", content: "x".repeat(5001), city: "İzmir", likes: [], comments: [],
     }));
     await assertFails(setDoc(doc(owner, "communityPosts", "extra-field-post"), {
-      authorId: "owner", content: "Post", city: "İzmir", likes: [], comments: [], isAdmin: true,
+      authorId: "owner", authorName: "Owner", content: "Post", city: "İzmir", likes: [], comments: [], isAdmin: true, createdAt: serverTimestamp(),
+    }));
+    await assertFails(setDoc(doc(owner, "communityPosts", "forged-likes-post"), {
+      authorId: "owner", authorName: "Owner", content: "Post", city: "İzmir", likes: ["outsider"], comments: [], createdAt: serverTimestamp(),
+    }));
+    await assertFails(setDoc(doc(owner, "communityPosts", "email-exposure-post"), {
+      authorId: "owner", authorName: "Owner", authorEmail: "owner@example.test", content: "Post", city: "İzmir", likes: [], comments: [], createdAt: serverTimestamp(),
+    }));
+    await assertFails(setDoc(doc(owner, "communityPosts", "missing-timestamp-post"), {
+      authorId: "owner", authorName: "Owner", content: "Post", city: "İzmir", likes: [], comments: [],
     }));
     await assertSucceeds(updateDoc(doc(owner, "events", "public-event"), { title: "Edited public event" }));
     await assertFails(updateDoc(doc(owner, "events", "public-event"), { organizerId: "outsider" }));
