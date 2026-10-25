@@ -123,3 +123,8 @@ The Safe CI workflow checks every pull request against its actual base branch an
 ## Firestore rules drift prevention
 
 The Safe CI workflow compares `firestore.rules` and `firestore.prod.rules` byte-for-byte and fails if they diverge. This prevents a future security fix from being applied to only one checked-in rules file. It does not publish rules to Firebase. At the time of adding this guard, both files are identical.
+
+
+## Closed help request chat write guard
+
+Firestore rules now require a help request to remain active before a non-admin can create a chat message. The emulator suite includes a regression test for a listed helper attempting to send a message after closure.

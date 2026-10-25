@@ -47,8 +47,8 @@ async function main() {
       });
       await setDoc(doc(db, "helpRequests", "closed-help"), {
         id: "closed-help", ownerId: "owner", title: "Closed help",
-        description: "closed test fixture", active: false, helpers: [], resolvedBy: null,
-        resolvedAt: null, createdAt: new Date(),
+        description: "closed test fixture", active: false, helpers: ["helper"], resolvedBy: "helper",
+        resolvedAt: new Date(), createdAt: new Date(),
       });
       await setDoc(doc(db, "helpRequests", "private-help", "messages", "seed"), {
         id: "seed", from: "owner", fromName: "Owner", text: "private message", ts: Date.now(),
@@ -187,6 +187,10 @@ async function main() {
     console.log("PASS: active help request is discoverable without publishing owner email");
     await assertFails(getDoc(doc(outsider, "helpRequests", "closed-help")));
     console.log("PASS: outsider cannot read closed help request");
+    await assertFails(setDoc(doc(helper, "helpRequests", "closed-help", "messages", "after-close"), {
+      id: "after-close", from: "helper", fromName: "Helper", text: "message after closure", ts: serverTimestamp(),
+    }));
+    console.log("PASS: listed helper cannot send chat messages after request closure");
     await assertFails(getDoc(doc(outsider, "helpRequests", "private-help", "messages", "seed")));
     console.log("PASS: outsider cannot read chat before accepting the request");
     await assertFails(setDoc(doc(outsider, "helpRequests", "private-help", "messages", "outsider-message"), {

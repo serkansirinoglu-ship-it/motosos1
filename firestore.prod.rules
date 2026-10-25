@@ -222,6 +222,7 @@ service cloud.firestore {
                 && request.auth.token.email in get(/databases/$(database)/documents/helpRequests/$(requestId)).data.helpers)))
         ));
         allow create: if isAdmin() || (isSignedIn()
+          && get(/databases/$(database)/documents/helpRequests/$(requestId)).data.active == true
           && request.resource.data.keys().hasOnly(['id', 'from', 'fromName', 'text', 'ts'])
           && request.resource.data.from == request.auth.uid
           && request.resource.data.fromName is string
