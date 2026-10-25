@@ -66,6 +66,15 @@ jobs:
       - name: Strict Firestore rules static gate
         run: pnpm security:rules:strict
 
+      - name: Ensure Firestore rules files stay in sync
+        run: |
+          if ! cmp -s firestore.rules firestore.prod.rules; then
+            echo "::error::firestore.rules and firestore.prod.rules have drifted."
+            diff -u firestore.rules firestore.prod.rules || true
+            exit 1
+          fi
+          echo "PASS: source and production rules files are identical."
+
       - name: Install isolated Firestore emulator test tools
         run: npm install --prefix .firestore-test-runtime --no-save --package-lock=false @firebase/rules-unit-testing@4.0.1 firebase@11.10.0 firebase-tools@14.22.0
 
