@@ -71,7 +71,15 @@ service cloud.firestore {
           resource.data.requesterId == request.auth.uid
           || resource.data.status == 'active'
         ));
-      allow update: if isAdmin() || (
+      allow update: if isAdmin()
+        || (isSignedIn()
+          && resource.data.status == 'active'
+          && resource.data.requesterId != request.auth.uid
+          && resource.data.acceptedBy == null
+          && request.resource.data.acceptedBy == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['acceptedBy', 'updatedAt'])
+          && request.resource.data.updatedAt == request.time)
+        || (
         isSignedIn()
         && resource.data.requesterId == request.auth.uid
         && resource.data.status == 'active'
@@ -108,8 +116,10 @@ service cloud.firestore {
           && request.resource.data.note.size() <= 1000
           && request.resource.data.createdAt == request.time;
         allow read: if isAdmin()
-          || (isSignedIn()
-            && get(/databases/$(database)/documents/sosRequests/$(sosId)).data.requesterId == request.auth.uid);
+          || (isSignedIn() && (
+            get(/databases/$(database)/documents/sosRequests/$(sosId)).data.requesterId == request.auth.uid
+            || get(/databases/$(database)/documents/sosRequests/$(sosId)).data.acceptedBy == request.auth.uid
+          ));
         allow update, delete: if isAdmin();
       }
     }
