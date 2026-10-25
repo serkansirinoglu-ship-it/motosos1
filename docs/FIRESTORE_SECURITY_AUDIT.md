@@ -50,3 +50,15 @@ No rule change should be published until the following tests run against a dedic
 - No Firestore rules were published or modified in this audit.
 - No user data or Firebase secrets were accessed or changed.
 - The isolated branch and pull request remain the review surface.
+
+## Emulator characterization added on the audit branch
+
+The Safe CI workflow now installs pinned Firebase Emulator test tooling into a temporary CI-only directory (not into the app dependency tree) and runs `scripts/firestore-rules.emulator.test.cjs` against the Firestore Emulator with the demo project ID `demo-motoguard-firestore-rules`. It does not connect to the production Firebase project.
+
+The current test mode is **baseline characterization**: tests intentionally reproduce the known permissive behaviors and print each as `KNOWN RISK reproduced`. This makes the current exposure executable and repeatable without pretending the current rules are secure. The suite also checks a small number of existing denials. When rules are hardened, invert the vulnerable cases to expected denials and switch CI to strict mode.
+
+The static scanner has two modes:
+- `pnpm security:rules`: reports current findings without blocking baseline CI; this is an audit report, **not** a security pass.
+- `pnpm security:rules:strict`: fails while the known risky patterns remain. Do not treat the branch as release-ready until strict static checks and strict emulator authorization tests pass.
+
+This harness is transitional by design. It does not justify changing or publishing production rules; both rules files remain unchanged.
