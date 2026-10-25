@@ -257,48 +257,123 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
-    // Community posts: authenticated users can create; owner can update/delete
+    // Community posts: public read, owner create/edit of content fields, admin moderation.
     match /communityPosts/{postId} {
-      allow create: if isSignedIn()
-        && request.resource.data.authorId == request.auth.uid;
       allow read: if true;
+      allow create: if isSignedIn()
+        && request.resource.data.keys().hasOnly([
+          'id', 'authorId', 'authorName', 'authorEmail', 'authorPhoto',
+          'city', 'content', 'image', 'tag', 'likes', 'comments', 'createdAt'
+        ])
+        && request.resource.data.authorId == request.auth.uid
+        && request.resource.data.content is string
+        && request.resource.data.content.size() > 0
+        && request.resource.data.content.size() <= 5000
+        && request.resource.data.city is string
+        && request.resource.data.city.size() <= 100
+        && (!('authorName' in request.resource.data) || (request.resource.data.authorName is string && request.resource.data.authorName.size() <= 80))
+        && (!('authorEmail' in request.resource.data) || (request.resource.data.authorEmail is string && request.resource.data.authorEmail.size() <= 254))
+        && (!('image' in request.resource.data) || (request.resource.data.image is string && request.resource.data.image.size() <= 2048))
+        && (!('tag' in request.resource.data) || (request.resource.data.tag is string && request.resource.data.tag.size() <= 80))
+        && (!('likes' in request.resource.data) || request.resource.data.likes is list)
+        && (!('comments' in request.resource.data) || request.resource.data.comments is list);
       allow update: if isAdmin()
         || (isSignedIn()
           && resource.data.authorId == request.auth.uid
-          && request.resource.data.authorId == resource.data.authorId);
-      allow delete: if isSignedIn()
-        && (
-          resource.data.authorId == request.auth.uid
-          || isAdmin()
-        );
+          && request.resource.data.authorId == resource.data.authorId
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['content', 'city', 'image', 'tag'])
+          && request.resource.data.content is string
+          && request.resource.data.content.size() > 0
+          && request.resource.data.content.size() <= 5000
+          && request.resource.data.city is string
+          && request.resource.data.city.size() <= 100
+          && (!('image' in request.resource.data) || (request.resource.data.image is string && request.resource.data.image.size() <= 2048))
+          && (!('tag' in request.resource.data) || (request.resource.data.tag is string && request.resource.data.tag.size() <= 80)));
+      allow delete: if isAdmin()
+        || (isSignedIn() && resource.data.authorId == request.auth.uid);
     }
 
-    // Events: public read, authenticated create, owner/admin update/delete
+    // Events: public read; organizer identity and creation timestamp cannot be rewritten.
     match /events/{eventId} {
       allow read: if true;
       allow create: if isSignedIn()
-        && request.resource.data.organizerId == request.auth.uid;
+        && request.resource.data.organizerId == request.auth.uid
+        && request.resource.data.keys().hasOnly([
+          'organizerId', 'title', 'description', 'city', 'location',
+          'startsAt', 'endsAt', 'image', 'createdAt'
+        ])
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 160
+        && (!('description' in request.resource.data) || (request.resource.data.description is string && request.resource.data.description.size() <= 3000))
+        && (!('city' in request.resource.data) || (request.resource.data.city is string && request.resource.data.city.size() <= 100))
+        && (!('location' in request.resource.data) || (request.resource.data.location is string && request.resource.data.location.size() <= 300))
+        && (!('image' in request.resource.data) || (request.resource.data.image is string && request.resource.data.image.size() <= 2048));
       allow update: if isAdmin()
         || (isSignedIn()
           && resource.data.organizerId == request.auth.uid
-          && request.resource.data.organizerId == resource.data.organizerId);
+          && request.resource.data.organizerId == resource.data.organizerId
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'title', 'description', 'city', 'location', 'startsAt', 'endsAt', 'image'
+          ])
+          && request.resource.data.title is string
+          && request.resource.data.title.size() > 0
+          && request.resource.data.title.size() <= 160
+          && (!('description' in request.resource.data) || (request.resource.data.description is string && request.resource.data.description.size() <= 3000))
+          && (!('city' in request.resource.data) || (request.resource.data.city is string && request.resource.data.city.size() <= 100))
+          && (!('location' in request.resource.data) || (request.resource.data.location is string && request.resource.data.location.size() <= 300))
+          && (!('image' in request.resource.data) || (request.resource.data.image is string && request.resource.data.image.size() <= 2048)));
       allow delete: if isAdmin();
     }
 
-    // Listings: public read, authenticated create, owner/admin update/delete
+    // Listings: public read; sellers may edit listing content but not identity, timestamps, or promotion flags.
     match /listings/{listingId} {
       allow read: if true;
       allow create: if isSignedIn()
-        && request.resource.data.sellerId == request.auth.uid;
+        && request.resource.data.keys().hasOnly([
+          'id', 'title', 'category', 'price', 'city', 'description', 'image',
+          'sellerId', 'sellerName', 'sellerEmail', 'sellerPhone', 'createdAt', 'featured'
+        ])
+        && request.resource.data.sellerId == request.auth.uid
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 160
+        && request.resource.data.category is string
+        && request.resource.data.category in ['Motosiklet', 'Kask', 'Mont', 'Pantolon', 'Eldiven', 'Lastik', 'Parça', 'Aksesuar', 'Diğer']
+        && request.resource.data.price is number
+        && request.resource.data.price >= 0
+        && request.resource.data.description is string
+        && request.resource.data.description.size() > 0
+        && request.resource.data.description.size() <= 5000
+        && request.resource.data.city is string
+        && request.resource.data.city.size() <= 100
+        && (!('image' in request.resource.data) || (request.resource.data.image is string && request.resource.data.image.size() <= 2048))
+        && (!('sellerName' in request.resource.data) || (request.resource.data.sellerName is string && request.resource.data.sellerName.size() <= 80))
+        && (!('sellerEmail' in request.resource.data) || (request.resource.data.sellerEmail is string && request.resource.data.sellerEmail.size() <= 254))
+        && (!('sellerPhone' in request.resource.data) || (request.resource.data.sellerPhone is string && request.resource.data.sellerPhone.size() <= 40))
+        && (!('featured' in request.resource.data) || request.resource.data.featured == false);
       allow update: if isAdmin()
         || (isSignedIn()
           && resource.data.sellerId == request.auth.uid
-          && request.resource.data.sellerId == resource.data.sellerId);
-      allow delete: if isSignedIn()
-        && (
-          resource.data.sellerId == request.auth.uid
-          || isAdmin()
-        );
+          && request.resource.data.sellerId == resource.data.sellerId
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'title', 'category', 'price', 'city', 'description', 'image', 'sellerPhone'
+          ])
+          && request.resource.data.title is string
+          && request.resource.data.title.size() > 0
+          && request.resource.data.title.size() <= 160
+          && request.resource.data.category in ['Motosiklet', 'Kask', 'Mont', 'Pantolon', 'Eldiven', 'Lastik', 'Parça', 'Aksesuar', 'Diğer']
+          && request.resource.data.price is number
+          && request.resource.data.price >= 0
+          && request.resource.data.description is string
+          && request.resource.data.description.size() > 0
+          && request.resource.data.description.size() <= 5000
+          && request.resource.data.city is string
+          && request.resource.data.city.size() <= 100
+          && (!('image' in request.resource.data) || (request.resource.data.image is string && request.resource.data.image.size() <= 2048))
+          && (!('sellerPhone' in request.resource.data) || (request.resource.data.sellerPhone is string && request.resource.data.sellerPhone.size() <= 40)));
+      allow delete: if isAdmin()
+        || (isSignedIn() && resource.data.sellerId == request.auth.uid);
     }
 
     // Online presence: only the authenticated owner can maintain their minimal heartbeat.
