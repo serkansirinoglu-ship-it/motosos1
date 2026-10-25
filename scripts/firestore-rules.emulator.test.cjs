@@ -69,13 +69,21 @@ async function main() {
     const outsider = env.authenticatedContext("outsider", { email: "outsider@example.test" }).firestore();
     const anonymous = env.unauthenticatedContext().firestore();
     const owner = env.authenticatedContext("owner", { email: "owner@example.test" }).firestore();
+    const helper = env.authenticatedContext("helper", { email: "helper@example.test" }).firestore();
 
     await assertFails(getDoc(doc(outsider, "sosRequests", "private-sos")));
     console.log("PASS: outsider cannot read inactive SOS");
     await assertSucceeds(getDoc(doc(outsider, "sosRequests", "active-sos")));
     await assertFails(getDoc(doc(outsider, "sosRequests", "active-sos", "privateDetails", "owner")));
     await assertSucceeds(getDoc(doc(owner, "sosRequests", "active-sos", "privateDetails", "owner")));
-    console.log("PASS: helpers see approximate SOS location only; exact coordinates and contact details are owner-only");
+    await assertSucceeds(updateDoc(doc(helper, "sosRequests", "active-sos"), {
+      acceptedBy: "helper", updatedAt: serverTimestamp(),
+    }));
+    await assertSucceeds(getDoc(doc(helper, "sosRequests", "active-sos", "privateDetails", "owner")));
+    await assertFails(updateDoc(doc(outsider, "sosRequests", "active-sos"), {
+      acceptedBy: "outsider", updatedAt: serverTimestamp(),
+    }));
+    console.log("PASS: exact SOS details are visible to owner and accepted helper only");
     await assertFails(updateDoc(doc(outsider, "sosRequests", "active-sos"), {
       status: "resolved", resolvedAt: serverTimestamp(), updatedAt: serverTimestamp(),
     }));
