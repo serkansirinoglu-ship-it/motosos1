@@ -115,7 +115,9 @@ service cloud.firestore {
           && resource.data.active == true
           && request.auth.token.email != null
           && !(request.auth.token.email in resource.data.helpers)
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['helpers'])
+          && resource.data.user != request.auth.token.email
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['helpers', 'updatedAt'])
+          && request.resource.data.updatedAt == request.time
           && request.resource.data.helpers is list
           && request.resource.data.helpers.hasAll(resource.data.helpers)
           && request.resource.data.helpers.size() == resource.data.helpers.size() + 1
