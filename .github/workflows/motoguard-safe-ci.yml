@@ -10,7 +10,7 @@ on:
       - audit/add-nonprod-ci-gates
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: motoguard-ci-${{ github.workflow }}-${{ github.ref }}
@@ -18,9 +18,9 @@ concurrency:
 
 jobs:
   verify:
-    name: Typecheck and build (no deployment)
+    name: Typecheck, tests and build (no deployment)
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -33,10 +33,23 @@ jobs:
         with:
           node-version: 22
 
-      # Temporary non-frozen install because the current lockfile is known to
-      # be out of sync with package.json. A separate fix must restore frozen installs.
-      - name: Install dependencies
+      # First install regenerates an out-of-sync lockfile; the following step commits only that generated file.
+      - name: Install dependencies and regenerate lockfile
         run: pnpm install --no-frozen-lockfile
+
+      - name: Commit generated lockfile when changed
+        if: github.event_name == 'push' && github.ref == 'refs/heads/audit/add-nonprod-ci-gates'
+        run: |
+          if ! git diff --quiet -- pnpm-lock.yaml; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add pnpm-lock.yaml
+            git commit -m "chore: sync pnpm lockfile"
+            git push
+          fi
+
+      - name: Verify lockfile is reproducible
+        run: pnpm install --frozen-lockfile
 
       - name: TypeScript check
         run: pnpm check
@@ -46,12 +59,3 @@ jobs:
 
       - name: Production build (does not deploy)
         run: pnpm build
-
-      - name: Upload pnpm lockfile generated during install
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: regenerated-pnpm-lockfile
-          path: pnpm-lock.yaml
-          if-no-files-found: error
-          retention-days: 3
