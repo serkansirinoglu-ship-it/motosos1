@@ -10,7 +10,7 @@ on:
       - audit/add-nonprod-ci-gates
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: motoguard-ci-${{ github.workflow }}-${{ github.ref }}
@@ -32,23 +32,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: pnpm
 
-      # First install regenerates an out-of-sync lockfile; the following step commits only that generated file.
-      - name: Install dependencies and regenerate lockfile
-        run: pnpm install --no-frozen-lockfile
-
-      - name: Commit generated lockfile when changed
-        if: github.event_name == 'push' && github.ref == 'refs/heads/audit/add-nonprod-ci-gates'
-        run: |
-          if ! git diff --quiet -- pnpm-lock.yaml; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add pnpm-lock.yaml
-            git commit -m "chore: sync pnpm lockfile"
-            git push
-          fi
-
-      - name: Verify lockfile is reproducible
+      - name: Install dependencies (frozen lockfile)
         run: pnpm install --frozen-lockfile
 
       - name: TypeScript check
