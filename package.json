@@ -11,7 +11,8 @@
     "check": "tsc --noEmit",
     "test": "vitest run",
     "format": "prettier --write .",
-    "security:rules": "node scripts/check-firestore-rules.mjs"
+    "security:rules": "node scripts/check-firestore-rules.mjs",
+    "security:rules:strict": "STRICT_FIRESTORE_RULES=1 node scripts/check-firestore-rules.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
