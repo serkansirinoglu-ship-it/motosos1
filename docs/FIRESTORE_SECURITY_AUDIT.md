@@ -11,8 +11,8 @@ The initial emulator characterization confirmed permissive cross-user access and
 1. **Default access:** unmatched collections deny reads and writes. Public catalog/content collections retain explicit public-read rules.
 2. **SOS requests:** authenticated riders can discover active SOS calls; inactive requests are limited to their owner/admin. Owner updates are limited to active-to-cancelled/resolved transitions and the status/timestamp fields.
 3. **Profiles:** create validates UID/email identity, zero-valued server-controlled counters, empty badges, and server timestamps. Updates are restricted to profile-edit fields; points, counters, badges, identity, and creation time cannot be changed by the owner.
-4. **Help requests:** creation validates the authenticated email as owner and validates shape/coordinates. The realtime board query now filters to active requests. Closed requests are limited to owner/accepted helpers/admin.
-5. **Chat messages:** read/send access is limited to the request owner or accepted helpers. Message sender must match the authenticated email; text length and server timestamp are validated.
+4. **Help requests:** creation validates `ownerId` against the authenticated Firebase UID and validates shape/coordinates. The realtime board query now filters to active requests. Closing is restricted to the owner; resolving is restricted to an accepted helper whose UID is recorded on the request. Closed requests are limited to owner/accepted helpers/admin.
+5. **Chat messages:** read/send access is limited to the request owner or accepted helpers. Message sender must match the authenticated Firebase UID; display name is stored separately, and text length and server timestamp are validated.
 6. **Presence:** public read remains intentional for the online-count feature, with writes limited to the owner and documents restricted to `uid`/`lastSeen`. Revisit if the UI starts exposing anything beyond this minimal heartbeat.
 
 7. **Exact SOS location and contact details:** active SOS documents are visible to signed-in riders for discovery, so putting exact GPS coordinates, requester email, or free-text notes on the parent document would disclose them to every signed-in user. The audit branch stores only a rounded location on the public parent document and moves exact coordinates, requester email, and notes into `sosRequests/{id}/privateDetails/owner`. Rules allow the owner and the helper who successfully claims the active SOS to read that subdocument. Claiming an SOS is a one-time transition from `acceptedBy: null` to the authenticated helper UID. The legacy help-request mirror no longer copies exact GPS coordinates into its public description.
@@ -67,3 +67,16 @@ This harness is transitional by design. It verifies the checked-in rules only an
 The emulator configuration is explicitly checked into `firebase.json` and points the local Firestore Emulator at `firestore.rules`. This avoids the dangerous Firebase CLI default of allowing all emulator reads/writes when no rules path is configured. The emulator characterization must not be considered valid unless startup logs confirm the configured rules file is loaded.
 
 The emulator characterization is now run twice in the same CI step: once with `firestore.rules`, then with `FIRESTORE_RULES_FILE=firestore.prod.rules`. Both are supplied directly to `initializeTestEnvironment`; no production Firebase project is used.
+
+
+## Help-request lifecycle authorization tests — 2026-10-25
+
+The strict emulator suite now explicitly checks the lifecycle on both `firestore.rules` and `firestore.prod.rules`:
+
+- An unaccepted user cannot resolve a help request or read/send its chat messages.
+- An accepted helper can read/send messages and resolve the request using their own UID.
+- A helper cannot spoof another sender UID or submit a message over the 2,000-character limit.
+- The request owner can close an unresolved request but cannot claim the helper's identity in the resolution fields.
+- An unrelated user cannot close another rider's request.
+
+These are emulator-only authorization tests. They do not read, migrate, or modify production records. The CI run for this test expansion must pass before the expanded lifecycle coverage is considered verified.

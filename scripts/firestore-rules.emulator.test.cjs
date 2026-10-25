@@ -119,6 +119,10 @@ async function main() {
       id: "outsider-message", from: "outsider", fromName: "Outsider", text: "unauthorized", ts: serverTimestamp(),
     }));
     console.log("PASS: outsider cannot send chat before accepting the request");
+    await assertFails(updateDoc(doc(outsider, "helpRequests", "private-help"), {
+      active: false, resolvedBy: "outsider", resolvedAt: serverTimestamp(), updatedAt: serverTimestamp(),
+    }));
+    console.log("PASS: unaccepted user cannot resolve another rider request");
 
     await assertSucceeds(updateDoc(doc(outsider, "helpRequests", "private-help"), {
       helpers: ["outsider"], updatedAt: serverTimestamp(),
@@ -129,6 +133,21 @@ async function main() {
       id: "accepted-helper-message", from: "outsider", fromName: "Outsider", text: "accepted helper message", ts: serverTimestamp(),
     }));
     console.log("PASS: accepted helper can read and send chat messages");
+    await assertFails(setDoc(doc(outsider, "helpRequests", "private-help", "messages", "spoofed-sender"), {
+      id: "spoofed-sender", from: "owner", fromName: "Spoofed", text: "spoofed sender", ts: serverTimestamp(),
+    }));
+    await assertFails(setDoc(doc(outsider, "helpRequests", "private-help", "messages", "oversized-message"), {
+      id: "oversized-message", from: "outsider", fromName: "Outsider", text: "x".repeat(2001), ts: serverTimestamp(),
+    }));
+    console.log("PASS: chat rejects spoofed sender IDs and oversized messages");
+    await assertSucceeds(updateDoc(doc(outsider, "helpRequests", "private-help"), {
+      active: false, resolvedBy: "outsider", resolvedAt: serverTimestamp(), updatedAt: serverTimestamp(),
+    }));
+    console.log("PASS: accepted helper can resolve the request with their own UID");
+    await assertFails(updateDoc(doc(owner, "helpRequests", "private-help"), {
+      active: false, resolvedBy: "owner", resolvedAt: serverTimestamp(), updatedAt: serverTimestamp(),
+    }));
+    console.log("PASS: owner cannot impersonate a helper when resolving");
 
     await assertSucceeds(setDoc(doc(owner, "helpRequests", "valid-help"), {
       title: "Valid help", description: "test", ownerId: "owner",
@@ -136,6 +155,13 @@ async function main() {
       createdAt: serverTimestamp(),
     }));
     console.log("PASS: owner can create a valid help request");
+    await assertFails(updateDoc(doc(outsider, "helpRequests", "valid-help"), {
+      active: false, updatedAt: serverTimestamp(),
+    }));
+    await assertSucceeds(updateDoc(doc(owner, "helpRequests", "valid-help"), {
+      active: false, updatedAt: serverTimestamp(),
+    }));
+    console.log("PASS: only the request owner can close an unresolved help request");
     await assertFails(setDoc(doc(outsider, "helpRequests", "spoofed-help"), {
       id: "spoofed-help", ownerId: "owner", title: "spoofed",
       description: "test", active: true, helpers: [], resolvedBy: null, resolvedAt: null,
