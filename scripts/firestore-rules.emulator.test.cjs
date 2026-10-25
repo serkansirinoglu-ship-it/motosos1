@@ -70,9 +70,9 @@ async function main() {
       await setDoc(doc(db, "internalPrivate", "secret"), { value: "not public" });
       await setDoc(doc(db, "products", "public-product"), { name: "Public catalog fixture" });
       await setDoc(doc(db, "banners", "public-banner"), { title: "Public banner fixture" });
-      await setDoc(doc(db, "communityPosts", "public-post"), { authorId: "owner", text: "Public post fixture" });
+      await setDoc(doc(db, "communityPosts", "public-post"), { authorId: "owner", authorName: "Owner", city: "İzmir", content: "Public post fixture", likes: [], comments: [], createdAt: new Date() });
       await setDoc(doc(db, "events", "public-event"), { organizerId: "owner", title: "Public event fixture" });
-      await setDoc(doc(db, "listings", "public-listing"), { sellerId: "owner", title: "Public listing fixture" });
+      await setDoc(doc(db, "listings", "public-listing"), { sellerId: "owner", sellerName: "Owner", title: "Public listing fixture", category: "Kask", price: 1000, city: "İzmir", description: "Valid listing fixture", createdAt: new Date(), featured: false });
       await setDoc(doc(db, "presence", "owner"), { uid: "owner", lastSeen: new Date() });
     });
 
@@ -316,12 +316,29 @@ async function main() {
     await assertFails(setDoc(doc(outsider, "banners", "unauthorized-banner"), {
       title: "unauthorized",
     }));
-    await assertSucceeds(updateDoc(doc(owner, "communityPosts", "public-post"), { text: "Edited public post" }));
+    await assertSucceeds(updateDoc(doc(owner, "communityPosts", "public-post"), { content: "Edited public post" }));
     await assertFails(updateDoc(doc(owner, "communityPosts", "public-post"), { authorId: "outsider" }));
+    await assertFails(updateDoc(doc(owner, "communityPosts", "public-post"), { likes: ["outsider@example.test"] }));
+    await assertFails(updateDoc(doc(owner, "communityPosts", "public-post"), { createdAt: serverTimestamp() }));
+    await assertFails(setDoc(doc(owner, "communityPosts", "invalid-post"), {
+      authorId: "owner", content: "x".repeat(5001), city: "İzmir", likes: [], comments: [],
+    }));
+    await assertFails(setDoc(doc(owner, "communityPosts", "extra-field-post"), {
+      authorId: "owner", content: "Post", city: "İzmir", likes: [], comments: [], isAdmin: true,
+    }));
     await assertSucceeds(updateDoc(doc(owner, "events", "public-event"), { title: "Edited public event" }));
     await assertFails(updateDoc(doc(owner, "events", "public-event"), { organizerId: "outsider" }));
     await assertSucceeds(updateDoc(doc(owner, "listings", "public-listing"), { title: "Edited public listing" }));
     await assertFails(updateDoc(doc(owner, "listings", "public-listing"), { sellerId: "outsider" }));
+    await assertFails(updateDoc(doc(owner, "listings", "public-listing"), { featured: true }));
+    await assertFails(updateDoc(doc(owner, "listings", "public-listing"), { sellerEmail: "attacker@example.test" }));
+    await assertFails(updateDoc(doc(owner, "listings", "public-listing"), { price: -1 }));
+    await assertFails(setDoc(doc(owner, "listings", "invalid-price-listing"), {
+      sellerId: "owner", title: "Invalid", category: "Kask", price: -10, city: "İzmir", description: "Invalid price",
+    }));
+    await assertFails(setDoc(doc(owner, "listings", "promoted-listing"), {
+      sellerId: "owner", title: "Promoted", category: "Kask", price: 100, city: "İzmir", description: "Self-promoted", featured: true,
+    }));
     await assertSucceeds(setDoc(doc(owner, "events", "owner-event"), {
       organizerId: "owner", title: "Owner event",
     }));
