@@ -13,7 +13,7 @@ export default function HelpRequestsPage() {
 
   function handleCreate() {
 	if (!title) return;
-	createHelpRequest({ title, description: desc, user: user?.email || null });
+	createHelpRequest({ title, description: desc, ownerId: user?.uid || null });
 	setTitle("");
 	setDesc("");
   }

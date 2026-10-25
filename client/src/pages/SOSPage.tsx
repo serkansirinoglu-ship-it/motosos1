@@ -116,7 +116,7 @@ export default function SOSPage() {
           createHelpRequest({
             title: `Acil Yardım - ${CATEGORY_LABELS[category].label}`,
             description: "Acil yardım talebi. Kesin konum yalnızca yetkili katılımcılarla paylaşılır.",
-            user: user.email,
+            ownerId: user.uid,
           });
         }
 

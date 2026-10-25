@@ -292,7 +292,7 @@ export async function createHelpRequestRealtime(data) {
 
   // Keep the request ID used by the client and nested message path aligned with
   // the Firestore document ID. Fall back to an auto-ID for older callers.
-  const { id, ...payload } = data || {};
+  const { id, user: _legacyEmailField, ...payload } = data || {};
   const documentData = { ...payload, createdAt: serverTimestamp(), active: true };
   if (id) {
     const requestRef = doc(db, "helpRequests", id);
@@ -326,7 +326,8 @@ export async function sendMessageRealtime(requestId, msg) {
     console.info("sendMessageRealtime: Firestore not configured, skipping realtime write");
     return null;
   }
-  return addDoc(collection(db, "helpRequests", requestId, "messages"), { ...msg, ts: serverTimestamp() });
+  const { id, ...payload } = msg || {};
+  return addDoc(collection(db, "helpRequests", requestId, "messages"), { ...payload, ts: serverTimestamp() });
 }
 
 export function updateHelpRequestRealtime(id, patch) {

@@ -50,21 +50,21 @@ export default function ChatPage() {
 
   const msgs = localMsgs.length ? localMsgs : messages[chatId] || [];
   const req = helpRequests.find((r) => r.id === chatId);
-  const userEmail = user?.email || null;
+  const userUid = user?.uid || null;
 
   const handleSend = () => {
     if (!text.trim() || !chatId) return;
-    sendMessage(chatId, text.trim(), user?.email || null);
+    sendMessage(chatId, text.trim(), user?.uid || null, user?.displayName || user?.email?.split("@")[0] || "Motorcu");
     setText("");
   };
 
   const handleAccept = () => {
     if (!chatId) return;
-    if (!userEmail) {
+    if (!userUid) {
       (window as any).__openAuthModal?.();
       return;
     }
-    acceptHelp(chatId, userEmail);
+    acceptHelp(chatId, userUid);
     toast.success("Yardım talebi kabul edildi. Sürücü ile iletişime geçebilirsiniz.");
   };
 
@@ -74,7 +74,7 @@ export default function ChatPage() {
       (window as any).__openAuthModal?.();
       return;
     }
-    resolveHelp(chatId, userEmail);
+    resolveHelp(chatId, userUid);
     toast.success("Yardım çözüldü olarak işaretlendi! Puan ve rozetiniz güncellendi.");
   };
 
@@ -107,14 +107,14 @@ export default function ChatPage() {
           <div className="flex-1 overflow-y-auto space-y-3 pr-1" ref={listRef}>
             {msgs.length > 0 ? (
               msgs.map((m) => {
-                const isMe = m.from === user?.email;
+                const isMe = m.from === user?.uid;
                 return (
                   <div
                     key={m.id}
                     className={`flex flex-col max-w-[82%] ${isMe ? "ml-auto items-end" : "items-start"}`}
                   >
                     <span className="text-[10px] text-muted-foreground mb-0.5 px-1">
-                      {m.from ? m.from.split("@")[0] : "Anonim Motorcu"}
+                      {m.fromName || (m.from ? m.from.slice(0, 8) : "Anonim Motorcu")}
                     </span>
                     <div
                       className={`p-3 rounded-2xl text-xs leading-relaxed ${

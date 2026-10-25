@@ -41,17 +41,17 @@ async function main() {
         note: "Exact meeting point", createdAt: new Date(),
       });
       await setDoc(doc(db, "helpRequests", "private-help"), {
-        id: "private-help", user: "owner@example.test", title: "Private help",
+        id: "private-help", ownerId: "owner", title: "Private help",
         description: "test fixture", active: true, helpers: [], resolvedBy: null,
         resolvedAt: null, createdAt: new Date(),
       });
       await setDoc(doc(db, "helpRequests", "closed-help"), {
-        id: "closed-help", user: "owner@example.test", title: "Closed help",
+        id: "closed-help", ownerId: "owner", title: "Closed help",
         description: "closed test fixture", active: false, helpers: [], resolvedBy: null,
         resolvedAt: null, createdAt: new Date(),
       });
       await setDoc(doc(db, "helpRequests", "private-help", "messages", "seed"), {
-        id: "seed", from: "owner@example.test", text: "private message", ts: Date.now(),
+        id: "seed", from: "owner", fromName: "Owner", text: "private message", ts: Date.now(),
       });
       await setDoc(doc(db, "users", "owner"), {
         uid: "owner", email: "owner@example.test", displayName: "Owner",
@@ -106,35 +106,38 @@ async function main() {
     await assertSucceeds(sosBatch.commit());
     console.log("PASS: owner can create a valid SOS with server timestamps");
 
-    await assertSucceeds(getDoc(doc(outsider, "helpRequests", "private-help")));
-    console.log("PASS: active help request remains discoverable");
+    const publicHelp = await getDoc(doc(outsider, "helpRequests", "private-help"));
+    assert.equal("user" in publicHelp.data(), false);
+    assert.equal(publicHelp.data().ownerId, "owner");
+    assert.equal(publicHelp.data().ownerEmail, undefined);
+    console.log("PASS: active help request is discoverable without publishing owner email");
     await assertFails(getDoc(doc(outsider, "helpRequests", "closed-help")));
     console.log("PASS: outsider cannot read closed help request");
     await assertFails(getDoc(doc(outsider, "helpRequests", "private-help", "messages", "seed")));
     console.log("PASS: outsider cannot read chat before accepting the request");
     await assertFails(setDoc(doc(outsider, "helpRequests", "private-help", "messages", "outsider-message"), {
-      id: "outsider-message", from: "outsider@example.test", text: "unauthorized", ts: serverTimestamp(),
+      id: "outsider-message", from: "outsider", fromName: "Outsider", text: "unauthorized", ts: serverTimestamp(),
     }));
     console.log("PASS: outsider cannot send chat before accepting the request");
 
     await assertSucceeds(updateDoc(doc(outsider, "helpRequests", "private-help"), {
-      helpers: ["outsider@example.test"], updatedAt: serverTimestamp(),
+      helpers: ["outsider"], updatedAt: serverTimestamp(),
     }));
     console.log("PASS: helper can accept an active request by adding only their own identity");
     await assertSucceeds(getDoc(doc(outsider, "helpRequests", "private-help", "messages", "seed")));
     await assertSucceeds(setDoc(doc(outsider, "helpRequests", "private-help", "messages", "accepted-helper-message"), {
-      id: "accepted-helper-message", from: "outsider@example.test", text: "accepted helper message", ts: serverTimestamp(),
+      id: "accepted-helper-message", from: "outsider", fromName: "Outsider", text: "accepted helper message", ts: serverTimestamp(),
     }));
     console.log("PASS: accepted helper can read and send chat messages");
 
     await assertSucceeds(setDoc(doc(owner, "helpRequests", "valid-help"), {
-      title: "Valid help", description: "test", user: "owner@example.test",
+      title: "Valid help", description: "test", ownerId: "owner",
       active: true, helpers: [], resolvedBy: null, resolvedAt: null,
       createdAt: serverTimestamp(),
     }));
     console.log("PASS: owner can create a valid help request");
     await assertFails(setDoc(doc(outsider, "helpRequests", "spoofed-help"), {
-      id: "spoofed-help", user: "owner@example.test", title: "spoofed",
+      id: "spoofed-help", ownerId: "owner", title: "spoofed",
       description: "test", active: true, helpers: [], resolvedBy: null, resolvedAt: null,
       createdAt: serverTimestamp(),
     }));

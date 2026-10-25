@@ -5,6 +5,7 @@ import { nanoid } from "nanoid";
 type Message = {
   id: string;
   from: string | null;
+  fromName?: string;
   text: string;
   ts: number;
 };
@@ -13,6 +14,8 @@ type HelpRequest = {
   id: string;
   title: string;
   description: string;
+  // ownerId is the Firebase UID; user is retained only for legacy local-cache records.
+  ownerId?: string | null;
   user?: string | null;
   lat?: number;
   lng?: number;
@@ -29,8 +32,8 @@ type MessageContextType = {
   createHelpRequest: (r: Omit<HelpRequest, "id" | "createdAt" | "active">) => HelpRequest;
   sendMessage: (requestId: string, text: string, from?: string | null) => Message;
   subscribeToMessages: (requestId: string, onUpdate: (arr: Message[]) => void) => (() => void);
-  acceptHelp: (requestId: string, helperEmail: string) => void;
-  resolveHelp: (requestId: string, helperEmail: string) => void;
+  acceptHelp: (requestId: string, helperUid: string) => void;
+  resolveHelp: (requestId: string, helperUid: string) => void;
   getTopHelpers: (limit?: number) => {email:string,count:number}[];
   getHelpCount: (email?: string) => number;
 };
@@ -154,12 +157,12 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
   }
 
   // accept helping a request
-  function acceptHelp(requestId: string, helperEmail: string) {
+  function acceptHelp(requestId: string, helperUid: string) {
 	// update local
-	setHelpRequests((s) => s.map(hr => hr.id === requestId ? { ...hr, helpers: Array.from(new Set([...(hr.helpers||[]), helperEmail])) } : hr));
+	setHelpRequests((s) => s.map(hr => hr.id === requestId ? { ...hr, helpers: Array.from(new Set([...(hr.helpers||[]), helperUid])) } : hr));
     try {
       const helpers = Array.from(
-        new Set([...(helpRequests.find((item) => item.id === requestId)?.helpers || []), helperEmail])
+        new Set([...(helpRequests.find((item) => item.id === requestId)?.helpers || []), helperUid])
       );
       void Promise.resolve(updateHelpRequestRealtime(requestId, { helpers })).catch((error) => {
         console.warn("Realtime helper acceptance failed; local state retained", error);
@@ -170,13 +173,13 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
   }
 
   // resolve help: credit helper and mark resolved
-  function resolveHelp(requestId: string, helperEmail: string) {
-	setHelpRequests((s) => s.map(hr => hr.id === requestId ? { ...hr, resolvedBy: helperEmail, resolvedAt: Date.now(), active: false } : hr));
-	incrementHelpCount(helperEmail);
+  function resolveHelp(requestId: string, helperUid: string) {
+	setHelpRequests((s) => s.map(hr => hr.id === requestId ? { ...hr, resolvedBy: helperUid, resolvedAt: Date.now(), active: false } : hr));
+	incrementHelpCount(helperUid);
     try {
       void Promise.resolve(
         updateHelpRequestRealtime(requestId, {
-          resolvedBy: helperEmail,
+          resolvedBy: helperUid,
           resolvedAt: Date.now(),
           active: false,
         })
@@ -187,10 +190,9 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
       console.warn("Realtime help resolution unavailable; local state retained", error);
     }
 	  // after increment, check thresholds and award badges
-	const newCount = (helpCounts[helperEmail] || 0) + 1;
-	// Koruyucu Kardeş at 1, Yol Meleği at 5
-	if (newCount >= 1) addBadgeToProfile(helperEmail, 'Koruyucu Kardeş');
-	if (newCount >= 5) addBadgeToProfile(helperEmail, 'Yol Meleği');
+	const newCount = (helpCounts[helperUid] || 0) + 1;
+	if (newCount >= 1) addBadgeToProfile(helperUid, 'Koruyucu Kardeş');
+	if (newCount >= 5) addBadgeToProfile(helperUid, 'Yol Meleği');
   }
 
   // add badge to user's profile based on thresholds
@@ -207,8 +209,8 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
 	}catch(e){console.error(e)}
   }
 
-  function sendMessage(requestId: string, text: string, from: string | null = null) {
-    const msg: Message = { id: nanoid(), from, text, ts: Date.now() };
+  function sendMessage(requestId: string, text: string, from: string | null = null, fromName = "Motorcu") {
+    const msg: Message = { id: nanoid(), from, fromName, text, ts: Date.now() };
     const keepLocal = () => {
       setMessages((current) => {
         const existing = current[requestId] || [];
