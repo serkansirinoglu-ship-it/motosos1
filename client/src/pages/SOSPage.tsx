@@ -198,7 +198,7 @@ export default function SOSPage() {
             </div>
           </div>
 
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border text-xs font-bold uppercase tracking-wider mb-2 ${statusInfo.color}">
+          <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border text-xs font-bold uppercase tracking-wider mb-2 ${statusInfo.color}`}>
             <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
             {statusInfo.label}
           </div>
