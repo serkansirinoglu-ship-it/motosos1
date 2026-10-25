@@ -2,7 +2,7 @@
 
 Date: 2026-10-25  
 Scope: source review of `firestore.rules`, `firestore.prod.rules`, and current client calls.  
-Status: restrictive rules changes and emulator authorization tests are implemented on the audit branch. The current help-request identity privacy changes require fresh CI verification. No rules have been published to Firebase.
+Status: restrictive rules changes and emulator authorization tests are implemented on the audit branch. PR CI passed on commit `bbc66dc5c10e5584609caf2b64f8f172c36a9283`, including TypeScript, unit tests, production build, strict static gate, and emulator tests for both rule files. No rules have been published to Firebase.
 
 ## Findings and changes on the audit branch
 
