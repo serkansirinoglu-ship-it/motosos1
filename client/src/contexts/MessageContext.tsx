@@ -124,7 +124,7 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
     // Firebase calls are asynchronous: a surrounding try/catch does not catch
     // permission/network rejections unless the returned promise is observed.
     try {
-      const pending = createHelpRequestRealtime(r);
+      const pending = createHelpRequestRealtime(hr);
       void Promise.resolve(pending).then((result) => {
         if (result) return;
         console.warn("Realtime help request unavailable; keeping a local copy");
