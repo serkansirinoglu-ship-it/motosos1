@@ -79,9 +79,19 @@ service cloud.firestore {
         isSignedIn()
         && resource.data.requesterId == request.auth.uid
         && resource.data.status == 'active'
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'updatedAt', 'resolvedAt', 'cancelledAt'
+        ])
         && request.resource.data.status in ['cancelled', 'resolved']
         && request.resource.data.updatedAt == request.time
+        && (
+          (request.resource.data.status == 'cancelled'
+            && request.resource.data.cancelledAt == request.time
+            && request.resource.data.resolvedAt == resource.data.resolvedAt)
+          || (request.resource.data.status == 'resolved'
+            && request.resource.data.resolvedAt == request.time
+            && request.resource.data.cancelledAt == resource.data.cancelledAt)
+        )
       );
       allow delete: if isAdmin();
     }
