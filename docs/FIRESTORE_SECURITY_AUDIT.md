@@ -128,3 +128,8 @@ The Safe CI workflow compares `firestore.rules` and `firestore.prod.rules` byte-
 ## Closed help request chat write guard
 
 Firestore rules now require a help request to remain active before a non-admin can create a chat message. The emulator suite includes a regression test for a listed helper attempting to send a message after closure.
+
+
+## SOS private-details path restriction
+
+Non-admin access to SOS private details is restricted to the designated `privateDetails/owner` document. This prevents an accepted helper from reading other documents that might later be added under the same subcollection. The emulator suite verifies that the accepted helper can read `owner` while being denied `unexpected`.

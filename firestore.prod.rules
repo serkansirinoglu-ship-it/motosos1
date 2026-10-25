@@ -134,7 +134,7 @@ service cloud.firestore {
           && request.resource.data.note.size() <= 1000
           && request.resource.data.createdAt == request.time;
         allow read: if isAdmin()
-          || (isSignedIn() && (
+          || (detailId == 'owner' && isSignedIn() && (
             get(/databases/$(database)/documents/sosRequests/$(sosId)).data.requesterId == request.auth.uid
             || (get(/databases/$(database)/documents/sosRequests/$(sosId)).data.status == 'active'
               && get(/databases/$(database)/documents/sosRequests/$(sosId)).data.acceptedBy == request.auth.uid)

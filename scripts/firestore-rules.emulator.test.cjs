@@ -40,6 +40,10 @@ async function main() {
         requesterEmail: "owner@example.test", latitude: 40.12345, longitude: 29.54321,
         note: "Exact meeting point", createdAt: new Date(),
       });
+      await setDoc(doc(db, "sosRequests", "active-sos", "privateDetails", "unexpected"), {
+        requesterEmail: "other@example.test", latitude: 40.22222, longitude: 29.66666,
+        note: "Unexpected subdocument", createdAt: new Date(),
+      });
       await setDoc(doc(db, "helpRequests", "private-help"), {
         id: "private-help", ownerId: "owner", title: "Private help",
         description: "test fixture", active: true, helpers: [], resolvedBy: null,
@@ -86,6 +90,8 @@ async function main() {
       acceptedBy: "helper", updatedAt: serverTimestamp(),
     }));
     await assertSucceeds(getDoc(doc(helper, "sosRequests", "active-sos", "privateDetails", "owner")));
+    await assertFails(getDoc(doc(helper, "sosRequests", "active-sos", "privateDetails", "unexpected")));
+    console.log("PASS: accepted helper can read only the designated SOS owner-details document");
     await assertFails(updateDoc(doc(outsider, "sosRequests", "active-sos"), {
       acceptedBy: "outsider", updatedAt: serverTimestamp(),
     }));
