@@ -150,7 +150,7 @@ service cloud.firestore {
       allow read: if isAdmin() || (isSignedIn() && (
         resource.data.active == true
         || resource.data.ownerId == request.auth.uid
-        || (request.auth.token.email != null && resource.data.user == request.auth.token.email)
+        || (request.auth.token.email != null && 'user' in resource.data && resource.data.user == request.auth.token.email)
         || (resource.data.helpers is list && (
           request.auth.uid in resource.data.helpers
           || (request.auth.token.email != null && request.auth.token.email in resource.data.helpers)
@@ -169,7 +169,7 @@ service cloud.firestore {
           && !(request.auth.uid in resource.data.helpers)
           && (request.auth.token.email == null || !(request.auth.token.email in resource.data.helpers))
           && resource.data.ownerId != request.auth.uid
-          && (request.auth.token.email == null || resource.data.user != request.auth.token.email)
+          && (request.auth.token.email == null || !('user' in resource.data) || resource.data.user != request.auth.token.email)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['helpers', 'updatedAt'])
           && request.resource.data.updatedAt == request.time
           && request.resource.data.helpers is list
@@ -192,6 +192,7 @@ service cloud.firestore {
         allow read: if isAdmin() || (isSignedIn() && (
           get(/databases/$(database)/documents/helpRequests/$(requestId)).data.ownerId == request.auth.uid
           || (request.auth.token.email != null
+            && 'user' in get(/databases/$(database)/documents/helpRequests/$(requestId)).data
             && get(/databases/$(database)/documents/helpRequests/$(requestId)).data.user == request.auth.token.email)
           || (get(/databases/$(database)/documents/helpRequests/$(requestId)).data.helpers is list
             && (request.auth.uid in get(/databases/$(database)/documents/helpRequests/$(requestId)).data.helpers
