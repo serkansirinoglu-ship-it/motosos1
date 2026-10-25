@@ -44,6 +44,7 @@ export const STATUS_LABELS: Record<SOSStatus, { label: string; color: string }> 
 
 class SOSService {
   private activeRequests: SOSRequestItem[] = [];
+  private idSequence = 0;
 
   public getActiveRequests(): SOSRequestItem[] {
     return this.activeRequests.filter(
@@ -58,7 +59,7 @@ class SOSService {
   public createRequest(data: Omit<SOSRequestItem, 'id' | 'status' | 'helpersCount' | 'createdAt'>): SOSRequestItem {
     const newItem: SOSRequestItem = {
       ...data,
-      id: `sos-${Date.now()}`,
+      id: `sos-${Date.now()}-${++this.idSequence}`,
       status: 'bekleniyor',
       helpersCount: 0,
       createdAt: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
