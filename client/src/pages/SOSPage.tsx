@@ -97,6 +97,14 @@ export default function SOSPage() {
             if (res?.id) {
               setSosId(res.id);
               firebaseSaved = true;
+            } else if (res?.error === "active_duplicate") {
+              // Keep the local UI consistent with the server-side duplicate guard.
+              sosService.updateStatus(localReq.id, "iptal_edildi");
+              setLocalSosId(null);
+              setSosId(null);
+              setSubmitting(false);
+              toast.error("Zaten aktif bir SOS çağrınız var. Yeni çağrı açmadan önce mevcut çağrınızı kontrol edin.");
+              return;
             } else {
               console.warn("SOS was not persisted to Firebase", res?.error || "Firebase unavailable");
             }
