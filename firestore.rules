@@ -17,8 +17,29 @@ service cloud.firestore {
     // Users collection: each user can read/write only their own profile
     match /users/{uid} {
       allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
-      allow create: if isOwner(uid);
-      allow update: if isOwner(uid) || isAdmin();
+      allow create: if isOwner(uid)
+        && request.resource.data.keys().hasOnly([
+          'uid', 'email', 'displayName', 'city', 'motorcycle', 'photoURL', 'bio',
+          'privacyLocation', 'points', 'helpCount', 'receivedHelpCount', 'badges',
+          'createdAt', 'updatedAt', 'contacts'
+        ])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.points == 0
+        && request.resource.data.helpCount == 0
+        && request.resource.data.receivedHelpCount == 0
+        && request.resource.data.badges is list
+        && request.resource.data.badges.size() == 0
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow update: if isAdmin() || (
+        isOwner(uid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'displayName', 'city', 'motorcycle', 'photoURL', 'bio',
+          'privacyLocation', 'contacts', 'updatedAt'
+        ])
+        && request.resource.data.updatedAt == request.time
+      );
       allow delete: if isAdmin();
     }
 
@@ -26,14 +47,36 @@ service cloud.firestore {
     // helpers can read active requests; admin full access
     match /sosRequests/{sosId} {
       allow create: if isSignedIn()
+        && request.resource.data.keys().hasOnly([
+          'requesterId', 'requesterEmail', 'helpType', 'latitude', 'longitude',
+          'note', 'status', 'acceptedBy', 'createdAt', 'updatedAt',
+          'resolvedAt', 'cancelledAt'
+        ])
         && request.resource.data.requesterId == request.auth.uid
-        && request.resource.data.status == 'active';
-      allow read: if isSignedIn();
-      allow update: if isSignedIn()
-        && (
+        && request.resource.data.requesterEmail == request.auth.token.email
+        && request.resource.data.status == 'active'
+        && request.resource.data.latitude is number
+        && request.resource.data.longitude is number
+        && request.resource.data.latitude >= -90
+        && request.resource.data.latitude <= 90
+        && request.resource.data.longitude >= -180
+        && request.resource.data.longitude <= 180
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      // Active SOS calls are visible to authenticated helpers; inactive records stay private.
+      allow read: if isAdmin()
+        || (isSignedIn() && (
           resource.data.requesterId == request.auth.uid
-          || isAdmin()
-        );
+          || resource.data.status == 'active'
+        ));
+      allow update: if isAdmin() || (
+        isSignedIn()
+        && resource.data.requesterId == request.auth.uid
+        && resource.data.status == 'active'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
+        && request.resource.data.status in ['cancelled', 'resolved']
+        && request.resource.data.updatedAt == request.time
+      );
       allow delete: if isAdmin();
     }
 
