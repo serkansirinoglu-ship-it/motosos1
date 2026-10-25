@@ -55,6 +55,11 @@ async function main() {
       });
       await setDoc(doc(db, "internalPrivate", "secret"), { value: "not public" });
       await setDoc(doc(db, "products", "public-product"), { name: "Public catalog fixture" });
+      await setDoc(doc(db, "banners", "public-banner"), { title: "Public banner fixture" });
+      await setDoc(doc(db, "communityPosts", "public-post"), { authorId: "owner", text: "Public post fixture" });
+      await setDoc(doc(db, "events", "public-event"), { organizerId: "owner", title: "Public event fixture" });
+      await setDoc(doc(db, "listings", "public-listing"), { sellerId: "owner", title: "Public listing fixture" });
+      await setDoc(doc(db, "presence", "owner"), { uid: "owner", lastSeen: new Date() });
     });
 
     const outsider = env.authenticatedContext("outsider", { email: "outsider@example.test" }).firestore();
@@ -132,7 +137,34 @@ async function main() {
     await assertFails(getDoc(doc(anonymous, "users", "owner")));
     console.log("PASS: default-deny prevents anonymous reads of private/unmatched documents");
     await assertSucceeds(getDoc(doc(anonymous, "products", "public-product")));
-    console.log("PASS: explicit public product catalog remains readable");
+    await assertSucceeds(getDoc(doc(anonymous, "banners", "public-banner")));
+    await assertSucceeds(getDoc(doc(anonymous, "communityPosts", "public-post")));
+    await assertSucceeds(getDoc(doc(anonymous, "events", "public-event")));
+    await assertSucceeds(getDoc(doc(anonymous, "listings", "public-listing")));
+    console.log("PASS: explicitly public catalog, banners, posts, events, and listings remain readable");
+
+    await assertSucceeds(setDoc(doc(owner, "presence", "owner"), {
+      uid: "owner", lastSeen: serverTimestamp(),
+    }));
+    await assertFails(setDoc(doc(outsider, "presence", "owner"), {
+      uid: "owner", lastSeen: serverTimestamp(),
+    }));
+    await assertSucceeds(getDoc(doc(anonymous, "presence", "owner")));
+    console.log("PASS: presence is publicly readable but only its owner can update it");
+
+    await assertFails(setDoc(doc(outsider, "communityPosts", "spoofed-post"), {
+      authorId: "owner", text: "spoofed",
+    }));
+    await assertFails(setDoc(doc(outsider, "listings", "spoofed-listing"), {
+      sellerId: "owner", title: "spoofed",
+    }));
+    await assertFails(setDoc(doc(outsider, "products", "unauthorized-product"), {
+      name: "unauthorized",
+    }));
+    await assertFails(setDoc(doc(outsider, "banners", "unauthorized-banner"), {
+      title: "unauthorized",
+    }));
+    console.log("PASS: public content collections do not grant public write access");
     await assertFails(setDoc(doc(outsider, "sosRequests", "spoofed-sos"), {
       requesterId: "owner", requesterEmail: "owner@example.test", status: "active",
       helpType: "repair", latitude: 0, longitude: 0,
