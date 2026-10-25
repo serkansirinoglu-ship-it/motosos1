@@ -70,12 +70,16 @@ service cloud.firestore {
             && (request.resource.data.latitude * 100) % 1 < 0.000001)
           || (request.resource.data.latitude > 0
             && (request.resource.data.latitude * 100) % 1 > 0.999999)
+          || (request.resource.data.latitude < 0
+            && (request.resource.data.latitude * 100) % 1 < -0.999999)
         )
         && (
           ((request.resource.data.longitude * 100) % 1 > -0.000001
             && (request.resource.data.longitude * 100) % 1 < 0.000001)
           || (request.resource.data.longitude > 0
             && (request.resource.data.longitude * 100) % 1 > 0.999999)
+          || (request.resource.data.longitude < 0
+            && (request.resource.data.longitude * 100) % 1 < -0.999999)
         )
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time;

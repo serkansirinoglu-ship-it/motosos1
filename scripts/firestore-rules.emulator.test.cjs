@@ -167,6 +167,19 @@ async function main() {
     await assertFails(getDoc(doc(owner, "sosRequests", "precise-public-sos")));
     console.log("PASS: server rules reject precise coordinates on public SOS documents atomically");
 
+    const negativeRoundedSOSBatch = writeBatch(owner);
+    negativeRoundedSOSBatch.set(doc(owner, "sosRequests", "negative-rounded-sos"), {
+      requesterId: "owner", status: "active", helpType: "ariza",
+      latitude: -40.12, longitude: -29.54, acceptedBy: null,
+      createdAt: serverTimestamp(), updatedAt: serverTimestamp(), resolvedAt: null, cancelledAt: null,
+    });
+    negativeRoundedSOSBatch.set(doc(owner, "sosRequests", "negative-rounded-sos", "privateDetails", "owner"), {
+      requesterEmail: "owner@example.test", latitude: -40.12345, longitude: -29.54321,
+      note: "Exact meeting point", createdAt: serverTimestamp(),
+    });
+    await assertSucceeds(negativeRoundedSOSBatch.commit());
+    console.log("PASS: negative rounded SOS coordinates are accepted without weakening precision checks");
+
     const publicHelp = await getDoc(doc(outsider, "helpRequests", "private-help"));
     assert.equal("user" in publicHelp.data(), false);
     assert.equal(publicHelp.data().ownerId, "owner");
