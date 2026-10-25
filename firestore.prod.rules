@@ -266,6 +266,9 @@ service cloud.firestore {
           'city', 'content', 'image', 'tag', 'likes', 'comments', 'createdAt'
         ])
         && request.resource.data.authorId == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && (!('likes' in request.resource.data) || (request.resource.data.likes is list && request.resource.data.likes.size() == 0))
+        && (!('comments' in request.resource.data) || (request.resource.data.comments is list && request.resource.data.comments.size() == 0))
         && request.resource.data.content is string
         && request.resource.data.content.size() > 0
         && request.resource.data.content.size() <= 5000
