@@ -19,6 +19,9 @@ async function main() {
   });
 
   try {
+    // The CI step runs both rule files against one emulator process. Clear fixtures
+    // between runs so the second suite starts from the same isolated baseline.
+    await env.clearFirestore();
     await env.withSecurityRulesDisabled(async (context) => {
       const db = context.firestore();
       await setDoc(doc(db, "sosRequests", "private-sos"), {
