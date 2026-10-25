@@ -164,7 +164,19 @@ async function main() {
     await assertFails(setDoc(doc(outsider, "banners", "unauthorized-banner"), {
       title: "unauthorized",
     }));
-    console.log("PASS: public content collections do not grant public write access");
+    await assertSucceeds(updateDoc(doc(owner, "communityPosts", "public-post"), { text: "Edited public post" }));
+    await assertFails(updateDoc(doc(owner, "communityPosts", "public-post"), { authorId: "outsider" }));
+    await assertSucceeds(updateDoc(doc(owner, "events", "public-event"), { title: "Edited public event" }));
+    await assertFails(updateDoc(doc(owner, "events", "public-event"), { organizerId: "outsider" }));
+    await assertSucceeds(updateDoc(doc(owner, "listings", "public-listing"), { title: "Edited public listing" }));
+    await assertFails(updateDoc(doc(owner, "listings", "public-listing"), { sellerId: "outsider" }));
+    await assertSucceeds(setDoc(doc(owner, "events", "owner-event"), {
+      organizerId: "owner", title: "Owner event",
+    }));
+    await assertFails(setDoc(doc(outsider, "events", "spoofed-event"), {
+      organizerId: "owner", title: "Spoofed event",
+    }));
+    console.log("PASS: public content ownership fields cannot be forged or transferred");
     await assertFails(setDoc(doc(outsider, "sosRequests", "spoofed-sos"), {
       requesterId: "owner", requesterEmail: "owner@example.test", status: "active",
       helpType: "repair", latitude: 0, longitude: 0,
