@@ -80,3 +80,27 @@ The strict emulator suite now explicitly checks the lifecycle on both `firestore
 - An unrelated user cannot close another rider's request.
 
 These are emulator-only authorization tests. They do not read, migrate, or modify production records. The CI run for this test expansion must pass before the expanded lifecycle coverage is considered verified.
+
+
+## Legacy help-record migration preparation — 2026-10-25
+
+The legacy `user` and email-valued `helpers` fields are a known privacy limitation: Firestore rules cannot redact individual fields from a document that is readable. Existing records must not be bulk-updated until the owner/helper identities have been mapped to authoritative Firebase UIDs.
+
+A local-only assessment tool has been added at `scripts/legacy-help-migration-plan.mjs`, with unit tests at `scripts/legacy-help-migration-plan.test.mjs`. It:
+
+- Reads only user-supplied local JSON inputs; it does not initialize Firebase or use credentials.
+- Maps legacy email identities to Firebase UIDs only when the mapping is unique and complete.
+- Blocks missing/ambiguous identities, malformed helper lists, duplicate document IDs, and duplicate helper identities after mapping.
+- Prints aggregate counts only from the CLI; it never prints raw emails, descriptions, or document bodies.
+- Does not update Firestore and does not create a migration payload. `readyForReview` means only that identity mapping checks passed, not that a record is approved for migration.
+
+### Required migration gates
+
+1. Produce an authorized, access-controlled export and a verified email-to-UID mapping from an authoritative identity source; never infer UIDs from email strings.
+2. Run the assessment on a protected local machine and resolve every blocked item. Keep export and mapping files out of Git and support logs.
+3. Review the planned record-by-record changes, preserving unrelated fields and timestamps according to a separately reviewed migration design.
+4. Test the transformation and rollback on a disposable emulator dataset; verify owner/helper reads, chat authorization, and removal of legacy email fields.
+5. Obtain separate explicit approval before any production migration. Back up the relevant collection, run a dry-run diff, apply in bounded batches with audit logging that omits PII, and verify counts and authorization after migration.
+6. Only after verified migration, consider removing email-based compatibility branches from both rules files. Do not publish rules as part of this preparatory change.
+
+No export, identity mapping, Firestore write, production data access, or rules publication was performed as part of this commit.
