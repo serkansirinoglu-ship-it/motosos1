@@ -129,7 +129,7 @@ async function main() {
       note: "x".repeat(1001), createdAt: serverTimestamp(),
     });
     await assertFails(invalidNoteBatch.commit());
-    await assertFails(getDoc(doc(owner, "sosRequests", "invalid-note-sos")));
+    await env.withSecurityRulesDisabled(async (context) => { assert.equal((await getDoc(doc(context.firestore(), "sosRequests", "invalid-note-sos"))).exists(), false); });
     console.log("PASS: SOS batch rejects private notes over 1000 characters atomically");
 
     const spoofedEmailBatch = writeBatch(owner);
@@ -143,7 +143,7 @@ async function main() {
       note: "Exact meeting point", createdAt: serverTimestamp(),
     });
     await assertFails(spoofedEmailBatch.commit());
-    await assertFails(getDoc(doc(owner, "sosRequests", "spoofed-email-sos")));
+    await env.withSecurityRulesDisabled(async (context) => { assert.equal((await getDoc(doc(context.firestore(), "sosRequests", "spoofed-email-sos"))).exists(), false); });
     console.log("PASS: SOS batch rejects mismatched contact email without partial parent creation");
 
     await assertFails(setDoc(doc(owner, "sosRequests", "invalid-coordinate-sos"), {
