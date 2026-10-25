@@ -53,4 +53,4 @@ jobs:
         run: npm install --prefix .firestore-test-runtime --no-save --package-lock=false @firebase/rules-unit-testing@4.0.1 firebase@11.10.0 firebase-tools@14.22.0
 
       - name: Characterize current Firestore rules in emulator (non-production)
-        run: .firestore-test-runtime/node_modules/.bin/firebase emulators:exec --only firestore --project demo-motoguard-firestore-rules "node scripts/firestore-rules.emulator.test.cjs"
+        run: .firestore-test-runtime/node_modules/.bin/firebase emulators:exec --only firestore --project demo-motoguard-firestore-rules "node scripts/firestore-rules.emulator.test.cjs && FIRESTORE_RULES_FILE=firestore.prod.rules node scripts/firestore-rules.emulator.test.cjs"
