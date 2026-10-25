@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import { pathToFileURL } from "node:url";
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;\nconst SAFE_UID_RE = /^[A-Za-z0-9_-]{1,128}$/;
 
 function normalizeEmail(value) {
   return typeof value === "string" ? value.trim().toLowerCase() : "";
@@ -33,7 +33,7 @@ export function planLegacyHelpMigration(records, emailToUid) {
     const id = typeof record?.id === "string" ? record.id : "";
     const reasons = [];
     if (!id) reasons.push("missing_document_id");
-    if (id && idCounts.get(id) > 1) reasons.push("duplicate_document_id");
+    if (id && idCounts.get(id) > 1) reasons.push("duplicate_document_id");\n    if (id && id.length > 1500) reasons.push("invalid_document_id");
     if (!data || typeof data !== "object" || Array.isArray(data)) {
       reasons.push("invalid_document_data");
       return { id: id || null, status: "blocked", reasonCodes: reasons };
@@ -41,7 +41,7 @@ export function planLegacyHelpMigration(records, emailToUid) {
 
     const legacyOwnerEmail = normalizeEmail(data.user);
     let ownerId = typeof data.ownerId === "string" && data.ownerId.trim() ? data.ownerId.trim() : "";
-    if (!ownerId && legacyOwnerEmail) {
+    if (ownerId && !SAFE_UID_RE.test(ownerId)) reasons.push("invalid_owner_uid");\n    if (!ownerId && legacyOwnerEmail) {
       if (!EMAIL_RE.test(legacyOwnerEmail)) reasons.push("invalid_legacy_owner_email");
       else if (!mapping.has(legacyOwnerEmail)) reasons.push("owner_uid_mapping_missing");
       else if (!mapping.get(legacyOwnerEmail)) reasons.push("owner_uid_mapping_ambiguous");
