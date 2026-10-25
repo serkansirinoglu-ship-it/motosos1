@@ -66,7 +66,7 @@ async function main() {
     await check("anonymous user reads an unmatched private collection", getDoc(doc(anonymous, "internalPrivate", "secret")), true);
 
     // A couple of existing restrictions are also characterized.
-    await assertFails(getDoc(doc(anonymous, "users", "owner")));
+    await check("anonymous user reads a private user profile because the catch-all grants public read", getDoc(doc(anonymous, "users", "owner")), true);
     await assertFails(setDoc(doc(outsider, "sosRequests", "spoofed-sos"), {
       requesterId: "owner", status: "active", helpType: "repair", latitude: 0, longitude: 0,
     }));
