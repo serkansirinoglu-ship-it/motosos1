@@ -25,6 +25,13 @@ describe("SOSService in-memory request lifecycle", () => {
     expect(sosService.getActiveRequests().some((item) => item.id === created.id)).toBe(true);
   });
 
+  it("generates distinct IDs for requests created in the same millisecond", () => {
+    const first = sosService.createRequest(request);
+    const second = sosService.createRequest(request);
+
+    expect(first.id).not.toBe(second.id);
+  });
+
   it("updates status and records the helper when a request is accepted", () => {
     const created = sosService.createRequest(request);
     expect(sosService.updateStatus(created.id, "yanit_geliyor", "helper-user")).toBe(true);
