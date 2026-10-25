@@ -108,7 +108,7 @@ export default function SOSPage() {
 
         setSosActive(true);
         setSubmitting(false);
-        toast.success("Yardım çağrınız oluşturuldu! Yakındaki motorcular bilgilendiriliyor.");
+        toast.success("SOS talebiniz oluşturuldu. Yakındaki motorculara otomatik bildirim gönderildiği henüz doğrulanamıyor.");
       },
       (err) => {
         toast.dismiss();
@@ -141,7 +141,7 @@ export default function SOSPage() {
     setSosId(null);
     setElapsed(0);
     setSelectedCategory(null);
-    toast.success("Harika! Yardım tamamlandı. Puan ve rozetiniz güncellendi.");
+    toast.success("Yardım talebiniz tamamlandı olarak işaretlendi. Puan ve rozet güncellemesi henüz doğrulanmadı.");
   };
 
   if (sosActive) {
