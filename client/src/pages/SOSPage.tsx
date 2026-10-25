@@ -330,6 +330,7 @@ export default function SOSPage() {
             <CategoryCard icon={Wrench} title="Arıza" desc="Mekanik Arıza" onClick={() => handleSOS("ariza")} />
             <CategoryCard icon={Phone} title="Kaza" desc="Maddi Hasarlı" onClick={() => handleSOS("kaza")} />
             <CategoryCard icon={Truck} title="Çekici" desc="Çekici Desteği" onClick={() => handleSOS("cekici")} />
+            <CategoryCard icon={HelpCircle} title="Diğer" desc="Farklı yardım ihtiyacı" onClick={() => handleSOS("diger")} />
           </div>
         </div>
 
