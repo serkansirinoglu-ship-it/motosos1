@@ -159,7 +159,7 @@ service cloud.firestore {
       allow update: if isAdmin()
         || (isSignedIn()
           && (resource.data.ownerId == request.auth.uid
-            || (request.auth.token.email != null && resource.data.user == request.auth.token.email))
+            || (request.auth.token.email != null && 'user' in resource.data && resource.data.user == request.auth.token.email))
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['active', 'updatedAt'])
           && request.resource.data.active == false
           && request.resource.data.updatedAt == request.time)
@@ -193,7 +193,8 @@ service cloud.firestore {
           get(/databases/$(database)/documents/helpRequests/$(requestId)).data.ownerId == request.auth.uid
           || (request.auth.token.email != null
             && 'user' in get(/databases/$(database)/documents/helpRequests/$(requestId)).data
-            && get(/databases/$(database)/documents/helpRequests/$(requestId)).data.user == request.auth.token.email)
+            && 'user' in get(/databases/$(database)/documents/helpRequests/$(requestId)).data
+              && get(/databases/$(database)/documents/helpRequests/$(requestId)).data.user == request.auth.token.email)
           || (get(/databases/$(database)/documents/helpRequests/$(requestId)).data.helpers is list
             && (request.auth.uid in get(/databases/$(database)/documents/helpRequests/$(requestId)).data.helpers
               || (request.auth.token.email != null
@@ -211,6 +212,7 @@ service cloud.firestore {
           && (
             get(/databases/$(database)/documents/helpRequests/$(requestId)).data.ownerId == request.auth.uid
             || (request.auth.token.email != null
+              && 'user' in get(/databases/$(database)/documents/helpRequests/$(requestId)).data
               && get(/databases/$(database)/documents/helpRequests/$(requestId)).data.user == request.auth.token.email)
             || (get(/databases/$(database)/documents/helpRequests/$(requestId)).data.helpers is list
               && (request.auth.uid in get(/databases/$(database)/documents/helpRequests/$(requestId)).data.helpers
