@@ -42,7 +42,7 @@ export default function MapPage() {
 
   const filterTabs = [
     { id: "all", label: "Tümü", icon: MapPin },
-    { id: "sos", label: "🆘 Aktif Çağrılar", icon: ShieldAlert },
+    { id: "sos", label: "🆘 Yerel Çağrılar", icon: ShieldAlert },
     { id: "usta", label: "🔧 Ustalar", icon: Wrench },
     { id: "cekici", label: "🚚 Çekiciler", icon: Truck },
     { id: "lastikci", label: "🛞 Lastikçiler", icon: Bike },
@@ -103,7 +103,7 @@ export default function MapPage() {
             Bulunan Noktalar: <span className="text-primary font-bold">{filteredBusinesses.length + filteredSOS.length} Hızlı Erişim</span>
           </p>
           <span className="text-[10px] font-bold text-green-400 bg-green-500/10 px-2 py-0.5 rounded-full border border-green-500/20">
-            🟢 Canlı Radar
+            🟢 Yerel Radar
           </span>
         </div>
       </div>
