@@ -24,6 +24,20 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Protect main page from PR changes
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          git fetch --no-tags origin "${{ github.base_ref }}"
+          changed="$(git diff --name-only "origin/${{ github.base_ref }}...HEAD" -- client/src/pages/Home.tsx)"
+          if [ -n "$changed" ]; then
+            echo "::error::Protected main page changed in this PR: $changed"
+            exit 1
+          fi
+          echo "PASS: client/src/pages/Home.tsx is unchanged relative to the PR base."
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
