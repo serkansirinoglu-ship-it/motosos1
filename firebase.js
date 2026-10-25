@@ -214,7 +214,10 @@ export async function updateSOSRequest(id, patch) {
   if (!db || !id) return null;
   try {
     const ref = doc(db, "sosRequests", id);
-    await updateDoc(ref, { ...patch, updatedAt: serverTimestamp() });
+    const safePatch = { ...patch, updatedAt: serverTimestamp() };
+    if (patch?.status === "resolved") safePatch.resolvedAt = serverTimestamp();
+    if (patch?.status === "cancelled") safePatch.cancelledAt = serverTimestamp();
+    await updateDoc(ref, safePatch);
     return true;
   } catch (e) {
     console.error("updateSOSRequest error", e);
