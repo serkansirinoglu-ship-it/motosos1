@@ -165,9 +165,9 @@ service cloud.firestore {
           && request.resource.data.updatedAt == request.time)
         || (isSignedIn()
           && resource.data.active == true
-          && request.auth.token.email != null
           && resource.data.helpers is list
-          && !(request.auth.token.email in resource.data.helpers)
+          && !(request.auth.uid in resource.data.helpers)
+          && (request.auth.token.email == null || !(request.auth.token.email in resource.data.helpers))
           && resource.data.ownerId != request.auth.uid
           && (request.auth.token.email == null || resource.data.user != request.auth.token.email)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['helpers', 'updatedAt'])

@@ -30,10 +30,10 @@ type MessageContextType = {
   helpRequests: HelpRequest[];
   messages: Record<string, Message[]>;
   createHelpRequest: (r: Omit<HelpRequest, "id" | "createdAt" | "active">) => HelpRequest;
-  sendMessage: (requestId: string, text: string, from?: string | null) => Message;
+  sendMessage: (requestId: string, text: string, from?: string | null, fromName?: string) => Message;
   subscribeToMessages: (requestId: string, onUpdate: (arr: Message[]) => void) => (() => void);
   acceptHelp: (requestId: string, helperUid: string) => void;
-  resolveHelp: (requestId: string, helperUid: string) => void;
+  resolveHelp: (requestId: string, helperUid: string, helperEmail?: string | null) => void;
   getTopHelpers: (limit?: number) => {email:string,count:number}[];
   getHelpCount: (email?: string) => number;
 };
@@ -173,9 +173,10 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
   }
 
   // resolve help: credit helper and mark resolved
-  function resolveHelp(requestId: string, helperUid: string) {
+  function resolveHelp(requestId: string, helperUid: string, helperEmail?: string | null) {
 	setHelpRequests((s) => s.map(hr => hr.id === requestId ? { ...hr, resolvedBy: helperUid, resolvedAt: Date.now(), active: false } : hr));
-	incrementHelpCount(helperUid);
+    const statsKey = helperEmail || helperUid;
+	incrementHelpCount(statsKey);
     try {
       void Promise.resolve(
         updateHelpRequestRealtime(requestId, {
@@ -190,9 +191,9 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
       console.warn("Realtime help resolution unavailable; local state retained", error);
     }
 	  // after increment, check thresholds and award badges
-	const newCount = (helpCounts[helperUid] || 0) + 1;
-	if (newCount >= 1) addBadgeToProfile(helperUid, 'Koruyucu Kardeş');
-	if (newCount >= 5) addBadgeToProfile(helperUid, 'Yol Meleği');
+	const newCount = (helpCounts[statsKey] || 0) + 1;
+	if (newCount >= 1) addBadgeToProfile(statsKey, 'Koruyucu Kardeş');
+	if (newCount >= 5) addBadgeToProfile(statsKey, 'Yol Meleği');
   }
 
   // add badge to user's profile based on thresholds

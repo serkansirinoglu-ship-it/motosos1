@@ -70,11 +70,11 @@ export default function ChatPage() {
 
   const handleResolveClick = () => {
     if (!chatId) return;
-    if (!userEmail) {
+    if (!userUid) {
       (window as any).__openAuthModal?.();
       return;
     }
-    resolveHelp(chatId, userUid);
+    resolveHelp(chatId, userUid, user?.email);
     toast.success("Yardım çözüldü olarak işaretlendi! Puan ve rozetiniz güncellendi.");
   };
 
