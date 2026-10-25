@@ -220,6 +220,20 @@ export async function createSOSRequest(data) {
   }
 }
 
+export async function acceptSOSRequest(id) {
+  if (!db || !auth?.currentUser?.uid || !id) return false;
+  try {
+    await updateDoc(doc(db, "sosRequests", id), {
+      acceptedBy: auth.currentUser.uid,
+      updatedAt: serverTimestamp(),
+    });
+    return true;
+  } catch (e) {
+    console.error("acceptSOSRequest error", e);
+    return false;
+  }
+}
+
 export async function updateSOSRequest(id, patch) {
   if (!db || !id) return null;
   try {
