@@ -126,10 +126,10 @@ service cloud.firestore {
       allow delete: if isOwner(uid);
     }
 
-    // Default: deny all writes, allow reads only for public content
+    // Default deny: public access must be granted explicitly by collection rules.
+    // Never make every current and future collection readable through a catch-all.
     match /{document=**} {
-      allow read: if true;
-      allow write: if false;
+      allow read, write: if false;
     }
   }
 }
