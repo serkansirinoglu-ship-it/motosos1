@@ -62,6 +62,19 @@ async function main() {
     console.log("PASS: outsider cannot read inactive SOS");
     await assertSucceeds(getDoc(doc(outsider, "sosRequests", "active-sos")));
     console.log("PASS: signed-in helper can discover active SOS");
+    await assertFails(updateDoc(doc(outsider, "sosRequests", "active-sos"), {
+      status: "resolved", updatedAt: serverTimestamp(),
+    }));
+    await assertSucceeds(updateDoc(doc(owner, "sosRequests", "active-sos"), {
+      status: "cancelled", updatedAt: serverTimestamp(),
+    }));
+    console.log("PASS: only the SOS owner can make an allowed active-to-terminal transition");
+    await assertSucceeds(setDoc(doc(owner, "sosRequests", "valid-sos"), {
+      requesterId: "owner", requesterEmail: "owner@example.test", status: "active",
+      helpType: "repair", latitude: 40, longitude: 29, note: "", acceptedBy: null,
+      createdAt: serverTimestamp(), updatedAt: serverTimestamp(), resolvedAt: null, cancelledAt: null,
+    }));
+    console.log("PASS: owner can create a valid SOS with server timestamps");
 
     await assertSucceeds(getDoc(doc(outsider, "helpRequests", "private-help")));
     console.log("PASS: active help request remains discoverable");
@@ -84,6 +97,12 @@ async function main() {
     }));
     console.log("PASS: accepted helper can read and send chat messages");
 
+    await assertSucceeds(setDoc(doc(owner, "helpRequests", "valid-help"), {
+      title: "Valid help", description: "test", user: "owner@example.test",
+      active: true, helpers: [], resolvedBy: null, resolvedAt: null,
+      createdAt: serverTimestamp(),
+    }));
+    console.log("PASS: owner can create a valid help request");
     await assertFails(setDoc(doc(outsider, "helpRequests", "spoofed-help"), {
       id: "spoofed-help", user: "owner@example.test", title: "spoofed",
       description: "test", active: true, helpers: [], resolvedBy: null, resolvedAt: null,
