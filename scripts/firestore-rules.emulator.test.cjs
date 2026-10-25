@@ -73,7 +73,9 @@ async function main() {
 
     await assertFails(getDoc(doc(outsider, "sosRequests", "private-sos")));
     console.log("PASS: outsider cannot read inactive SOS");
-    await assertSucceeds(getDoc(doc(outsider, "sosRequests", "active-sos")));
+    const publicSOS = await getDoc(doc(outsider, "sosRequests", "active-sos"));
+    assert.equal("requesterEmail" in publicSOS.data(), false);
+    assert.equal("note" in publicSOS.data(), false);
     await assertFails(getDoc(doc(outsider, "sosRequests", "active-sos", "privateDetails", "owner")));
     await assertSucceeds(getDoc(doc(owner, "sosRequests", "active-sos", "privateDetails", "owner")));
     await assertSucceeds(updateDoc(doc(helper, "sosRequests", "active-sos"), {
