@@ -125,7 +125,13 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
     // permission/network rejections unless the returned promise is observed.
     try {
       const pending = createHelpRequestRealtime(r);
-      void Promise.resolve(pending).catch((error) => {
+      void Promise.resolve(pending).then((result) => {
+        if (result) return;
+        console.warn("Realtime help request unavailable; keeping a local copy");
+        setHelpRequests((current) =>
+          current.some((item) => item.id === hr.id) ? current : [hr, ...current]
+        );
+      }).catch((error) => {
         console.warn("Realtime help request failed; keeping a local copy", error);
         setHelpRequests((current) =>
           current.some((item) => item.id === hr.id) ? current : [hr, ...current]
@@ -208,7 +214,11 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const pending = sendMessageRealtime(requestId, msg);
-      void Promise.resolve(pending).catch((error) => {
+      void Promise.resolve(pending).then((result) => {
+        if (result) return;
+        console.warn("Realtime message unavailable; keeping a local copy");
+        keepLocal();
+      }).catch((error) => {
         console.warn("Realtime message failed; keeping a local copy", error);
         keepLocal();
       });
