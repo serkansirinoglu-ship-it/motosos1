@@ -118,7 +118,8 @@ service cloud.firestore {
         allow read: if isAdmin()
           || (isSignedIn() && (
             get(/databases/$(database)/documents/sosRequests/$(sosId)).data.requesterId == request.auth.uid
-            || get(/databases/$(database)/documents/sosRequests/$(sosId)).data.acceptedBy == request.auth.uid
+            || (get(/databases/$(database)/documents/sosRequests/$(sosId)).data.status == 'active'
+              && get(/databases/$(database)/documents/sosRequests/$(sosId)).data.acceptedBy == request.auth.uid)
           ));
         allow update, delete: if isAdmin();
       }

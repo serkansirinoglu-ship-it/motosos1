@@ -92,7 +92,9 @@ async function main() {
     await assertSucceeds(updateDoc(doc(owner, "sosRequests", "active-sos"), {
       status: "cancelled", cancelledAt: serverTimestamp(), updatedAt: serverTimestamp(),
     }));
-    console.log("PASS: only the SOS owner can make an allowed active-to-terminal transition");
+    await assertFails(getDoc(doc(helper, "sosRequests", "active-sos", "privateDetails", "owner")));
+    await assertSucceeds(getDoc(doc(owner, "sosRequests", "active-sos", "privateDetails", "owner")));
+    console.log("PASS: only the SOS owner can make an allowed active-to-terminal transition; helper loses exact-location access after closure");
     const sosBatch = writeBatch(owner);
     sosBatch.set(doc(owner, "sosRequests", "valid-sos"), {
       requesterId: "owner", status: "active", helpType: "ariza",
