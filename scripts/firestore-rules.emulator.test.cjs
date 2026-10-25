@@ -37,7 +37,12 @@ async function main() {
         requesterId: "owner", requesterEmail: "owner@example.test", status: "resolved",
         helpType: "repair", latitude: 40, longitude: 29,
       });
-      await setDoc(doc(db, "helpRequests", "private-help"), {
+      await setDoc(doc(db, "sosRequests", "active-sos"), {
+        requesterId: "owner", requesterEmail: "owner@example.test", status: "active",
+        helpType: "repair", latitude: 40, longitude: 29, note: "", acceptedBy: null,
+        createdAt: new Date(), updatedAt: new Date(), resolvedAt: null, cancelledAt: null,
+      });
+      await setDoc(doc(db, "helpRequests", "private-help"),
         id: "private-help", user: "owner@example.test", title: "Private help",
         description: "test fixture", active: true, helpers: [],
       });
@@ -56,7 +61,10 @@ async function main() {
     const owner = env.authenticatedContext("owner", { email: "owner@example.test" }).firestore();
 
     // These cases intentionally reproduce the currently documented weaknesses.
-    await check("signed-in outsider reads another user's SOS", getDoc(doc(outsider, "sosRequests", "private-sos")), true);
+    await assertFails(getDoc(doc(outsider, "sosRequests", "private-sos")));
+    console.log("DENIED as expected: signed-in outsider reads an inactive SOS");
+    await assertSucceeds(getDoc(doc(outsider, "sosRequests", "active-sos")));
+    console.log("ALLOWED as expected: signed-in helper reads an active SOS");
     await check("signed-in outsider reads another user's help request", getDoc(doc(outsider, "helpRequests", "private-help")), true);
     await check("signed-in outsider reads another request's message", getDoc(doc(outsider, "helpRequests", "private-help", "messages", "seed")), true);
     await check("signed-in outsider creates a message in another request", setDoc(doc(outsider, "helpRequests", "private-help", "messages", "outsider-message"), {
@@ -65,7 +73,10 @@ async function main() {
     await check("signed-in outsider creates a help request claiming another user", setDoc(doc(outsider, "helpRequests", "spoofed-help"), {
       id: "spoofed-help", user: "owner@example.test", title: "spoofed", description: "test", active: true,
     }), true);
-    await check("profile owner edits server-controlled points", updateDoc(doc(owner, "users", "owner"), { points: 999999 }), true);
+    await assertFails(updateDoc(doc(owner, "users", "owner"), { points: 999999, updatedAt: new Date() }));
+    console.log("DENIED as expected: profile owner edits server-controlled points");
+    await assertSucceeds(updateDoc(doc(owner, "users", "owner"), { displayName: "Owner Updated", updatedAt: new Date() }));
+    console.log("ALLOWED as expected: profile owner edits an approved profile field");
     await assertFails(getDoc(doc(anonymous, "internalPrivate", "secret")));
     console.log("DENIED as expected: anonymous user reads an unmatched private collection");
 
