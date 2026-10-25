@@ -80,23 +80,77 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Help requests: authenticated users can create/read; owner can update/delete
+    // Active help requests are discoverable; closed requests are limited to owner/helpers.
     match /helpRequests/{requestId} {
-      allow create: if isSignedIn();
-      allow read: if isSignedIn();
-      allow update: if isSignedIn()
-        && (
-          resource.data.user == request.auth.token.email
-          || isAdmin()
-        );
+      allow create: if isSignedIn()
+        && request.resource.data.keys().hasOnly([
+          'title', 'description', 'user', 'lat', 'lng', 'createdAt',
+          'active', 'helpers', 'resolvedBy', 'resolvedAt'
+        ])
+        && request.resource.data.user == request.auth.token.email
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 120
+        && request.resource.data.description is string
+        && request.resource.data.description.size() <= 2000
+        && request.resource.data.active == true
+        && request.resource.data.helpers is list
+        && request.resource.data.helpers.size() == 0
+        && request.resource.data.resolvedBy == null
+        && request.resource.data.resolvedAt == null
+        && request.resource.data.createdAt == request.time
+        && (!('lat' in request.resource.data) || (request.resource.data.lat is number && request.resource.data.lat >= -90 && request.resource.data.lat <= 90))
+        && (!('lng' in request.resource.data) || (request.resource.data.lng is number && request.resource.data.lng >= -180 && request.resource.data.lng <= 180));
+      allow read: if isAdmin() || (isSignedIn() && (
+        resource.data.active == true
+        || resource.data.user == request.auth.token.email
+        || (request.auth.token.email != null && resource.data.helpers is list && request.auth.token.email in resource.data.helpers)
+      ));
+      allow update: if isAdmin()
+        || (isSignedIn()
+          && resource.data.user == request.auth.token.email
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['active', 'updatedAt'])
+          && request.resource.data.active == false)
+        || (isSignedIn()
+          && resource.data.active == true
+          && request.auth.token.email != null
+          && !(request.auth.token.email in resource.data.helpers)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['helpers'])
+          && request.resource.data.helpers is list
+          && request.resource.data.helpers.hasAll(resource.data.helpers)
+          && request.resource.data.helpers.size() == resource.data.helpers.size() + 1
+          && request.auth.token.email in request.resource.data.helpers)
+        || (isSignedIn()
+          && request.auth.token.email != null
+          && request.auth.token.email in resource.data.helpers
+          && resource.data.active == true
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['active', 'resolvedBy', 'resolvedAt', 'updatedAt'])
+          && request.resource.data.active == false
+          && request.resource.data.resolvedBy == request.auth.token.email
+          && request.resource.data.resolvedAt == request.time);
       allow delete: if isAdmin();
 
-      // Messages subcollection: authenticated users can read/create
+      // Only the request owner or a listed helper can read/send messages in that request.
       match /messages/{messageId} {
-        allow read: if isSignedIn();
-        allow create: if isSignedIn();
-        allow update: if isAdmin();
-        allow delete: if isAdmin();
+        allow read: if isAdmin() || (isSignedIn() && request.auth.token.email != null && (
+          get(/databases/$(database)/documents/helpRequests/$(requestId)).data.user == request.auth.token.email
+          || (get(/databases/$(database)/documents/helpRequests/$(requestId)).data.helpers is list
+            && request.auth.token.email in get(/databases/$(database)/documents/helpRequests/$(requestId)).data.helpers)
+        ));
+        allow create: if isAdmin() || (isSignedIn()
+          && request.auth.token.email != null
+          && request.resource.data.keys().hasOnly(['id', 'from', 'text', 'ts'])
+          && request.resource.data.from == request.auth.token.email
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 2000
+          && request.resource.data.ts == request.time
+          && (
+            get(/databases/$(database)/documents/helpRequests/$(requestId)).data.user == request.auth.token.email
+            || (get(/databases/$(database)/documents/helpRequests/$(requestId)).data.helpers is list
+              && request.auth.token.email in get(/databases/$(database)/documents/helpRequests/$(requestId)).data.helpers)
+          ));
+        allow update, delete: if isAdmin();
       }
     }
 
