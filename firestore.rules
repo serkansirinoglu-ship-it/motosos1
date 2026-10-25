@@ -115,6 +115,17 @@ service cloud.firestore {
         );
     }
 
+    // Online presence: only the authenticated owner can maintain their minimal heartbeat.
+    // Public read is limited to uid + lastSeen fields so the client can display an aggregate count.
+    match /presence/{uid} {
+      allow read: if true;
+      allow create, update: if isOwner(uid)
+        && request.resource.data.keys().hasOnly(['uid', 'lastSeen'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.lastSeen == request.time;
+      allow delete: if isOwner(uid);
+    }
+
     // Default: deny all writes, allow reads only for public content
     match /{document=**} {
       allow read: if true;
