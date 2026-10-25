@@ -45,6 +45,13 @@ for (const file of files) {
   }
 }
 
+const devRules = readFileSync(new URL("../firestore.rules", import.meta.url), "utf8");
+const prodRules = readFileSync(new URL("../firestore.prod.rules", import.meta.url), "utf8");
+if (devRules !== prodRules) {
+  failures += 1;
+  console.error("FAIL [rules-drift] firestore.rules and firestore.prod.rules must stay aligned.");
+}
+
 if (failures > 0 && process.env.STRICT_FIRESTORE_RULES === "1") {
   console.error(`\nStrict Firestore security gate failed with ${failures} finding(s). See docs/FIRESTORE_SECURITY_AUDIT.md. Rules were not deployed.`);
   process.exitCode = 1;
