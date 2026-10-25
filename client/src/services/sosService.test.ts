@@ -53,3 +53,25 @@ describe("SOSService in-memory request lifecycle", () => {
     expect(sosService.updateStatus("missing-sos-id", "iptal_edildi")).toBe(false);
   });
 });
+
+describe("SOS category and status coverage", () => {
+  it("provides a label and description for all seven supported help categories", async () => {
+    const { CATEGORY_LABELS } = await import("./sosService");
+    const expected = ["lastik", "aku", "yakit", "ariza", "kaza", "cekici", "diger"];
+    expect(Object.keys(CATEGORY_LABELS).sort()).toEqual(expected.sort());
+    for (const category of expected) {
+      expect(CATEGORY_LABELS[category as SOSHelpCategory].label.trim()).not.toBe("");
+      expect(CATEGORY_LABELS[category as SOSHelpCategory].desc.trim()).not.toBe("");
+    }
+  });
+
+  it("provides a visible label and style for every SOS status", async () => {
+    const { STATUS_LABELS } = await import("./sosService");
+    const expected = ["bekleniyor", "yanit_geliyor", "yardim_bulundu", "tamamlandi", "iptal_edildi"];
+    expect(Object.keys(STATUS_LABELS).sort()).toEqual(expected.sort());
+    for (const status of expected) {
+      expect(STATUS_LABELS[status as keyof typeof STATUS_LABELS].label.trim()).not.toBe("");
+      expect(STATUS_LABELS[status as keyof typeof STATUS_LABELS].color.trim()).not.toBe("");
+    }
+  });
+});
