@@ -45,3 +45,6 @@ jobs:
 
       - name: Production build (does not deploy)
         run: pnpm build
+
+      - name: Firestore rules static security gate
+        run: pnpm security:rules
