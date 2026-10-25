@@ -118,6 +118,41 @@ async function main() {
     await assertSucceeds(sosBatch.commit());
     console.log("PASS: owner can create a valid SOS with server timestamps");
 
+    const invalidNoteBatch = writeBatch(owner);
+    invalidNoteBatch.set(doc(owner, "sosRequests", "invalid-note-sos"), {
+      requesterId: "owner", status: "active", helpType: "ariza",
+      latitude: 40.12, longitude: 29.54, acceptedBy: null,
+      createdAt: serverTimestamp(), updatedAt: serverTimestamp(), resolvedAt: null, cancelledAt: null,
+    });
+    invalidNoteBatch.set(doc(owner, "sosRequests", "invalid-note-sos", "privateDetails", "owner"), {
+      requesterEmail: "owner@example.test", latitude: 40.12345, longitude: 29.54321,
+      note: "x".repeat(1001), createdAt: serverTimestamp(),
+    });
+    await assertFails(invalidNoteBatch.commit());
+    await assertFails(getDoc(doc(owner, "sosRequests", "invalid-note-sos")));
+    console.log("PASS: SOS batch rejects private notes over 1000 characters atomically");
+
+    const spoofedEmailBatch = writeBatch(owner);
+    spoofedEmailBatch.set(doc(owner, "sosRequests", "spoofed-email-sos"), {
+      requesterId: "owner", status: "active", helpType: "ariza",
+      latitude: 40.12, longitude: 29.54, acceptedBy: null,
+      createdAt: serverTimestamp(), updatedAt: serverTimestamp(), resolvedAt: null, cancelledAt: null,
+    });
+    spoofedEmailBatch.set(doc(owner, "sosRequests", "spoofed-email-sos", "privateDetails", "owner"), {
+      requesterEmail: "someone-else@example.test", latitude: 40.12345, longitude: 29.54321,
+      note: "Exact meeting point", createdAt: serverTimestamp(),
+    });
+    await assertFails(spoofedEmailBatch.commit());
+    await assertFails(getDoc(doc(owner, "sosRequests", "spoofed-email-sos")));
+    console.log("PASS: SOS batch rejects mismatched contact email without partial parent creation");
+
+    await assertFails(setDoc(doc(owner, "sosRequests", "invalid-coordinate-sos"), {
+      requesterId: "owner", status: "active", helpType: "ariza",
+      latitude: 91, longitude: 29.54, acceptedBy: null,
+      createdAt: serverTimestamp(), updatedAt: serverTimestamp(), resolvedAt: null, cancelledAt: null,
+    }));
+    console.log("PASS: SOS creation rejects out-of-range coordinates");
+
     const publicHelp = await getDoc(doc(outsider, "helpRequests", "private-help"));
     assert.equal("user" in publicHelp.data(), false);
     assert.equal(publicHelp.data().ownerId, "owner");
