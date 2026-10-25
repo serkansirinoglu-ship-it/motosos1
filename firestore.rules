@@ -48,16 +48,12 @@ service cloud.firestore {
     match /sosRequests/{sosId} {
       allow create: if isSignedIn()
         && request.resource.data.keys().hasOnly([
-          'requesterId', 'requesterEmail', 'helpType', 'latitude', 'longitude',
-          'note', 'status', 'acceptedBy', 'createdAt', 'updatedAt',
-          'resolvedAt', 'cancelledAt'
+          'requesterId', 'helpType', 'latitude', 'longitude', 'status',
+          'acceptedBy', 'createdAt', 'updatedAt', 'resolvedAt', 'cancelledAt'
         ])
         && request.resource.data.requesterId == request.auth.uid
-        && request.resource.data.requesterEmail == request.auth.token.email
         && request.resource.data.status == 'active'
         && request.resource.data.helpType in ['lastik', 'aku', 'yakit', 'ariza', 'kaza', 'cekici', 'diger', 'other']
-        && request.resource.data.note is string
-        && request.resource.data.note.size() <= 1000
         && request.resource.data.acceptedBy == null
         && request.resource.data.resolvedAt == null
         && request.resource.data.cancelledAt == null
@@ -94,6 +90,28 @@ service cloud.firestore {
         )
       );
       allow delete: if isAdmin();
+
+      // Exact GPS coordinates, email, and free-text notes are never exposed with public active SOS.
+      match /privateDetails/{detailId} {
+        allow create: if isSignedIn()
+          && detailId == 'owner'
+          && getAfter(/databases/$(database)/documents/sosRequests/$(sosId)).data.requesterId == request.auth.uid
+          && request.resource.data.keys().hasOnly(['requesterEmail', 'latitude', 'longitude', 'note', 'createdAt'])
+          && request.resource.data.requesterEmail == request.auth.token.email
+          && request.resource.data.latitude is number
+          && request.resource.data.latitude >= -90
+          && request.resource.data.latitude <= 90
+          && request.resource.data.longitude is number
+          && request.resource.data.longitude >= -180
+          && request.resource.data.longitude <= 180
+          && request.resource.data.note is string
+          && request.resource.data.note.size() <= 1000
+          && request.resource.data.createdAt == request.time;
+        allow read: if isAdmin()
+          || (isSignedIn()
+            && get(/databases/$(database)/documents/sosRequests/$(sosId)).data.requesterId == request.auth.uid);
+        allow update, delete: if isAdmin();
+      }
     }
 
     // Active help requests are discoverable; closed requests are limited to owner/helpers.
