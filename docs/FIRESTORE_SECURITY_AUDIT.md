@@ -2,7 +2,7 @@
 
 Date: 2026-10-25  
 Scope: source review of `firestore.rules`, `firestore.prod.rules`, and current client calls.  
-Status: restrictive rules changes and emulator authorization tests are implemented on the audit branch. PR CI passed on commit `bbc66dc5c10e5584609caf2b64f8f172c36a9283`, including TypeScript, unit tests, production build, strict static gate, and emulator tests for both rule files. No rules have been published to Firebase.
+Status: restrictive rules changes, strict emulator authorization tests, and offline migration-assessment tooling are implemented on the isolated audit branch. The latest recorded PR and push CI runs for commit `fe65d1e2f0a4110108a0fd8bbce070fac678f1e8` completed successfully, including TypeScript, unit tests, production build, static audit, strict static gate, and emulator authorization tests for both rule files. No rules have been published to Firebase.
 
 ## Findings and changes on the audit branch
 
@@ -21,7 +21,7 @@ The initial emulator characterization confirmed permissive cross-user access and
 
 ## Remaining release gates
 
-Rules are enforced server-side, so the client query/state transitions were updated alongside the rules. The test suite must pass against the dedicated demo Firestore Emulator for both rule files before this branch is considered validated. The latest exact-location privacy changes are awaiting fresh CI confirmation. Production publishing remains a separate release decision and is not part of this work.
+Rules are enforced server-side, so the client query/state transitions were updated alongside the rules. The test suite must pass against the dedicated demo Firestore Emulator for both rule files before this branch is considered validated. The latest audited branch commit has passing CI, including the non-production emulator authorization suite. This validates the checked-in branch only; it does not mean the rules are deployed. Production publishing remains a separate release decision and is not part of this work.
 
 ## Required emulator authorization test matrix
 
@@ -104,3 +104,12 @@ A local-only assessment tool has been added at `scripts/legacy-help-migration-pl
 6. Only after verified migration, consider removing email-based compatibility branches from both rules files. Do not publish rules as part of this preparatory change.
 
 No export, identity mapping, Firestore write, production data access, or rules publication was performed as part of this commit.
+
+
+## Legacy identity migration assessment (offline only)
+
+The branch includes `scripts/legacy-help-migration-plan.mjs` and unit tests. It accepts a local export JSON plus an explicit email-to-UID mapping JSON, and emits aggregate counts on the command line. It never initializes Firebase, connects to a project, or writes records. It blocks duplicate document IDs, missing or conflicting mappings, malformed identity lists, and invalid identity shapes. The function-level plan contains proposed identities for review; do not share that detailed output because it can include document IDs and UIDs.
+
+`readyForReview` is only a static identity-mapping result, not a migration payload, data-integrity guarantee, or authorization to migrate. Before any migration: obtain an authorized export and authoritative UID mapping; review a redacted assessment; validate all field transformations against the actual schema; test idempotency, backups, rollback and bounded batches in an isolated environment; then obtain a separate explicit production migration approval. Never put raw exports or mapping files into Git or CI artifacts. Do not remove legacy rule compatibility until migration completion is independently verified.
+
+The planner's UID-shape checks are intentionally conservative and must be reconciled against the actual Firebase Auth UID format and project data before use on a real export. No production export, mapping, migration, or user-data mutation has been performed.
