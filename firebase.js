@@ -246,7 +246,7 @@ export function subscribeHelpRequestsRealtime(onUpdate) {
   }
 
   try {
-    const q = query(collection(db, "helpRequests"), orderBy("createdAt", "desc"));
+    const q = query(collection(db, "helpRequests"), where("active", "==", true), orderBy("createdAt", "desc"));
     return onSnapshot(q, (snap) => {
       const arr = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       onUpdate(arr);
@@ -306,7 +306,12 @@ export function updateHelpRequestRealtime(id, patch) {
   if (!db) return null;
   try {
     const dref = doc(db, "helpRequests", id);
-    return updateDoc(dref, patch);
+    const safePatch = { ...patch, updatedAt: serverTimestamp() };
+    // Server timestamps are required by the Firestore authorization rules.
+    if (patch?.active === false && patch?.resolvedBy) {
+      safePatch.resolvedAt = serverTimestamp();
+    }
+    return updateDoc(dref, safePatch);
   } catch (e) {
     console.error("updateHelpRequestRealtime error", e);
     return null;
