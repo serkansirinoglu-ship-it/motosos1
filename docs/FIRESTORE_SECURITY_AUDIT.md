@@ -132,3 +132,14 @@ Non-admin access to SOS private details is restricted to the designated `private
 ## SOS private-details ownership regression
 
 The emulator suite also verifies that a different authenticated rider cannot create `privateDetails/owner` under an SOS request they do not own. This checks the atomic parent/subdocument ownership binding, not just read restrictions.
+## Public content mutation hardening — 2026-10-26
+
+The strict Firestore rules now constrain the public community-post and marketplace-listing schemas and owner-editable fields:
+
+- Community-post creation uses an explicit field allowlist and validates content/city and optional text/list fields. Owners can edit only content, city, image, and tag; they cannot rewrite author identity, likes/comments arrays, or creation time. Admins retain moderation access.
+- Listing creation uses an explicit field allowlist and validates title, category, non-negative numeric price, description, city, and optional contact/image text. Sellers cannot self-assign the featured/promotion flag or rewrite seller identity/contact email and creation time through ordinary updates. Editable listing content is allowlisted.
+- Event writes now use a bounded field allowlist and validate title and optional descriptive fields. Organizer identity and creation timestamp are immutable to non-admins; event deletion remains admin-only.
+- Emulator regression tests cover oversized community content, extra privilege fields, unauthorized likes/creation-time mutation, self-promotion, seller email changes, negative prices, and owner-field spoofing.
+- Both `firestore.rules` and `firestore.prod.rules` are kept byte-for-byte identical. The application currently uses local in-memory community and marketplace services rather than a Firestore-backed persistence layer for those screens; these rules are defensive server-side gates for any authorized future integration and do not claim that those screens persist remotely.
+
+These changes were validated by the strict emulator suite against both rule files, plus TypeScript, unit tests, production build, static security analysis, and the protected-homepage CI guard. No deployment or production data change was performed.
