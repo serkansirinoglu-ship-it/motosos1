@@ -64,3 +64,5 @@ The static scanner has two modes:
 This harness is transitional by design. It does not justify changing or publishing production rules; both rules files remain unchanged.
 
 The emulator configuration is explicitly checked into `firebase.json` and points the local Firestore Emulator at `firestore.rules`. This avoids the dangerous Firebase CLI default of allowing all emulator reads/writes when no rules path is configured. The emulator characterization must not be considered valid unless startup logs confirm the configured rules file is loaded.
+
+The emulator characterization is now run twice in the same CI step: once with `firestore.rules`, then with `FIRESTORE_RULES_FILE=firestore.prod.rules`. Both are supplied directly to `initializeTestEnvironment`; no production Firebase project is used.
