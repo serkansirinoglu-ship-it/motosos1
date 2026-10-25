@@ -2,25 +2,22 @@
 
 Date: 2026-10-25  
 Scope: source review of `firestore.rules`, `firestore.prod.rules`, and current client calls.  
-Status: findings recorded; no Firebase rules have been published or changed by this audit.
+Status: restrictive rules changes and emulator authorization tests are implemented on the audit branch; CI verification is pending. No rules have been published to Firebase.
 
-## Confirmed risks in the checked-in rules
+## Findings and changes on the audit branch
 
-The checked-in `firestore.rules` and `firestore.prod.rules` currently contain the same broad access patterns:
+The initial emulator characterization confirmed permissive cross-user access and exposed an additional issue: the catch-all public-read rule overrode narrower private-profile rules because matching Firestore `allow` statements are combined with OR semantics. The branch now addresses these confirmed paths:
 
-1. **SOS reads:** every signed-in user can read every document in `sosRequests`, including inactive requests and requester details.
-2. **SOS updates:** the requester can update any fields of their request. The rules do not restrict allowed changed fields or state transitions.
-3. **Help request reads:** every signed-in user can read every `helpRequests` document.
-4. **Message subcollection:** every signed-in user can read and create messages under every help request; the rules do not verify that the user owns the request or is an accepted helper.
-5. **Help request creation:** any signed-in user can create a request without validating owner identity, required fields, or data shape.
-6. **Profile updates:** the owner can update any fields in `users/{uid}`, including counters, points, badges, or other fields that should be server-controlled.
-7. **Presence reads:** `presence` is publicly readable. The documents are intended to contain only `uid` and `lastSeen`, but public access should be reviewed against the actual online-count feature and privacy requirements.
+1. **Default access:** unmatched collections deny reads and writes. Public catalog/content collections retain explicit public-read rules.
+2. **SOS requests:** authenticated riders can discover active SOS calls; inactive requests are limited to their owner/admin. Owner updates are limited to active-to-cancelled/resolved transitions and the status/timestamp fields.
+3. **Profiles:** create validates UID/email identity, zero-valued server-controlled counters, empty badges, and server timestamps. Updates are restricted to profile-edit fields; points, counters, badges, identity, and creation time cannot be changed by the owner.
+4. **Help requests:** creation validates the authenticated email as owner and validates shape/coordinates. The realtime board query now filters to active requests. Closed requests are limited to owner/accepted helpers/admin.
+5. **Chat messages:** read/send access is limited to the request owner or accepted helpers. Message sender must match the authenticated email; text length and server timestamp are validated.
+6. **Presence:** public read remains intentional for the online-count feature, with writes limited to the owner and documents restricted to `uid`/`lastSeen`. Revisit if the UI starts exposing anything beyond this minimal heartbeat.
 
-## Why rules were not changed in this commit
+## Remaining release gates
 
-Rules are enforced server-side and a client-only change cannot secure the database. A premature restrictive rule can also break helper discovery, request acceptance, message subscriptions, or account flows. The checked-in code uses different identifiers and access patterns in SOS and legacy help-request flows, so those relationships must be mapped before choosing predicates.
-
-No rule change should be published until the following tests run against a dedicated Firebase Emulator project—not production—and the actual Firebase project/rules deployment target is confirmed.
+Rules are enforced server-side, so the client query/state transitions were updated alongside the rules. The test suite must pass against the dedicated demo Firestore Emulator for both rule files before this branch is considered validated. CI has not yet confirmed the latest changes. Production publishing remains a separate release decision and is not part of this work.
 
 ## Required emulator authorization test matrix
 
@@ -47,7 +44,7 @@ No rule change should be published until the following tests run against a dedic
 ## Release safety
 
 - No production deployment was performed.
-- No Firestore rules were published or modified in this audit.
+- Firestore rules were modified on the isolated audit branch only; no rules were published to Firebase.
 - No user data or Firebase secrets were accessed or changed.
 - The isolated branch and pull request remain the review surface.
 
@@ -61,7 +58,7 @@ The static scanner has two modes:
 - `pnpm security:rules`: reports current findings without blocking baseline CI; this is an audit report, **not** a security pass.
 - `pnpm security:rules:strict`: fails while the known risky patterns remain. Do not treat the branch as release-ready until strict static checks and strict emulator authorization tests pass.
 
-This harness is transitional by design. It does not justify changing or publishing production rules; both rules files remain unchanged.
+This harness is transitional by design. It verifies the checked-in rules only and does not publish them to Firebase. Development and production rule files are kept aligned on the branch.
 
 The emulator configuration is explicitly checked into `firebase.json` and points the local Firestore Emulator at `firestore.rules`. This avoids the dangerous Firebase CLI default of allowing all emulator reads/writes when no rules path is configured. The emulator characterization must not be considered valid unless startup logs confirm the configured rules file is loaded.
 
