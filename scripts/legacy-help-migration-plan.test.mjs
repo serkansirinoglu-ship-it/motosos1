@@ -25,6 +25,15 @@ describe("planLegacyHelpMigration", () => {
     expect(result.summary.reasonCounts.helper_uid_mapping_missing).toBe(1);
   });
 
+  it("blocks a valid UID mapping when a normalized duplicate has a malformed UID", () => {
+    const result = planLegacyHelpMigration([
+      { id: "conflicted-owner", data: { user: "owner@example.test", helpers: [] } },
+    ], { "owner@example.test": "uid/with/slash", "OWNER@example.test": "valid-uid" });
+    expect(result.summary.blocked).toBe(1);
+    expect(result.items[0].reasonCodes).toContain("owner_uid_mapping_ambiguous");
+    expect(result.items[0].proposedIdentityShape).toBeNull();
+  });
+
   it("does not treat already-modern records as legacy work", () => {
     const result = planLegacyHelpMigration([
       { id: "modern", data: { ownerId: "owner-uid", helpers: ["helper-uid"] } },
