@@ -47,7 +47,7 @@ export default function CommunityPage() {
       tag,
     });
 
-    toast.success("Gönderiniz toplulukta paylaşıldı!");
+    toast.success("Gönderi bu oturumda yerel olarak kaydedildi; diğer kullanıcılara yayınlanmadı.");
     setContent("");
     setImage("");
     setIsNewPostOpen(false);
@@ -84,6 +84,14 @@ export default function CommunityPage() {
     <div className="min-h-screen bg-asphalt pb-8">
       <Header />
 
+      <div className="px-4 pt-3 max-w-lg mx-auto">
+        <Card className="bg-amber-500/10 border-amber-500/30 p-3 rounded-xl">
+          <p className="text-[11px] text-amber-200 leading-relaxed">
+            Bilgi: Gönderiler, beğeniler ve yorumlar şu anda yalnızca bu oturumda tutulur; diğer kullanıcılara yayınlanmaz ve kalıcı olarak senkronize edilmez.
+          </p>
+        </Card>
+      </div>
+
       {/* Main Tabs */}
       <div className="px-4 pt-4 max-w-lg mx-auto flex items-center justify-between">
         <div className="flex gap-2">
@@ -105,7 +113,7 @@ export default function CommunityPage() {
                 : "bg-card-gradient border-border text-muted-foreground"
             }`}
           >
-            👥 81 İl Grupları
+            👥 Şehir Grupları
           </button>
         </div>
 
