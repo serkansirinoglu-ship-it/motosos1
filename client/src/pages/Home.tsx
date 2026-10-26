@@ -20,7 +20,6 @@ import Leaderboard from "@/components/Leaderboard";
 import { sosService, SOSRequestItem } from "@/services/sosService";
 import { marketplaceService, ListingItem } from "@/services/marketplaceService";
 import EmergencyWarning from "@/components/EmergencyWarning";
-import HomeEngagementSection from "@/components/HomeEngagementSection";
 
 export default function Home() {
   const [activeSOSList, setActiveSOSList] = useState<SOSRequestItem[]>([]);
@@ -195,9 +194,6 @@ export default function Home() {
           ))}
         </div>
       </section>
-
-      {/* Engagement section: appended below existing home content only. */}
-      <HomeEngagementSection />
 
     </div>
   );
