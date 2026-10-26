@@ -198,10 +198,14 @@ service cloud.firestore {
           request.auth.uid in resource.data.helpers
           || (request.auth.token.email != null && request.auth.token.email in resource.data.helpers)
         ))
-        || (resource.data.active == true && resource.data.keys().hasOnly([
-          'id', 'title', 'description', 'ownerId', 'lat', 'lng', 'createdAt',
-          'active', 'helpers', 'resolvedBy', 'resolvedAt', 'updatedAt'
-        ]))
+        || (resource.data.active == true
+          // Public discovery is limited to unclaimed requests with no legacy email-bearing helper identities.
+          && resource.data.helpers is list
+          && resource.data.helpers.size() == 0
+          && resource.data.keys().hasOnly([
+            'id', 'title', 'description', 'ownerId', 'lat', 'lng', 'createdAt',
+            'active', 'helpers', 'resolvedBy', 'resolvedAt', 'updatedAt'
+          ]))
       ));
       allow update: if isAdmin()
         || (isSignedIn()
