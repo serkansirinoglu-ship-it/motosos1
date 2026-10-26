@@ -59,6 +59,10 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
   const statsStorageKey = scopedStorageKey(STATS_STORAGE_KEY, uid);
   const profilesStorageKey = scopedStorageKey(PROFILES_STORAGE_KEY, uid);
   const [cacheForKey, setCacheForKey] = useState<string | null>(null);
+  // Realtime callbacks can arrive after an account switch; gate them against the
+  // currently rendered identity, not the identity captured by an old listener.
+  const identityRef = useRef({ uid, storageKey, authReady, cacheForKey });
+  identityRef.current = { uid, storageKey, authReady, cacheForKey };
   const [helpRequests, setHelpRequests] = useState<HelpRequest[]>([]);
   const localOnlyHelpRequestIds = useRef(new Set<string>());
   const [messages, setMessages] = useState<Record<string, Message[]>>({});
@@ -129,6 +133,8 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
 	let unsub = null;
 	try {
 	  unsub = subscribeHelpRequestsRealtime((arr: any[]) => {
+        const activeIdentity = identityRef.current;
+        if (!activeIdentity.authReady || activeIdentity.uid !== uid || activeIdentity.storageKey !== storageKey) return;
 		// Map Firestore timestamp to number if necessary
 		const normalized = arr.map((d: any) => ({
 		  ...d,
@@ -361,10 +367,19 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
 
   // Keep this callback stable so consumers do not churn Firestore listeners on provider renders.
   const subscribeToMessages = useCallback((requestId: string, onUpdate: (arr: Message[]) => void) => {
-    // Deliver the latest cached conversation immediately, including local-only messages.
-    onUpdate([...(messagesRef.current[requestId] || [])].sort((a, b) => a.ts - b.ts));
+    const identityAtSubscribe = identityRef.current;
+    const subscriptionUid = identityAtSubscribe.uid;
+    const subscriptionKey = identityAtSubscribe.storageKey;
+    const canReadCache = identityAtSubscribe.authReady &&
+      identityAtSubscribe.cacheForKey === identityAtSubscribe.storageKey;
+    // Never deliver the previous account's in-memory cache during auth transitions.
+    const initialMessages = canReadCache ? (messagesRef.current[requestId] || []) : [];
+    onUpdate([...initialMessages].sort((a, b) => a.ts - b.ts));
     try {
       return subscribeMessagesRealtime(requestId, (arr: any[]) => {
+        const activeIdentity = identityRef.current;
+        if (!activeIdentity.authReady || activeIdentity.uid !== subscriptionUid ||
+          activeIdentity.storageKey !== subscriptionKey) return;
         const normalized = arr.map((d) => ({ ...d, ts: d.ts && d.ts.toMillis ? d.ts.toMillis() : d.ts })) as Message[];
         const remoteIds = new Set(normalized.map((item) => item.id));
         const localOnly = (localOnlyMessagesByRequest.current.get(requestId) || [])
