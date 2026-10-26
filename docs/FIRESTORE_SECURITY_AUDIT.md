@@ -390,3 +390,14 @@ Strengthened the SOS terminal-action guard with a React ref in addition to the v
 ## Local-only help request retention — 2026-10-26
 
 Updated `MessageContext` to track help requests whose Firestore write returned no result or failed. Realtime snapshots now merge those explicitly local-only fallback entries with remote results instead of replacing the entire local list. This prevents a later successful/partial realtime snapshot from silently making a local-only request disappear from the current session. Remote records remain sourced from Firestore; this does not claim local-only records are server-persisted and does not alter Firestore rules or production data. Latest CI for the previous head is still pending; this change requires CI on its own head.
+
+
+## MotoGuard engagement and profile reliability pass — 2026-10-26
+
+Repository review confirmed the existing App.tsx already mounts HomeEngagementSection beneath the protected Home.tsx; the homepage file was therefore not edited. The engagement section previously showed one fixed safety question and lost completion state on refresh. It now rotates through five safety-focused questions by local calendar day and stores that day's answer/completion in browser storage. This is a lightweight engagement feature, not a points award or proof of riding activity.
+
+ProfilePage.tsx already contained a single motorcycle field, help counts, badges, emergency contacts, and a bio field in state/save logic, but the bio had no editable input. Added a bounded 280-character bio editor and profile display. Profile notification controls were reviewed against the actual rules and implementation: notificationsEnabled is not an allowed user-profile update field, and no push-delivery service is wired here. Rather than writing a field that rules would reject or pretending push works, the UI now explicitly states push infrastructure is not connected. The saved privacyLocation field is labelled as a profile preference, with a disclosure that it does not yet enforce live-map or SOS location visibility.
+
+MessageContext now marks browser-only fallback messages explicitly, keeps them in a per-request local-only collection, merges them with realtime messages rather than replacing them, and immediately returns cached messages when realtime is unavailable. Local-only records are not represented as server-persisted.
+
+No changes were made to client/src/pages/Home.tsx, firestore.rules, or firestore.prod.rules. No production deployment, rules publication, or production data access/mutation occurred. CI must pass on the final resulting branch head before this pass is considered verified.
