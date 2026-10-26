@@ -50,7 +50,7 @@ export default function ReportModal({
       reportedBy: reporterEmail,
     });
 
-    toast.success("Şikayetiniz alındı. Moderasyon ekibimiz inceleyecektir.");
+    toast.info("Şikâyet bu oturumda yerel olarak kaydedildi; moderasyon ekibine gönderilmedi.");
     setSubmitting(false);
     onClose();
   };
@@ -71,6 +71,9 @@ export default function ReportModal({
         </div>
 
         <div className="space-y-4">
+          <div role="status" className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs leading-relaxed text-amber-200">
+            Şikâyet sistemi henüz sunucuya bağlı değil. Gönderdiğiniz bildirim yalnızca bu oturumda tutulur; moderasyon ekibine iletilmez.
+          </div>
           <div>
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">
               Şikayet Nedeni
@@ -100,6 +103,7 @@ export default function ReportModal({
             </label>
             <textarea
               rows={3}
+              maxLength={1000}
               value={details}
               onChange={(e) => setDetails(e.target.value)}
               placeholder="Sorunu daha detaylı açıklayabilirsiniz..."
@@ -119,7 +123,7 @@ export default function ReportModal({
               disabled={submitting}
               className="flex-1 py-2.5 rounded-xl bg-destructive text-white text-xs font-bold active:scale-95 transition-transform disabled:opacity-50"
             >
-              {submitting ? "Gönderiliyor..." : "Şikayeti Gönder"}
+              {submitting ? "Kaydediliyor..." : "Yerel Olarak Kaydet"}
             </button>
           </div>
         </div>
