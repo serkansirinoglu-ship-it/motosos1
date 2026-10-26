@@ -293,8 +293,17 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
           .filter((item) => !remoteIds.has(item.id));
         localOnlyMessagesByRequest.current.set(requestId, localOnly);
         const merged = [...normalized, ...localOnly].sort((a, b) => a.ts - b.ts);
-        // Realtime snapshots replace server messages but must not erase browser-only fallbacks.
-		setMessages((m) => ({ ...m, [requestId]: merged }));
+        // Avoid needless provider rerenders that would churn the realtime subscription.
+        setMessages((current) => {
+          const previous = current[requestId] || [];
+          const unchanged = previous.length === merged.length && previous.every((item, index) => {
+            const nextItem = merged[index];
+            return item.id === nextItem.id && item.text === nextItem.text &&
+              item.from === nextItem.from && item.fromName === nextItem.fromName &&
+              item.ts === nextItem.ts && item.localOnly === nextItem.localOnly;
+          });
+          return unchanged ? current : { ...current, [requestId]: merged };
+        });
 		onUpdate(merged);
 	  });
 	} catch (e) {
