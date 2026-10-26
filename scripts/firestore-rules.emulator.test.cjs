@@ -303,6 +303,20 @@ async function main() {
     await assertSucceeds(updateDoc(doc(owner, "users", "owner"), {
       displayName: "Owner Updated", updatedAt: serverTimestamp(),
     }));
+    await assertFails(updateDoc(doc(owner, "users", "owner"), {
+      displayName: 123, updatedAt: serverTimestamp(),
+    }));
+    await assertFails(updateDoc(doc(owner, "users", "owner"), {
+      bio: "x".repeat(501), updatedAt: serverTimestamp(),
+    }));
+    await assertFails(updateDoc(doc(owner, "users", "owner"), {
+      privacyLocation: "yes", updatedAt: serverTimestamp(),
+    }));
+    await assertFails(updateDoc(doc(owner, "users", "owner"), {
+      contacts: Array.from({ length: 11 }, (_, i) => ({ name: `Contact ${i}`, phone: "123" })),
+      updatedAt: serverTimestamp(),
+    }));
+    console.log("PASS: profile updates validate field types, text bounds, and contact-list size");
     console.log("PASS: profile owner can edit an approved profile field");
     await assertFails(setDoc(doc(outsider, "users", "outsider"), {
       uid: "outsider", email: "outsider@example.test", displayName: "Spoofed",
