@@ -157,3 +157,7 @@ These changes were validated by the strict emulator suite against both rule file
 ## Public presence reads reject malformed legacy documents — 2026-10-26
 
 Firestore document reads cannot redact selected fields. The public presence read rule therefore checks that a record contains only `uid` and `lastSeen`; malformed legacy records with additional fields are denied rather than exposed. The emulator suite seeds such a legacy-shaped record and asserts that anonymous reads fail while a valid minimal presence record remains readable. This is a defensive document-level gate, not a field-redaction mechanism. Both rules files must remain byte-for-byte identical, and no production rules were published.
+
+## Presence read schema validation — 2026-10-26
+
+The public `presence/{uid}` read rule now requires exactly the `uid` and `lastSeen` fields, requires the stored UID to match the document ID, and requires `lastSeen` to be a Firestore timestamp. Emulator fixtures verify that anonymous reads still work for valid minimal records and are denied for legacy records with extra identity fields, mismatched UIDs, or malformed heartbeat timestamps. Both rules files remain byte-identical; no production rules were published.
