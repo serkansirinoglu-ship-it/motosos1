@@ -97,7 +97,8 @@ export function subscribeOnlineMembers(uid, onCount) {
     stopped = true;
     clearInterval(refreshTimer);
     stopSnapshot();
-    void deleteDoc(presenceRef).catch(() => {});
+    // Do not delete the shared UID presence document here: another tab/device
+    // may still be active. The lastSeen cutoff naturally expires stale sessions.
   };
 }
 
