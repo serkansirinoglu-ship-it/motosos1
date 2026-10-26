@@ -480,3 +480,8 @@ A follow-up guard now checks the boolean results returned by session-local repor
 ## Community input validation — 2026-10-26
 
 Added service-layer validation for community posts and comments so callers cannot bypass the page form limits: post text must be non-empty and at most 5,000 characters; author/city/tag fields are bounded; comments must be non-empty and at most 1,000 characters; optional image URLs must be valid HTTP(S) URLs and at most 2,048 characters. The UI now mirrors these limits, handles rejected service results without clearing the user's draft, and shows a clear validation message. Added focused service tests for accepted input, blank/oversized text, malformed or disallowed image URLs, and comments against missing posts. This remains session-local behavior and does not imply publication or persistence. No changes to Home.tsx or either Firestore rules file; latest-head CI is required before this change is considered verified.
+
+
+## Marketplace price parity — 2026-10-26
+
+The Firestore listing create/update rules now require a strictly positive price, matching the client-side marketplace validation. The previous rule accepted zero-price listings even though the form rejects them. Emulator regression coverage now rejects both zero and negative prices on create/update. The two rules files remain byte-identical. This is a source/test change only: no production rules were published and no production records were accessed or changed. The final branch head must pass Safe CI before this finding is considered verified.
