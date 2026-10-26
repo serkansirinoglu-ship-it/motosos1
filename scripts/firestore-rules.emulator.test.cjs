@@ -65,6 +65,16 @@ async function main() {
         title: "Legacy help", description: "legacy email fixture", active: true,
         helpers: [], resolvedBy: null, resolvedAt: null, createdAt: new Date(),
       });
+      await setDoc(doc(db, "helpRequests", "legacy-helper-email"), {
+        id: "legacy-helper-email", ownerId: "owner", title: "Legacy helper email",
+        description: "legacy helper fixture", active: true, helpers: ["helper@example.test"],
+        resolvedBy: null, resolvedAt: null, createdAt: new Date(),
+      });
+      await setDoc(doc(db, "helpRequests", "legacy-extra-private-field"), {
+        id: "legacy-extra-private-field", ownerId: "owner", title: "Unexpected private field",
+        description: "legacy schema fixture", active: true, helpers: [], resolvedBy: null,
+        resolvedAt: null, createdAt: new Date(), ownerEmail: "owner@example.test",
+      });
       await setDoc(doc(db, "helpRequests", "private-help", "messages", "seed"), {
         id: "seed", from: "owner", fromName: "Owner", text: "private message", ts: Date.now(),
       });
@@ -224,6 +234,12 @@ async function main() {
     await assertFails(getDoc(doc(outsider, "helpRequests", "legacy-email-help")));
     await assertSucceeds(getDoc(doc(owner, "helpRequests", "legacy-email-help")));
     console.log("PASS: legacy email-bearing help requests are not readable by unrelated signed-in users");
+    await assertSucceeds(getDoc(doc(helper, "helpRequests", "legacy-helper-email")));
+    await assertFails(getDoc(doc(outsider, "helpRequests", "legacy-helper-email")));
+    console.log("PASS: legacy helper-email access is limited to the matching helper identity");
+    await assertFails(getDoc(doc(outsider, "helpRequests", "legacy-extra-private-field")));
+    await assertSucceeds(getDoc(doc(owner, "helpRequests", "legacy-extra-private-field")));
+    console.log("PASS: active legacy help requests with unexpected private fields are not public");
     assert.equal("user" in publicHelp.data(), false);
     assert.equal(publicHelp.data().ownerId, "owner");
     assert.equal(publicHelp.data().ownerEmail, undefined);
