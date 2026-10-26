@@ -352,16 +352,65 @@ export function subscribeHelpRequestsRealtime(onUpdate) {
     return () => {};
   }
 
+  const currentUser = auth?.currentUser;
+  const uid = currentUser?.uid || null;
+  const email = currentUser?.email || null;
+  const sources = new Map();
+  const unsubscribers = [];
+
+  // Public discovery only includes unclaimed requests. Separate authenticated
+  // queries keep each owner's and accepted helper's conversations available.
+  const publish = () => {
+    const merged = new Map();
+    for (const sourceName of ["public", "owner", "helperUid", "legacyOwner", "helperEmail"]) {
+      for (const [id, item] of sources.get(sourceName) || []) merged.set(id, item);
+    }
+    const toMillis = (value) => value && typeof value.toMillis === "function"
+      ? value.toMillis()
+      : typeof value === "number" ? value : 0;
+    onUpdate(Array.from(merged.values()).sort(
+      (a, b) => toMillis(b.createdAt) - toMillis(a.createdAt)
+    ));
+  };
+
+  const listen = (sourceName, q) => {
+    sources.set(sourceName, new Map());
+    try {
+      const stop = onSnapshot(q, (snap) => {
+        sources.set(sourceName, new Map(
+          snap.docs.map((d) => [d.id, { ...d.data(), id: d.id }])
+        ));
+        publish();
+      }, (error) => {
+        console.warn(`Help request ${sourceName} subscription unavailable`, error);
+      });
+      unsubscribers.push(stop);
+    } catch (error) {
+      console.warn(`Help request ${sourceName} subscription unavailable`, error);
+    }
+  };
+
   try {
-    const q = query(collection(db, "helpRequests"), where("active", "==", true), where("publicVisible", "==", true), where("helpers", "==", []), orderBy("createdAt", "desc"));
-    return onSnapshot(q, (snap) => {
-      const arr = snap.docs.map((d) => ({ ...d.data(), id: d.id }));
-      onUpdate(arr);
-    });
-  } catch (e) {
-    console.error("subscribeHelpRequestsRealtime error", e);
-    return () => {};
+    listen("public", query(
+      collection(db, "helpRequests"),
+      where("active", "==", true),
+      where("publicVisible", "==", true),
+      where("helpers", "==", []),
+      orderBy("createdAt", "desc")
+    ));
+    if (uid) {
+      listen("owner", query(collection(db, "helpRequests"), where("ownerId", "==", uid)));
+      listen("helperUid", query(collection(db, "helpRequests"), where("helpers", "array-contains", uid)));
+    }
+    if (email) {
+      listen("legacyOwner", query(collection(db, "helpRequests"), where("user", "==", email)));
+      listen("helperEmail", query(collection(db, "helpRequests"), where("helpers", "array-contains", email)));
+    }
+  } catch (error) {
+    console.error("subscribeHelpRequestsRealtime error", error);
   }
+
+  return () => unsubscribers.forEach((stop) => stop());
 }
 
 export async function createHelpRequestRealtime(data) {

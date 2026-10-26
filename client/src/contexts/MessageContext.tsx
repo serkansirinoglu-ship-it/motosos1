@@ -140,7 +140,17 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
           const localOnly = current.filter((item) =>
             localOnlyHelpRequestIds.current.has(item.id) && !remoteIds.has(item.id)
           ).map((item) => ({ ...item, localOnly: true }));
-          return [...localOnly, ...(normalized as HelpRequest[])];
+          // Keep already-observed conversations during brief gaps between the
+          // public-feed and account-scoped snapshots; never retain another user's data.
+          const email = typeof user?.email === "string" ? user.email : null;
+          const participantRequests = current.filter((item) => {
+            if (remoteIds.has(item.id) || localOnlyHelpRequestIds.current.has(item.id)) return false;
+            const isOwner = item.ownerId === uid || (!!email && item.user === email);
+            const helpers = item.helpers || [];
+            const isHelper = helpers.includes(uid!) || (!!email && helpers.includes(email));
+            return isOwner || isHelper;
+          });
+          return [...localOnly, ...participantRequests, ...(normalized as HelpRequest[])];
         });
 	  });
 	} catch (e) {
@@ -150,7 +160,7 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
 	return () => {
 	  if (unsub) unsub();
 	};
-  }, [authReady, storageKey]);
+  }, [authReady, storageKey, uid, user?.email]);
 
   function createHelpRequest(r: Omit<HelpRequest, "id" | "createdAt" | "active">): HelpRequest | null {
     // Do not create even a local-only request before authentication is resolved.
