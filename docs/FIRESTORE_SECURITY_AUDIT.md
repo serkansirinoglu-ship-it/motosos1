@@ -416,3 +416,8 @@ A further UI review found that ChatPage preferred the realtime callback array wh
 ## Help-request creation authorization and disclosure — 2026-10-26
 
 Reviewed HelpRequestsPage against the checked-in rules: Firestore help-request creation requires an authenticated owner UID, but the page previously allowed unauthenticated users to create a browser-only fallback. The create handler now requires a signed-in user, trims and validates title/description lengths, opens the existing authentication prompt when signed out, and disables submission for a blank title. Browser-only help requests are explicitly marked in the list, and their local-only flag is cleared when a later realtime snapshot confirms the same document ID. No rules were loosened or changed. Requires Safe CI on the latest head.
+
+
+## Local-only request cache rehydration — 2026-10-26
+
+A follow-up persistence review found that local-only request IDs were held only in a React ref and were not reconstructed from localStorage after a reload. The ref is now initialized from the cached request records marked localOnly, so a later realtime snapshot does not erase those requests solely because the page was refreshed. This remains browser-local persistence, not Firestore persistence. Requires Safe CI on the latest head.
