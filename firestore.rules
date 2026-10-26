@@ -184,8 +184,11 @@ service cloud.firestore {
         && request.resource.data.resolvedBy == null
         && request.resource.data.resolvedAt == null
         && request.resource.data.createdAt == request.time
-        && (!('lat' in request.resource.data) || (request.resource.data.lat is number && request.resource.data.lat >= -90 && request.resource.data.lat <= 90))
-        && (!('lng' in request.resource.data) || (request.resource.data.lng is number && request.resource.data.lng >= -180 && request.resource.data.lng <= 180));
+        // Coordinates are optional, but must be supplied together to avoid ambiguous partial locations.
+        && (( !('lat' in request.resource.data) && !('lng' in request.resource.data))
+          || ('lat' in request.resource.data && 'lng' in request.resource.data
+            && request.resource.data.lat is number && request.resource.data.lat >= -90 && request.resource.data.lat <= 90
+            && request.resource.data.lng is number && request.resource.data.lng >= -180 && request.resource.data.lng <= 180));
       // New public help documents contain owner/helper UIDs, never email addresses.
       // Legacy email fields remain accepted for existing documents until an approved migration.
       allow read: if isAdmin() || (isSignedIn() && (
