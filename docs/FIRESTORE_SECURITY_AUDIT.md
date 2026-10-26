@@ -385,3 +385,8 @@ Added a client-side in-flight guard to the SOS cancel and complete controls. Whi
 ## Synchronous SOS terminal-action lock — 2026-10-26
 
 Strengthened the SOS terminal-action guard with a React ref in addition to the visible pending state. The ref is set synchronously at handler entry, preventing two rapid events from both passing the same stale render-state check; it is released after a failed remote update to allow retry, and after a completed operation. The UI still disables both controls while pending. CI for the prior commit is still running; this commit requires its own successful Safe CI run before verification is complete.
+
+
+## Local-only help request retention — 2026-10-26
+
+Updated `MessageContext` to track help requests whose Firestore write returned no result or failed. Realtime snapshots now merge those explicitly local-only fallback entries with remote results instead of replacing the entire local list. This prevents a later successful/partial realtime snapshot from silently making a local-only request disappear from the current session. Remote records remain sourced from Firestore; this does not claim local-only records are server-persisted and does not alter Firestore rules or production data. Latest CI for the previous head is still pending; this change requires CI on its own head.
