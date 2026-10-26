@@ -43,9 +43,25 @@ class CommunityService {
     return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
-  public createPost(post: Omit<CommunityPost, 'id' | 'likes' | 'comments' | 'createdAt'>): CommunityPost {
+  public createPost(post: Omit<CommunityPost, 'id' | 'likes' | 'comments' | 'createdAt'>): CommunityPost | null {
+    const content = post.content.trim();
+    const image = post.image?.trim();
+    if (
+      !content ||
+      content.length > 5000 ||
+      !post.authorName.trim() ||
+      post.authorName.length > 80 ||
+      !post.authorEmail.trim() ||
+      !post.city.trim() ||
+      post.city.length > 100 ||
+      (post.tag !== undefined && post.tag.length > 80) ||
+      (image !== undefined && image !== '' && !isAllowedCommunityImageUrl(image))
+    ) return null;
+
     const newPost: CommunityPost = {
       ...post,
+      content,
+      image: image || undefined,
       id: `post-${Date.now()}`,
       likes: [],
       comments: [],
@@ -69,9 +85,18 @@ class CommunityService {
 
   public addComment(postId: string, comment: Omit<PostComment, 'id' | 'postId' | 'createdAt'>): PostComment | null {
     const post = this.posts.find((p) => p.id === postId);
-    if (!post) return null;
+    const content = comment.content.trim();
+    if (
+      !post ||
+      !content ||
+      content.length > 1000 ||
+      !comment.authorName.trim() ||
+      comment.authorName.length > 80 ||
+      !comment.authorEmail.trim()
+    ) return null;
     const newComment: PostComment = {
       ...comment,
+      content,
       id: `c-${Date.now()}`,
       postId,
       createdAt: new Date().toLocaleString('tr-TR'),
@@ -89,3 +114,15 @@ class CommunityService {
 
 export const communityService = new CommunityService();
 export default communityService;
+
+
+/** Restrict remote images to explicit HTTP(S) URLs; reject javascript:, data:, and malformed values. */
+export function isAllowedCommunityImageUrl(value: string): boolean {
+  if (!value || value.length > 2048) return false;
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "https:" || parsed.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
