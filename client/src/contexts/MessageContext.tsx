@@ -265,7 +265,9 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
   }
 
   function sendMessage(requestId: string, text: string, from: string | null = null, fromName = "Motorcu"): Message | null {
-    if (validateHelpMessageInput({ requestId, text, from, fromName })) return null;
+    // Never persist or submit a message unless its sender matches the resolved Firebase account.
+    if (!authReady || !uid || from !== uid) return null;
+    if (validateHelpMessageInput({ requestId, text, from, fromName, authenticatedUid: uid })) return null;
     const msg: Message = {
       id: nanoid(),
       from,
