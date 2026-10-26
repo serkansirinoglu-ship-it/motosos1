@@ -361,3 +361,7 @@ Added an authenticated “Yardım Çağrısını Üstlen” action to the MapPag
 ## SOS discovery query portability — 2026-10-26
 
 Updated both one-shot and realtime active-SOS queries to filter by `status == active` using the single-field index and sort returned documents by `createdAt` in memory. The repository does not define a Firestore composite-index manifest, so the previous `status` + `createdAt` query could require an index that was not declared in source control and leave the map in local-only fallback mode. The change does not alter Firestore rules, document fields, access scope, or production configuration. CI verification for this commit is pending.
+
+## SOS self-acceptance regression test — 2026-10-26
+
+Extended the non-production Firestore emulator suite to assert that an SOS requester cannot set themselves as the accepted helper. The test exercises the deployed-rules-equivalent emulator policy without modifying either rules file or accessing production. The existing test already verifies a different signed-in rider can claim an active request and that subsequent claim attempts cannot replace the accepted helper.
