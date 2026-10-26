@@ -36,7 +36,7 @@ export default function HelpRequestsPage() {
   return (
 	<div className="min-h-screen bg-asphalt-light px-4 pt-6 page-surface-light">
 	  <div className="flex items-center justify-between mb-4">
-		<h1 className="font-display text-2xl font-bold text-white">Yardım Talepleri</h1>
+		<h1 className="font-display text-2xl font-bold text-foreground">Yardım Talepleri</h1>
 		<div className="flex gap-2">
 		  <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Kısa başlık" maxLength={120} className="px-3 py-2 rounded-md bg-card-gradient border border-border text-sm" />
 		  <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Açıklama (opsiyonel)" maxLength={2000} className="px-3 py-2 rounded-md bg-card-gradient border border-border text-sm" />
