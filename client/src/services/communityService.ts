@@ -42,10 +42,15 @@ class CommunityService {
   private posts: CommunityPost[] = [...INITIAL_POSTS];
 
   /** Subscribe to server-backed community posts. No local fallback is presented as remote data. */
-  public subscribeRemotePosts(onPosts: (posts: CommunityPost[]) => void, onError: (error: unknown) => void): () => void {
+  public subscribeRemotePosts(
+    onPosts: (posts: CommunityPost[]) => void,
+    onError: (error: unknown) => void,
+    shouldApply: () => boolean = () => true,
+  ): () => void {
     if (!communityDb) throw new Error("Firebase yapılandırılmamış; topluluk akışı sunucuya bağlanamadı.");
     const postsQuery = query(collection(communityDb, "communityPosts"), orderBy("createdAt", "desc"));
     return onSnapshot(postsQuery, (snapshot) => {
+      if (!shouldApply()) return;
       const remotePosts = snapshot.docs.map((item) => {
         const data = item.data();
         const timestamp = data.createdAt;
@@ -65,7 +70,9 @@ class CommunityService {
       });
       this.posts = remotePosts;
       onPosts(remotePosts);
-    }, onError);
+    }, (error) => {
+      if (shouldApply()) onError(error);
+    });
   }
 
   /** Create a post only when Firebase Auth and Firestore are both available. */

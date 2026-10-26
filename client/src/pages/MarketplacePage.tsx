@@ -68,7 +68,7 @@ export default function MarketplacePage() {
         console.error("marketplace subscription failed", error);
         setListings([]);
         toast.error("İlanlar sunucudan alınamadı. Bağlantıyı veya erişim izinlerini kontrol edin.");
-      });
+      }, isCurrentScope);
     } catch (error) {
       if (isCurrentScope()) {
         console.error("Marketplace unavailable", error);

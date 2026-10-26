@@ -52,7 +52,7 @@ export default function CommunityPage() {
         console.error("community feed failed", error);
         setPosts([]);
         toast.error("Topluluk akışı sunucudan alınamadı. Bağlantıyı veya erişim izinlerini kontrol edin.");
-      });
+      }, isCurrentScope);
     } catch (error) {
       if (isCurrentScope()) {
         console.error("Community feed unavailable", error);

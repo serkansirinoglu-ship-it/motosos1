@@ -50,10 +50,15 @@ class MarketplaceService {
   // Server snapshots are the source of truth; never fabricate marketplace records.
   private listings: ListingItem[] = [];
 
-  public subscribeRemoteListings(onListings: (listings: ListingItem[]) => void, onError: (error: unknown) => void): () => void {
+  public subscribeRemoteListings(
+    onListings: (listings: ListingItem[]) => void,
+    onError: (error: unknown) => void,
+    shouldApply: () => boolean = () => true,
+  ): () => void {
     if (!marketplaceDb) throw new Error("Firebase yapılandırılmamış; pazar yeri sunucuya bağlanamadı.");
     const listingsQuery = query(collection(marketplaceDb, "listings"), orderBy("createdAt", "desc"));
     return onSnapshot(listingsQuery, (snapshot) => {
+      if (!shouldApply()) return;
       const remoteListings = snapshot.docs.map((item) => {
         const data = item.data();
         const timestamp = data.createdAt;
@@ -75,7 +80,9 @@ class MarketplaceService {
       });
       this.listings = remoteListings;
       onListings(remoteListings);
-    }, onError);
+    }, (error) => {
+      if (shouldApply()) onError(error);
+    });
   }
 
   public async createRemoteListing(input: Omit<ListingItem, "id" | "createdAt" | "sellerId" | "featured"> & { sellerId: string }): Promise<string> {
