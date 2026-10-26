@@ -137,7 +137,7 @@ export default function MapPage() {
   const filteredSOS = activeFilter === "all" || activeFilter === "sos" ? activeSOS : [];
 
   return (
-    <div className="min-h-screen bg-asphalt pb-8">
+    <div className="min-h-screen bg-asphalt-light pb-8">
       <Header />
 
       <div className="px-4 pt-3 max-w-lg mx-auto">
