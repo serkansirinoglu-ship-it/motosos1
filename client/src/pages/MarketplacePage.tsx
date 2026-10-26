@@ -28,7 +28,9 @@ export default function MarketplacePage() {
   const [image, setImage] = useState("");
   const [phone, setPhone] = useState("");
 
-  const { user } = useAuth();
+  const { user, authReady } = useAuth();
+  const scopeKey = user?.uid || "anonymous";
+  const [cacheForScope, setCacheForScope] = useState("");
   const [, setLocation] = useLocation();
 
   const categories: string[] = [
@@ -45,10 +47,22 @@ export default function MarketplacePage() {
   ];
 
   useEffect(() => {
+    if (!authReady) return;
+    marketplaceService.clearLocalSession();
+    setListings([]);
+    setSelectedListing(null);
+    setCacheForScope(scopeKey);
+  }, [authReady, scopeKey]);
+
+  useEffect(() => {
+    if (!authReady || cacheForScope !== scopeKey) return;
     setListings(marketplaceService.getListings(selectedCategory, searchQuery, selectedCity));
-  }, [selectedCategory, searchQuery, selectedCity]);
+  }, [authReady, cacheForScope, scopeKey, selectedCategory, searchQuery, selectedCity]);
+
+  const visibleListings = cacheForScope === scopeKey ? listings : [];
 
   const handleCreateListing = () => {
+    if (!authReady || cacheForScope !== scopeKey) return;
     const numericPrice = Number(price);
     if (!title.trim() || !price || !description.trim()) {
       toast.error("Lütfen başlık, fiyat ve açıklama alanlarını doldurun.");
@@ -160,7 +174,7 @@ export default function MarketplacePage() {
       <div className="px-4 pt-3 max-w-lg mx-auto">
         {listings.length > 0 ? (
           <div className="grid grid-cols-2 gap-3">
-            {listings.map((item) => (
+            {visibleListings.map((item) => (
               <Card
                 key={item.id}
                 onClick={() => setSelectedListing(item)}
@@ -316,7 +330,7 @@ export default function MarketplacePage() {
       )}
 
       {/* Listing Detail Modal */}
-      {selectedListing && (
+      {cacheForScope === scopeKey && selectedListing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in">
           <Card className="w-full max-w-md bg-card-gradient border-border p-5 rounded-2xl shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-border pb-3">
