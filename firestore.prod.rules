@@ -201,7 +201,7 @@ service cloud.firestore {
         ))
         || ('active' in resource.data && resource.data.active == true
           // Public discovery requires an explicit marker; legacy records remain private by default.
-          && 'publicVisible' in resource.data && resource.data.publicVisible == true
+          && (resource.data.keys().hasAll(['publicVisible']) ? resource.data.publicVisible == true : false)
           && resource.data.helpers is list
           && resource.data.helpers.size() == 0
           && resource.data.keys().hasOnly([
