@@ -1,63 +1,77 @@
-import { useParams, useRoute } from "wouter";
+import { useRoute } from "wouter";
 import { useEffect, useState } from "react";
 import { useMembership } from "@/contexts/MembershipContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { readScopedJson, scopedStorageKey, writeScopedJson } from "@/services/scopedLocalCache";
 
-const STORAGE_KEY = 'motosos_group_posts_v1';
+const STORAGE_KEY = "motosos_group_posts_v1";
+type GroupPost = { id: string; from: string; text: string; ts: number };
+type GroupStore = Record<string, GroupPost[]>;
 
-function loadStore(){
-  try{ const raw = localStorage.getItem(STORAGE_KEY); return raw? JSON.parse(raw): {}; }catch(e){return {};}
-}
-
-function saveStore(s:any){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); }catch(e){} }
-
-export default function GroupPage(){
-  const [match, params] = useRoute('/group/:city');
+export default function GroupPage() {
+  const [, params] = useRoute("/group/:city");
   const city = params?.city ? decodeURIComponent(params.city) : null;
   const { isMember, joinCity } = useMembership();
-  const { user } = useAuth();
-  const [posts, setPosts] = useState<any[]>([]);
-  const [text, setText] = useState('');
+  const { user, authReady } = useAuth();
+  const uid = typeof user?.uid === "string" ? user.uid : null;
+  const storageKey = scopedStorageKey(STORAGE_KEY, uid);
+  const [cacheForKey, setCacheForKey] = useState<string | null>(null);
+  const [store, setStore] = useState<GroupStore>({});
+  const [text, setText] = useState("");
 
-  useEffect(()=>{
-	const s = loadStore();
-	setPosts(s[city||''] || []);
-  }, [city]);
+  useEffect(() => {
+    if (!authReady) return;
+    const storage = typeof localStorage === "undefined" ? null : localStorage;
+    const next = readScopedJson<GroupStore>(storage, storageKey, {});
+    setStore(next && typeof next === "object" && !Array.isArray(next) ? next : {});
+    setCacheForKey(storageKey);
+  }, [authReady, storageKey]);
 
-  function submit(){
-	if(!text.trim()) return;
-	const s = loadStore();
-	const arr = s[city||''] || [];
-	const entry = { id: Date.now().toString(), from: user?.email||'Anonim', text: text.trim(), ts: Date.now() };
-	const next = [ ...arr, entry ];
-	s[city||''] = next; saveStore(s); setPosts(next); setText('');
+  useEffect(() => {
+    if (!authReady || cacheForKey !== storageKey) return;
+    const storage = typeof localStorage === "undefined" ? null : localStorage;
+    writeScopedJson(storage, storageKey, store);
+  }, [authReady, cacheForKey, storageKey, store]);
+
+  function submit() {
+    const cleanText = text.trim();
+    if (!authReady || cacheForKey !== storageKey || !cleanText || cleanText.length > 1000 || !city) return;
+    const entry: GroupPost = {
+      id: typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      from: user?.displayName || user?.email?.split("@")[0] || "Anonim",
+      text: cleanText,
+      ts: Date.now(),
+    };
+    setStore((current) => ({ ...current, [city]: [ ...(current[city] || []), entry ] }));
+    setText("");
   }
 
-  // If user accepts a help request in this group, we could resolve here
-  // For now GroupPage is generic posts; accept/resolve handled on SOS flow.
+  const visiblePosts = authReady && cacheForKey === storageKey ? (store[city || ""] || []) : [];
 
-  if(!city) return <div className="min-h-screen bg-asphalt p-4 text-white">Geçersiz grup.</div>;
+  if (!city) return <div className="min-h-screen bg-asphalt p-4 text-white">Geçersiz grup.</div>;
 
   return (
-	<div className="min-h-screen bg-asphalt p-4">
-	  <div className="flex items-center justify-between mb-4">
-		<h1 className="font-display text-2xl text-white">{city} Grubu</h1>
-		{!isMember(city) && <button onClick={()=>joinCity(city)} className="px-3 py-1 rounded bg-primary text-white">Katıl</button>}
-	  </div>
+    <div className="min-h-screen bg-asphalt p-4">
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="font-display text-2xl text-white">{city} Grubu</h1>
+        {!isMember(city) && <button onClick={() => joinCity(city)} className="px-3 py-1 rounded bg-primary text-white">Katıl</button>}
+      </div>
 
-	  <div className="mb-4">
-		{posts.map(p=> (
-		  <div key={p.id} className="p-3 bg-card-gradient border border-border rounded mb-2">
-			<div className="text-xs text-muted-foreground">{p.from} • {new Date(p.ts).toLocaleString()}</div>
-			<div className="mt-1 text-foreground">{p.text}</div>
-		  </div>
-		))}
-	  </div>
+      <p className="mb-3 text-xs text-amber-300">Grup mesajları şu anda yalnızca bu hesapta ve bu cihazda tutulur; diğer kullanıcılara yayınlanmaz.</p>
 
-	  <div className="flex gap-2">
-		<input value={text} onChange={e=>setText(e.target.value)} className="flex-1 px-3 py-2 rounded bg-card-gradient border border-border" placeholder="Gruba mesaj yaz..." />
-		<button onClick={submit} className="px-3 py-2 rounded bg-primary text-white">Gönder</button>
-	  </div>
-	</div>
+      <div className="mb-4">
+        {visiblePosts.map((post) => (
+          <div key={post.id} className="p-3 bg-card-gradient border border-border rounded mb-2">
+            <div className="text-xs text-muted-foreground">{post.from} • {new Date(post.ts).toLocaleString()}</div>
+            <div className="mt-1 text-foreground">{post.text}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex gap-2">
+        <input value={text} onChange={(event) => setText(event.target.value)} maxLength={1000} className="flex-1 px-3 py-2 rounded bg-card-gradient border border-border" placeholder="Gruba mesaj yaz..." />
+        <button onClick={submit} disabled={!authReady || cacheForKey !== storageKey || !text.trim()} className="px-3 py-2 rounded bg-primary text-white disabled:opacity-50">Gönder</button>
+      </div>
+    </div>
   );
 }
