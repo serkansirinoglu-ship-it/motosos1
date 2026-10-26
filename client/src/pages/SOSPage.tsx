@@ -8,7 +8,7 @@ import { useMessages } from "@/contexts/MessageContext";
 import Header from "@/components/Header";
 import EmergencyWarning from "@/components/EmergencyWarning";
 import { sosService, SOSHelpCategory, CATEGORY_LABELS, STATUS_LABELS, SOSStatus } from "@/services/sosService";
-import { createSOSRequest, updateSOSRequest } from "../../../firebase";
+import { createSOSRequest, updateSOSRequest, subscribeActiveSOSRequests } from "../../../firebase";
 
 export default function SOSPage() {
   const [sosActive, setSosActive] = useState(false);
@@ -36,6 +36,22 @@ export default function SOSPage() {
       if (timer) clearInterval(timer);
     };
   }, [sosActive]);
+
+  // Keep the requester-facing status in sync when another rider accepts the SOS.
+  // The subscription returns public active SOS fields only, never private GPS details.
+  useEffect(() => {
+    if (!sosId) return;
+    return subscribeActiveSOSRequests(
+      (requests) => {
+        const current = requests.find((request) => request.id === sosId);
+        if (!current) return;
+        setStatus(current.acceptedBy ? "yanit_geliyor" : "bekleniyor");
+      },
+      (error) => {
+        console.warn("Could not refresh active SOS status", error);
+      },
+    );
+  }, [sosId]);
 
   const handleSOS = async (catOverride?: SOSHelpCategory) => {
     if (submittingRef.current) return;
