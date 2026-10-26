@@ -294,3 +294,24 @@ Both CI runs for this exact commit completed successfully:
 - [Pull-request CI](https://github.com/serkansirinoglu-ship-it/motosos1/actions/runs/40294137597)
 
 The successful CI jobs run type checking, unit tests, production build without deployment, static Firestore audit and strict gate, rule-file synchronization, and emulator authorization tests against both rule files. The isolated branch remains non-production: `client/src/pages/Home.tsx` is unchanged, `firestore.rules` and `firestore.prod.rules` are byte-identical, PR #3 remains open and unmerged, and no production rules or records were changed. This does not certify that historical production records are clean or that deployment is approved.
+
+
+## Latest verification snapshot — UID mapping conflict regression — 2026-10-26
+
+Current audited commit at the time of this snapshot: `6535eca0c10b99370d7e5d74d994e9ae2e7adba3`.
+
+Both CI runs for this exact commit completed successfully:
+- [Push CI](https://github.com/serkansirinoglu-ship-it/motosos1/actions/runs/40295717674)
+- [Pull-request CI](https://github.com/serkansirinoglu-ship-it/motosos1/actions/runs/40295724726)
+
+Verified jobs include TypeScript, unit tests, production build without deployment, Firestore static audit and strict gate, rule-file parity, and Emulator authorization tests against both checked-in rules files. The added regression test confirms a malformed UID in one normalized duplicate email mapping makes the mapping ambiguous even if another duplicate contains a valid UID.
+
+The current source hashes checked on the branch are:
+- `client/src/pages/Home.tsx`: `a45976c8085709adce1a6186e4a72865d440c654` (unchanged)
+- `firestore.rules` and `firestore.prod.rules`: both `f5d197e0a0d6639021ff777efa98199a6a73c668` (byte-identical)
+
+## Client implementation scope — verified 2026-10-26
+
+Source review confirms that `client/src/services/sosService.ts` and `client/src/services/marketplaceService.ts` maintain in-memory arrays, not durable Firestore-backed records. The marketplace page currently reports a listing as published after adding it to that in-memory service; this is not evidence of server persistence. The SOS page has Firestore helper calls, but also creates local SOS state, so end-to-end persistence and live multi-user behavior must be validated separately. Help requests/messages have Firestore realtime helper calls and localStorage-backed state; their full behavior still requires authenticated end-to-end checks against a non-production environment.
+
+Therefore, passing rules Emulator tests validates the checked-in authorization rules and tested scenarios only. It does not establish that SOS, chat, map, marketplace, or community workflows are fully integrated, persistent, or production-ready. No production deployment, rules publication, or production-data access or mutation was performed. PR #3 remains open and unmerged.
