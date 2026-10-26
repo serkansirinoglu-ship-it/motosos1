@@ -76,7 +76,11 @@ export default function ChatPage() {
       toast.error("Mesaj göndermek için talep sahibi veya kabul edilmiş yardımcı olmalısınız.");
       return;
     }
-    sendMessage(chatId, text.trim(), userUid, user?.displayName || user?.email?.split("@")[0] || "Motorcu");
+    const sent = sendMessage(chatId, text.trim(), userUid, user?.displayName || user?.email?.split("@")[0] || "Motorcu");
+    if (!sent) {
+      toast.error("Mesaj boş, çok uzun veya geçersiz. En fazla 2.000 karakter girin.");
+      return;
+    }
     setText("");
   };
 
