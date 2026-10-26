@@ -54,8 +54,38 @@ class MarketplaceService {
     return this.listings.find((l) => l.id === id);
   }
 
-  public createListing(listing: Omit<ListingItem, 'id' | 'createdAt'>): ListingItem {
+  public createListing(listing: Omit<ListingItem, 'id' | 'createdAt'>): ListingItem | null {
+    const allowedCategories: ListingCategory[] = [
+      'Motosiklet', 'Kask', 'Mont', 'Pantolon', 'Eldiven', 'Lastik', 'Parça', 'Aksesuar', 'Diğer',
+    ];
+    const title = typeof listing.title === 'string' ? listing.title.trim() : '';
+    const description = typeof listing.description === 'string' ? listing.description.trim() : '';
+    const city = typeof listing.city === 'string' ? listing.city.trim() : '';
+    const sellerName = typeof listing.sellerName === 'string' ? listing.sellerName.trim() : '';
+    const image = typeof listing.image === 'string' ? listing.image.trim() : '';
+    const sellerPhone = typeof listing.sellerPhone === 'string' ? listing.sellerPhone.trim() : '';
+
+    if (
+      !title || title.length > 160 ||
+      !description || description.length > 5000 ||
+      !city || city.length > 100 ||
+      !sellerName || sellerName.length > 80 ||
+      !allowedCategories.includes(listing.category) ||
+      typeof listing.price !== 'number' || !Number.isFinite(listing.price) || listing.price <= 0 ||
+      (image.length > 0 && (image.length > 2048 || !isHttpUrl(image))) ||
+      sellerPhone.length > 40
+    ) {
+      return null;
+    }
+
     const newListing: ListingItem = {
+      ...listing,
+      title,
+      description,
+      city,
+      sellerName,
+      image: image || undefined,
+      sellerPhone: sellerPhone || undefined,
       ...listing,
       id: `mkt-${Date.now()}`,
       createdAt: new Date().toISOString().split('T')[0],
