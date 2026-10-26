@@ -49,6 +49,8 @@ describe("MarketplaceService local listing lifecycle", () => {
     expect(marketplaceService.createListing({ ...base, description: "x".repeat(5001) })).toBeNull();
     expect(marketplaceService.createListing({ ...base, image: "javascript:alert(1)" })).toBeNull();
     expect(marketplaceService.createListing({ ...base, image: "data:image/svg+xml,test" })).toBeNull();
-    expect(marketplaceService.createListing({ ...base, image: "https://example.test/image.png" })).not.toBeNull();
+    const validImageListing = marketplaceService.createListing({ ...base, image: "https://example.test/image.png" });
+    expect(validImageListing).not.toBeNull();
+    if (validImageListing) createdIds.push(validImageListing.id);
   });
 });
