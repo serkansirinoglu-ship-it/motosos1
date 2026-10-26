@@ -188,7 +188,7 @@ export default function MapPage() {
             Bulunan Noktalar: <span className="text-primary font-bold">{filteredBusinesses.length + filteredSOS.length} Hızlı Erişim</span>
           </p>
           <span className="text-[10px] font-bold text-green-400 bg-green-500/10 px-2 py-0.5 rounded-full border border-green-500/20">
-            🟢 Yerel Radar
+            SOS / Harita
           </span>
         </div>
       </div>
