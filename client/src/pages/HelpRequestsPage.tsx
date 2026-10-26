@@ -28,7 +28,11 @@ export default function HelpRequestsPage() {
       toast.error("Başlık en fazla 120, açıklama en fazla 2000 karakter olabilir.");
       return;
     }
-    createHelpRequest({ title: cleanTitle, description: cleanDescription, ownerId: user.uid });
+    const created = createHelpRequest({ title: cleanTitle, description: cleanDescription, ownerId: user.uid });
+    if (!created) {
+      toast.error("Oturum doğrulaması tamamlanmadı veya talep geçersiz. Bilgileriniz korunuyor; tekrar deneyin.");
+      return;
+    }
     setTitle("");
     setDesc("");
   }
