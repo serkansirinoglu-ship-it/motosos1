@@ -337,6 +337,14 @@ async function main() {
     }));
     await assertSucceeds(updateDoc(doc(owner, "events", "public-event"), { title: "Edited public event" }));
     await assertFails(updateDoc(doc(owner, "events", "public-event"), { organizerId: "outsider" }));
+    await assertFails(updateDoc(doc(owner, "events", "public-event"), { createdAt: serverTimestamp() }));
+    await assertFails(updateDoc(doc(owner, "events", "public-event"), { isAdmin: true }));
+    await assertFails(setDoc(doc(owner, "events", "extra-field-event"), {
+      organizerId: "owner", title: "Event", isAdmin: true,
+    }));
+    await assertFails(setDoc(doc(owner, "events", "oversized-event"), {
+      organizerId: "owner", title: "x".repeat(161),
+    }));
     await assertSucceeds(updateDoc(doc(owner, "listings", "public-listing"), { title: "Edited public listing" }));
     await assertFails(updateDoc(doc(owner, "listings", "public-listing"), { sellerId: "outsider" }));
     await assertFails(updateDoc(doc(owner, "listings", "public-listing"), { featured: true }));
