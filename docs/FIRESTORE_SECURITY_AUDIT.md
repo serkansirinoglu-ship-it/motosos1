@@ -220,3 +220,12 @@ New profile creation may omit `privacyLocation`, but if it is supplied the value
 ## Help-request coordinate-pair validation — 2026-10-26
 
 Help-request creation now accepts either no location or both latitude and longitude. A request containing only one coordinate is rejected, as are nonnumeric or out-of-range coordinate values. The same validation is mirrored byte-for-byte in `firestore.rules` and `firestore.prod.rules`. Emulator regression tests cover both latitude-only and longitude-only submissions against both rule files. This is a non-production rules change only; no rules were published and no production records were accessed or changed.
+
+
+## Bottom-of-home engagement component and CI verification — 2026-10-26
+
+The optional MotoGuard engagement section is implemented in `client/src/components/HomeEngagementSection.tsx` and mounted from `client/src/App.tsx` after the existing `<Home />` component. The protected `client/src/pages/Home.tsx` file was restored to its baseline content; its verified blob SHA is `a45976c8085709adce1a6186e4a72865d440c654`. Do not move the engagement component into that protected file.
+
+The section contains a self-contained safe-driving question and navigation cards to existing community, events, map, and profile routes. It does not claim that event creation, persistent quiz scores, points, streaks, or rewards are implemented. The Events page currently presents an empty state when no real event data is available; do not populate it with fabricated events.
+
+Latest commit `83d1bcfbc9b5a8fefc63a9b4255f213f6ddf3a4c` passed both available Safe CI runs. Verified checks include TypeScript, unit tests, build-only (no deployment), static Firestore rules audit, rules-file parity, and Firestore Emulator authorization tests against both synchronized rule files. PR #3 remains open and unmerged. No production deployment, Firestore rules publication, or production data access occurred.
