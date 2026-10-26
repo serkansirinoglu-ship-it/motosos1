@@ -1,7 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut, onAuthStateChanged } from "firebase/auth";
 import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, getDocs, doc, setDoc, getDoc, updateDoc, deleteDoc, where, Timestamp, writeBatch } from "firebase/firestore";
-import { validateSOSRequestInput } from "./client/src/services/sosInputValidation";
+import { validateSOSRequestInput, validateSOSStatusUpdatePatch } from "./client/src/services/sosInputValidation";
 
 // Read config from Vite environment variables
 const firebaseConfig = {
@@ -246,12 +246,14 @@ export async function acceptSOSRequest(id) {
 }
 
 export async function updateSOSRequest(id, patch) {
-  if (!db || !id) return null;
+  // Only owner terminal transitions are supported by this client API.
+  // Firestore rules remain authoritative, but reject malformed/over-broad writes early.
+  if (!db || !auth?.currentUser?.uid || !id || !validateSOSStatusUpdatePatch(patch)) return false;
   try {
     const ref = doc(db, "sosRequests", id);
-    const safePatch = { ...patch, updatedAt: serverTimestamp() };
-    if (patch?.status === "resolved") safePatch.resolvedAt = serverTimestamp();
-    if (patch?.status === "cancelled") safePatch.cancelledAt = serverTimestamp();
+    const safePatch = { status: patch.status, updatedAt: serverTimestamp() };
+    if (patch.status === "resolved") safePatch.resolvedAt = serverTimestamp();
+    if (patch.status === "cancelled") safePatch.cancelledAt = serverTimestamp();
     await updateDoc(ref, safePatch);
     return true;
   } catch (e) {

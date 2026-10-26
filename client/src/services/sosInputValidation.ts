@@ -39,3 +39,14 @@ export function validateSOSRequestInput(
   }
   return null;
 }
+
+export type SOSStatusUpdate = { status: "resolved" | "cancelled" };
+
+export function validateSOSStatusUpdatePatch(patch: unknown): patch is SOSStatusUpdate {
+  if (!patch || typeof patch !== "object" || Array.isArray(patch)) return false;
+  const candidate = patch as Record<string, unknown>;
+  const keys = Object.keys(candidate);
+  return keys.length === 1 &&
+    keys[0] === "status" &&
+    (candidate.status === "resolved" || candidate.status === "cancelled");
+}

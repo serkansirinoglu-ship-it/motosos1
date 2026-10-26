@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validateSOSRequestInput } from "./sosInputValidation";
+import { validateSOSRequestInput, validateSOSStatusUpdatePatch } from "./sosInputValidation";
 
 const validInput = {
   requesterId: "authenticated-rider",
@@ -61,5 +61,26 @@ describe("validateSOSRequestInput", () => {
 
   it.each([null, 7, {}, "x".repeat(1001)])("rejects invalid or oversized SOS notes", (note) => {
     expect(validateSOSRequestInput("authenticated-rider", { ...validInput, note })).toBe("invalid_note");
+  });
+});
+
+describe("validateSOSStatusUpdatePatch", () => {
+  it.each(["resolved", "cancelled"] as const)("accepts the owner terminal status %s", (status) => {
+    expect(validateSOSStatusUpdatePatch({ status })).toBe(true);
+  });
+
+  it.each([
+    null,
+    undefined,
+    "resolved",
+    [],
+    {},
+    { status: "active" },
+    { status: "pending" },
+    { status: "resolved", requesterId: "attacker" },
+    { status: "cancelled", acceptedBy: "attacker" },
+    { status: "resolved", resolvedAt: new Date() },
+  ])("rejects malformed or over-broad status patches", (patch) => {
+    expect(validateSOSStatusUpdatePatch(patch)).toBe(false);
   });
 });
