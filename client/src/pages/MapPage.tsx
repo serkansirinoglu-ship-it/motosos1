@@ -5,6 +5,7 @@ import Header from "@/components/Header";
 import { businessService, BusinessProfile, BusinessCategory } from "@/services/businessService";
 import { sosService, SOSRequestItem } from "@/services/sosService";
 import { makeDirectionsUrl } from "@/lib/places";
+import { subscribeActiveSOSRequests } from "../../../firebase";
 
 export default function MapPage() {
   const [activeFilter, setActiveFilter] = useState<string>("all");
@@ -18,6 +19,44 @@ export default function MapPage() {
     setBusinesses(businessService.getBusinesses());
     setActiveSOS(sosService.getActiveRequests());
 
+    // Merge public Firestore SOS updates with this browser's local-only requests.
+    // Never fetch or expose the privateDetails subcollection from the public map.
+    const unsubscribe = subscribeActiveSOSRequests(
+      (documents: any[]) => {
+        const remoteRequests: SOSRequestItem[] = documents.map((doc) => {
+          const createdAt = doc.createdAt?.toMillis
+            ? new Date(doc.createdAt.toMillis()).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })
+            : typeof doc.createdAt === "string"
+              ? doc.createdAt
+              : "";
+          const categories: Record<string, SOSRequestItem["category"]> = {
+            lastik: "lastik", aku: "aku", yakit: "yakit", ariza: "ariza",
+            kaza: "kaza", cekici: "cekici", diger: "diger",
+          };
+          return {
+            id: doc.id,
+            requesterId: doc.requesterId || "",
+            requesterEmail: "",
+            requesterName: undefined,
+            category: categories[doc.helpType] || "diger",
+            latitude: Number(doc.latitude),
+            longitude: Number(doc.longitude),
+            status: "bekleniyor",
+            helpersCount: doc.acceptedBy ? 1 : 0,
+            acceptedBy: doc.acceptedBy || undefined,
+            createdAt,
+          };
+        });
+        const localRequests = sosService.getActiveRequests();
+        const remoteIds = new Set(remoteRequests.map((request) => request.id));
+        setActiveSOS([...localRequests.filter((request) => !remoteIds.has(request.id)), ...remoteRequests]);
+      },
+      () => {
+        // Keep local requests visible if remote discovery is unavailable.
+        setActiveSOS(sosService.getActiveRequests());
+      }
+    );
+
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => setPosition({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
@@ -25,6 +64,8 @@ export default function MapPage() {
         { enableHighAccuracy: false, timeout: 5000 }
       );
     }
+
+    return () => unsubscribe();
   }, []);
 
   const locateMe = () => {
