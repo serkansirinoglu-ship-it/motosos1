@@ -88,20 +88,6 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 	};
   }, []);
 
-  // Optionally auto-seed Firestore when configured and env flag enabled
-  useEffect(() => {
-	try {
-	  if (import.meta.env.VITE_FIREBASE_AUTO_SEED === 'true') {
-		// dynamic import to avoid running in non-firebase mode
-		import('../../../firebase').then((mod) => {
-		  if (mod.createInitialSeed) mod.createInitialSeed();
-		}).catch(()=>{});
-	  }
-	} catch (e) {
-	  // ignore
-	}
-  }, []);
-
   function addProduct(p: Omit<Product, "id">) {
 	try {
 	  const res = createProductRealtime(p);
