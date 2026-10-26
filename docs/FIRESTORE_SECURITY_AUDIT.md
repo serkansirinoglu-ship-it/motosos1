@@ -453,3 +453,13 @@ Removed the client-side `createInitialSeed` helper and its `VITE_FIREBASE_AUTO_S
 - Updated the SOS introduction to avoid promising delivery to nearby riders before notification delivery is implemented and verified.
 - Corrected the Koruyucu Kardeş points/badges copy to disclose that trusted server-side crediting is not enabled.
 - No Firestore rules, production environment, or Home.tsx changes.
+
+
+### SOS input validation and moderation transparency — 2026-10-26
+
+- SOS creation now requires a current Firebase-authenticated UID and rejects a requester ID that does not match that UID before reading or writing SOS documents.
+- Added allow-list validation for the seven supported SOS categories and finite latitude/longitude bounds; invalid requests are rejected before Firestore access. Firestore Security Rules remain the authoritative security boundary.
+- Private SOS contact email now comes from the current Firebase Auth user rather than caller-supplied data.
+- Added unit tests for unauthenticated calls, UID mismatch, unsupported categories, malformed/out-of-range coordinates, and valid boundary coordinates.
+- The report modal now clearly discloses that reports are session-local and are not sent to a moderation team; the success message no longer claims a team will review them. Report details are capped at 1,000 characters.
+- No Firestore rules, Home.tsx, production environment, or production data were changed.
