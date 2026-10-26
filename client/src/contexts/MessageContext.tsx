@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { subscribeHelpRequestsRealtime, createHelpRequestRealtime, subscribeMessagesRealtime, sendMessageRealtime, updateHelpRequestRealtime } from '../../../firebase';
 import { nanoid } from "nanoid";
-import { validateHelpMessageInput } from "@/services/helpMessageValidation";
+import { validateHelpMessageInput, validateHelpRequestInput } from "@/services/helpMessageValidation";
 import { useAuth } from "./AuthContext";
 import { readScopedJson, scopedStorageKey, writeScopedJson } from "@/services/scopedLocalCache";
 
@@ -36,7 +36,7 @@ type HelpRequest = {
 type MessageContextType = {
   helpRequests: HelpRequest[];
   messages: Record<string, Message[]>;
-  createHelpRequest: (r: Omit<HelpRequest, "id" | "createdAt" | "active">) => HelpRequest;
+  createHelpRequest: (r: Omit<HelpRequest, "id" | "createdAt" | "active">) => HelpRequest | null;
   sendMessage: (requestId: string, text: string, from?: string | null, fromName?: string) => Message | null;
   subscribeToMessages: (requestId: string, onUpdate: (arr: Message[]) => void) => (() => void);
   acceptHelp: (requestId: string, helperUid: string) => Promise<boolean>;
@@ -152,10 +152,14 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
 	};
   }, [authReady, storageKey]);
 
-  function createHelpRequest(r: Omit<HelpRequest, "id" | "createdAt" | "active">) {
+  function createHelpRequest(r: Omit<HelpRequest, "id" | "createdAt" | "active">): HelpRequest | null {
+    // Do not create even a local-only request before authentication is resolved.
+    if (!authReady || !uid || (r.ownerId != null && r.ownerId !== uid)) return null;
+
     const id = nanoid();
     const hr: HelpRequest = {
       ...r,
+      ownerId: uid,
       id,
       createdAt: Date.now(),
       active: true,
@@ -163,6 +167,7 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
       resolvedBy: null,
       resolvedAt: null,
     };
+    if (validateHelpRequestInput(hr, uid)) return null;
 
     // Render optimistically so a slow or unavailable realtime connection does
     // not leave the newly created request invisible in the current session.
