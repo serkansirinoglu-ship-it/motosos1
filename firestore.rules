@@ -335,13 +335,15 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Listings: public read; sellers may edit listing content but not identity, timestamps, or promotion flags.
+    // Listings: public reads must not expose seller email; owners/admins can still access legacy records.
     match /listings/{listingId} {
-      allow read: if true;
+      allow read: if isAdmin()
+        || (isSignedIn() && resource.data.sellerId == request.auth.uid)
+        || !('sellerEmail' in resource.data);
       allow create: if isSignedIn()
         && request.resource.data.keys().hasOnly([
           'id', 'title', 'category', 'price', 'city', 'description', 'image',
-          'sellerId', 'sellerName', 'sellerEmail', 'sellerPhone', 'createdAt', 'featured'
+          'sellerId', 'sellerName', 'sellerPhone', 'createdAt', 'featured'
         ])
         && request.resource.data.sellerId == request.auth.uid
         && request.resource.data.createdAt == request.time
@@ -359,7 +361,6 @@ service cloud.firestore {
         && request.resource.data.city.size() <= 100
         && (!('image' in request.resource.data) || (request.resource.data.image is string && request.resource.data.image.size() <= 2048))
         && (!('sellerName' in request.resource.data) || (request.resource.data.sellerName is string && request.resource.data.sellerName.size() <= 80))
-        && (!('sellerEmail' in request.resource.data) || (request.resource.data.sellerEmail is string && request.resource.data.sellerEmail.size() <= 254))
         && (!('sellerPhone' in request.resource.data) || (request.resource.data.sellerPhone is string && request.resource.data.sellerPhone.size() <= 40))
         && (!('featured' in request.resource.data) || request.resource.data.featured == false);
       allow update: if isAdmin()
