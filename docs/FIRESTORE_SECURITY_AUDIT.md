@@ -329,3 +329,10 @@ Additional client-side review confirms:
 - `client/src/pages/ChatPage.tsx` shows accept/resolve success toasts immediately after invoking local-first context methods, before the asynchronous Firestore update is confirmed. That is a reliability/UX mismatch; the UI message is not proof that a server-side state transition succeeded.
 
 These findings are documented for follow-up; no broad client workflow rewrite was made in this security-gate pass because it would require dedicated non-production integration tests and explicit error/loading-state coverage. No production deployment, rules publication, or production-data access/mutation occurred.
+
+
+## Local persistence error handling review — 2026-10-26
+
+Further source review of `client/src/contexts/MessageContext.tsx` found that the effect persisting `helpRequests` and `messages` calls `localStorage.setItem(STORAGE_KEY, ...)` without a try/catch, while adjacent localStorage reads and the separate user-stats write are guarded. Browser storage can reject writes (for example, quota exhaustion or storage restrictions), so this persistence effect can throw instead of degrading gracefully. This is a client reliability finding, separate from Firestore authorization. A fix should guard the write and surface unsynced/local-only state explicitly; it should be paired with a test that simulates storage write failure. No code change was made without a focused test harness for this provider.
+
+The latest Safe CI run for commit `2e27fefa67773d8cdc1bd03deb2b5382d5201e10` completed successfully: [run #40313589978](https://github.com/serkansirinoglu-ship-it/motosos1/actions/runs/40313589978). Verified steps include the protected-homepage guard, frozen dependency install, TypeScript, unit tests, build-only (no deploy step in this workflow), static and strict Firestore checks, rules-file byte parity, and emulator authorization tests against both rule files. This CI result does not by itself establish whether external hosting integrations created a preview deployment; production deployment remains prohibited for this audit.
