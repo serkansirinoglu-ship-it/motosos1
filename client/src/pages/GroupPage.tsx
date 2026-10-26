@@ -48,10 +48,10 @@ export default function GroupPage() {
 
   const visiblePosts = authReady && cacheForKey === storageKey ? (store[city || ""] || []) : [];
 
-  if (!city) return <div className="min-h-screen bg-asphalt p-4 text-white page-surface-light">Geçersiz grup.</div>;
+  if (!city) return <div className="min-h-screen bg-asphalt-light p-4 text-white page-surface-light">Geçersiz grup.</div>;
 
   return (
-    <div className="min-h-screen bg-asphalt p-4 page-surface-light">
+    <div className="min-h-screen bg-asphalt-light p-4 page-surface-light">
       <div className="flex items-center justify-between mb-4">
         <h1 className="font-display text-2xl text-white">{city} Grubu</h1>
         {!isMember(city) && <button onClick={() => joinCity(city)} className="px-3 py-1 rounded bg-primary text-white">Katıl</button>}
