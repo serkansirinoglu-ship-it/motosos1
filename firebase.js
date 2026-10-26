@@ -40,7 +40,12 @@ async function hasAdminClaim() {
   if (!user) return false;
   try {
     const token = await getIdTokenResult(user);
-    return token.claims.admin === true;
+    if (token.claims.admin === true) return true;
+
+    // A recently granted custom claim may be missing from the cached ID token.
+    // Refresh only after a cached negative result; Firestore rules remain authoritative.
+    const refreshedToken = await getIdTokenResult(user, true);
+    return refreshedToken.claims.admin === true;
   } catch (error) {
     console.warn("Admin claim check failed", error);
     return false;
