@@ -402,7 +402,7 @@ service cloud.firestore {
         && request.resource.data.category is string
         && request.resource.data.category in ['Motosiklet', 'Kask', 'Mont', 'Pantolon', 'Eldiven', 'Lastik', 'Parça', 'Aksesuar', 'Diğer']
         && request.resource.data.price is number
-        && request.resource.data.price >= 0
+        && request.resource.data.price > 0
         && request.resource.data.description is string
         && request.resource.data.description.size() > 0
         && request.resource.data.description.size() <= 5000
@@ -424,7 +424,7 @@ service cloud.firestore {
           && request.resource.data.title.size() <= 160
           && request.resource.data.category in ['Motosiklet', 'Kask', 'Mont', 'Pantolon', 'Eldiven', 'Lastik', 'Parça', 'Aksesuar', 'Diğer']
           && request.resource.data.price is number
-          && request.resource.data.price >= 0
+          && request.resource.data.price > 0
           && request.resource.data.description is string
           && request.resource.data.description.size() > 0
           && request.resource.data.description.size() <= 5000
