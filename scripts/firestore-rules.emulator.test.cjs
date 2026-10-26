@@ -527,8 +527,12 @@ async function main() {
     await assertFails(updateDoc(doc(owner, "listings", "public-listing"), { sellerEmail: "attacker@example.test" }));
     await assertFails(updateDoc(doc(owner, "listings", "public-listing"), { createdAt: serverTimestamp() }));
     await assertFails(updateDoc(doc(owner, "listings", "public-listing"), { price: -1 }));
+    await assertFails(updateDoc(doc(owner, "listings", "public-listing"), { price: 0 }));
     await assertFails(setDoc(doc(owner, "listings", "invalid-price-listing"), {
       sellerId: "owner", title: "Invalid", category: "Kask", price: -10, city: "İzmir", description: "Invalid price",
+    }));
+    await assertFails(setDoc(doc(owner, "listings", "zero-price-listing"), {
+      sellerId: "owner", title: "Free", category: "Kask", price: 0, city: "İzmir", description: "Price must be positive", createdAt: serverTimestamp(),
     }));
     await assertFails(setDoc(doc(owner, "listings", "promoted-listing"), {
       sellerId: "owner", title: "Promoted", category: "Kask", price: 100, city: "İzmir", description: "Self-promoted", featured: true,
