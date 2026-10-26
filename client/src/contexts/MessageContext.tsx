@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { subscribeHelpRequestsRealtime, createHelpRequestRealtime, subscribeMessagesRealtime, sendMessageRealtime, updateHelpRequestRealtime } from '../../../firebase';
 import { nanoid } from "nanoid";
+import { validateHelpMessageInput } from "@/services/helpMessageValidation";
 
 type Message = {
   id: string;
@@ -34,7 +35,7 @@ type MessageContextType = {
   helpRequests: HelpRequest[];
   messages: Record<string, Message[]>;
   createHelpRequest: (r: Omit<HelpRequest, "id" | "createdAt" | "active">) => HelpRequest;
-  sendMessage: (requestId: string, text: string, from?: string | null, fromName?: string) => Message;
+  sendMessage: (requestId: string, text: string, from?: string | null, fromName?: string) => Message | null;
   subscribeToMessages: (requestId: string, onUpdate: (arr: Message[]) => void) => (() => void);
   acceptHelp: (requestId: string, helperUid: string) => Promise<boolean>;
   resolveHelp: (requestId: string, helperUid: string, helperEmail?: string | null) => Promise<boolean>;
@@ -254,8 +255,15 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
 	}catch(e){console.error(e)}
   }
 
-  function sendMessage(requestId: string, text: string, from: string | null = null, fromName = "Motorcu") {
-    const msg: Message = { id: nanoid(), from, fromName, text, ts: Date.now() };
+  function sendMessage(requestId: string, text: string, from: string | null = null, fromName = "Motorcu"): Message | null {
+    if (validateHelpMessageInput({ requestId, text, from, fromName })) return null;
+    const msg: Message = {
+      id: nanoid(),
+      from,
+      fromName: fromName.trim(),
+      text: text.trim(),
+      ts: Date.now(),
+    };
     const keepLocal = () => {
       const localMessage: Message = { ...msg, localOnly: true };
       const retained = localOnlyMessagesByRequest.current.get(requestId) || [];
