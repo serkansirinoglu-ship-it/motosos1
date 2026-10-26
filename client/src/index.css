@@ -205,3 +205,39 @@
     scrollbar-width: none;
   }
 }
+
+
+/* Lighter graphite/navy surface for non-home app pages.
+   Kept opt-in so the protected Home page retains its original dark appearance. */
+.page-surface-light {
+  --background: #263342;
+  --foreground: #f3f6fa;
+  --card: #303f50;
+  --card-foreground: #f3f6fa;
+  --popover: #303f50;
+  --popover-foreground: #f3f6fa;
+  --secondary: #3a4a5c;
+  --secondary-foreground: #edf2f7;
+  --muted: #3a4a5c;
+  --muted-foreground: #c0ccd8;
+  --accent: #405268;
+  --accent-foreground: #ffffff;
+  --border: #4b5c70;
+  --input: #4b5c70;
+  --sidebar: #303f50;
+  --sidebar-foreground: #f3f6fa;
+  --sidebar-accent: #3a4a5c;
+  --sidebar-accent-foreground: #ffffff;
+  background-color: #263342;
+  background-image:
+    radial-gradient(circle at 12% 8%, rgba(255, 107, 0, 0.09) 0%, transparent 38%),
+    radial-gradient(circle at 88% 90%, rgba(99, 153, 210, 0.09) 0%, transparent 42%);
+}
+
+.page-surface-light .bg-card-gradient {
+  background: linear-gradient(135deg, #303f50 0%, #3a4a5c 100%);
+}
+
+.page-surface-light .bg-card {
+  background-color: var(--card);
+}
