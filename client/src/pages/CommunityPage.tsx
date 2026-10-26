@@ -42,8 +42,16 @@ export default function CommunityPage() {
       toast.error("Lütfen bir gönderi metni girin.");
       return;
     }
+    if (content.trim().length > 5000) {
+      toast.error("Gönderi metni en fazla 5.000 karakter olabilir.");
+      return;
+    }
+    if (image.trim() && (image.trim().length > 2048 || !/^https?:\/\//i.test(image.trim()))) {
+      toast.error("Görsel için geçerli bir HTTP veya HTTPS adresi girin (en fazla 2.048 karakter).");
+      return;
+    }
 
-    communityService.createPost({
+    const createdPost = communityService.createPost({
       authorName: user?.displayName || user?.email?.split("@")[0] || "Motorcu Kardeş",
       authorEmail: user?.email || "anonim@motoguard.tr",
       city: postCity,
@@ -51,6 +59,10 @@ export default function CommunityPage() {
       image: image.trim() || undefined,
       tag,
     });
+    if (!createdPost) {
+      toast.error("Gönderi doğrulanamadı. Metni, şehir bilgisini ve görsel adresini kontrol edin.");
+      return;
+    }
 
     toast.success("Gönderi bu oturumda yerel olarak kaydedildi; diğer kullanıcılara yayınlanmadı.");
     setContent("");
@@ -86,11 +98,19 @@ export default function CommunityPage() {
       return;
     }
     if (!commentText.trim()) return;
-    communityService.addComment(postId, {
+    if (commentText.trim().length > 1000) {
+      toast.error("Yorum en fazla 1.000 karakter olabilir.");
+      return;
+    }
+    const addedComment = communityService.addComment(postId, {
       authorName: user?.displayName || user?.email?.split("@")[0] || "Motorcu Kardeş",
       authorEmail: user?.email || "anonim@motoguard.tr",
       content: commentText.trim(),
     });
+    if (!addedComment) {
+      toast.error("Yorum doğrulanamadı veya gönderi artık mevcut değil.");
+      return;
+    }
     setCommentText("");
     setPosts(communityService.getPosts(selectedCity));
   };
@@ -269,6 +289,7 @@ export default function CommunityPage() {
 
                       <div className="flex gap-2">
                         <input
+                          maxLength={1000}
                           value={commentText}
                           onChange={(e) => setCommentText(e.target.value)}
                           onKeyDown={(e) => e.key === "Enter" && handleAddComment(post.id)}
@@ -368,6 +389,7 @@ export default function CommunityPage() {
                 <label className="text-[10px] font-bold text-muted-foreground uppercase block mb-1">Mesajınız</label>
                 <textarea
                   rows={4}
+                  maxLength={5000}
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   placeholder="Sürüş fikri, rota paylaşımı veya tavsiye yazabilirsiniz..."
@@ -378,6 +400,8 @@ export default function CommunityPage() {
               <div>
                 <label className="text-[10px] font-bold text-muted-foreground uppercase block mb-1">Görsel URL (Opsiyonel)</label>
                 <input
+                  type="url"
+                  maxLength={2048}
                   value={image}
                   onChange={(e) => setImage(e.target.value)}
                   placeholder="https://gorsel-linki.com/foto.jpg"
