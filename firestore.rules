@@ -354,7 +354,10 @@ service cloud.firestore {
     match /listings/{listingId} {
       allow read: if isAdmin()
         || (isSignedIn() && resource.data.sellerId == request.auth.uid)
-        || !('sellerEmail' in resource.data);
+        || resource.data.keys().hasOnly([
+          'id', 'title', 'category', 'price', 'city', 'description', 'image',
+          'sellerId', 'sellerName', 'sellerPhone', 'createdAt', 'featured'
+        ]);
       allow create: if isSignedIn()
         && request.resource.data.keys().hasOnly([
           'id', 'title', 'category', 'price', 'city', 'description', 'image',
