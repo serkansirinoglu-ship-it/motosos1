@@ -129,7 +129,7 @@ export default function ChatPage() {
     try {
       const confirmed = await resolveHelp(chatId, userUid, user?.email);
       if (confirmed) {
-        toast.success("Yardım sunucuda tamamlandı olarak kaydedildi; puan ve rozetiniz güncellendi.");
+        toast.success("Yardım sunucuda tamamlandı. Yerel yardım istatistiği güncellendi; profil puan/rozet eşitlemesi henüz bağlı değil.");
       } else {
         toast.error("Yardımın tamamlandığı sunucuda doğrulanamadı. Puan ve rozet güncellenmedi.");
       }
