@@ -24,7 +24,7 @@ service cloud.firestore {
           'createdAt', 'updatedAt', 'contacts'
         ])
         && request.resource.data.uid == request.auth.uid
-        && request.resource.data.email == request.auth.token.get('email', null)
+        && 'email' in request.auth.token && request.resource.data.email == request.auth.token.email
         && request.resource.data.points == 0
         && request.resource.data.helpCount == 0
         && request.resource.data.receivedHelpCount == 0
@@ -145,7 +145,7 @@ service cloud.firestore {
           && detailId == 'owner'
           && getAfter(/databases/$(database)/documents/sosRequests/$(sosId)).data.requesterId == request.auth.uid
           && request.resource.data.keys().hasOnly(['requesterEmail', 'latitude', 'longitude', 'note', 'createdAt'])
-          && request.resource.data.requesterEmail == request.auth.token.get('email', null)
+          && request.resource.data.requesterEmail == request.auth.token.email
           && request.resource.data.latitude is number
           && request.resource.data.latitude >= -90
           && request.resource.data.latitude <= 90
@@ -194,10 +194,10 @@ service cloud.firestore {
       // Legacy email fields remain accepted for existing documents until an approved migration.
       allow read: if isAdmin() || (isSignedIn() && (
         ('ownerId' in resource.data && resource.data.ownerId == request.auth.uid)
-        || (request.auth.token.get('email', null) != null && 'user' in resource.data && resource.data.user == request.auth.token.get('email', null))
+        || ('email' in request.auth.token && 'user' in resource.data && resource.data.user == request.auth.token.email)
         || (resource.data.helpers is list && (
           request.auth.uid in resource.data.helpers
-          || (request.auth.token.get('email', null) != null && request.auth.token.get('email', null) in resource.data.helpers)
+          || ('email' in request.auth.token && request.auth.token.email in resource.data.helpers)
         ))
         || ('active' in resource.data && resource.data.active == true
           // Public discovery requires an explicit marker; legacy records remain private by default.
@@ -213,7 +213,7 @@ service cloud.firestore {
         || (isSignedIn()
           && resource.data.active == true
           && (resource.data.ownerId == request.auth.uid
-            || (request.auth.token.get('email', null) != null && 'user' in resource.data && resource.data.user == request.auth.token.get('email', null)))
+            || ('email' in request.auth.token && 'user' in resource.data && resource.data.user == request.auth.token.email))
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['active', 'updatedAt'])
           && request.resource.data.active == false
           && request.resource.data.updatedAt == request.time)
@@ -221,9 +221,9 @@ service cloud.firestore {
           && resource.data.active == true
           && resource.data.helpers is list
           && !(request.auth.uid in resource.data.helpers)
-          && (request.auth.token.get('email', null) == null || !(request.auth.token.get('email', null) in resource.data.helpers))
+          && (!('email' in request.auth.token) || !(request.auth.token.email in resource.data.helpers))
           && resource.data.ownerId != request.auth.uid
-          && (request.auth.token.get('email', null) == null || !('user' in resource.data) || resource.data.user != request.auth.token.get('email', null))
+          && (!('email' in request.auth.token) || !('user' in resource.data) || resource.data.user != request.auth.token.email)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['helpers', 'updatedAt'])
           && request.resource.data.updatedAt == request.time
           && request.resource.data.helpers is list
@@ -233,7 +233,7 @@ service cloud.firestore {
         || (isSignedIn()
           && resource.data.helpers is list
           && (request.auth.uid in resource.data.helpers
-            || (request.auth.token.get('email', null) != null && request.auth.token.get('email', null) in resource.data.helpers))
+            || ('email' in request.auth.token && request.auth.token.email in resource.data.helpers))
           && resource.data.active == true
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['active', 'resolvedBy', 'resolvedAt', 'updatedAt'])
           && request.resource.data.active == false
@@ -246,14 +246,14 @@ service cloud.firestore {
       match /messages/{messageId} {
         allow read: if isAdmin() || (isSignedIn() && (
           get(/databases/$(database)/documents/helpRequests/$(requestId)).data.ownerId == request.auth.uid
-          || (request.auth.token.get('email', null) != null
+          || (request.auth.token.email != null
             && 'user' in get(/databases/$(database)/documents/helpRequests/$(requestId)).data
             && 'user' in get(/databases/$(database)/documents/helpRequests/$(requestId)).data
-              && get(/databases/$(database)/documents/helpRequests/$(requestId)).data.user == request.auth.token.get('email', null))
+              && get(/databases/$(database)/documents/helpRequests/$(requestId)).data.user == request.auth.token.email)
           || (get(/databases/$(database)/documents/helpRequests/$(requestId)).data.helpers is list
             && (request.auth.uid in get(/databases/$(database)/documents/helpRequests/$(requestId)).data.helpers
-              || (request.auth.token.get('email', null) != null
-                && request.auth.token.get('email', null) in get(/databases/$(database)/documents/helpRequests/$(requestId)).data.helpers)))
+              || (request.auth.token.email != null
+                && request.auth.token.email in get(/databases/$(database)/documents/helpRequests/$(requestId)).data.helpers)))
         ));
         allow create: if isAdmin() || (isSignedIn()
           && get(/databases/$(database)/documents/helpRequests/$(requestId)).data.active == true
@@ -267,13 +267,13 @@ service cloud.firestore {
           && request.resource.data.ts == request.time
           && (
             get(/databases/$(database)/documents/helpRequests/$(requestId)).data.ownerId == request.auth.uid
-            || (request.auth.token.get('email', null) != null
+            || (request.auth.token.email != null
               && 'user' in get(/databases/$(database)/documents/helpRequests/$(requestId)).data
-              && get(/databases/$(database)/documents/helpRequests/$(requestId)).data.user == request.auth.token.get('email', null))
+              && get(/databases/$(database)/documents/helpRequests/$(requestId)).data.user == request.auth.token.email)
             || (get(/databases/$(database)/documents/helpRequests/$(requestId)).data.helpers is list
               && (request.auth.uid in get(/databases/$(database)/documents/helpRequests/$(requestId)).data.helpers
-                || (request.auth.token.get('email', null) != null
-                  && request.auth.token.get('email', null) in get(/databases/$(database)/documents/helpRequests/$(requestId)).data.helpers)))
+                || (request.auth.token.email != null
+                  && request.auth.token.email in get(/databases/$(database)/documents/helpRequests/$(requestId)).data.helpers)))
           ));
         allow update, delete: if isAdmin();
       }
