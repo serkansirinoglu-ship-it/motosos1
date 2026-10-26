@@ -380,3 +380,8 @@ Updated `client/src/pages/SOSPage.tsx` so remote SOS cancellation and resolution
 ## SOS duplicate terminal-action guard — 2026-10-26
 
 Added a client-side in-flight guard to the SOS cancel and complete controls. While a terminal action is awaiting Firestore confirmation, both controls are disabled and additional handler calls return immediately; if the remote update fails, the controls are re-enabled and the SOS remains active for retry. This reduces accidental duplicate writes from rapid taps without changing authorization rules or the remote document schema. The latest CI run for the preceding head (`967ffc74a17a6f5fd872eb3fce62e31314c8326e`) passed TypeScript, unit tests, build, static rules gates, rules parity, and both emulator rules suites. This new guard requires its own CI run before it is considered verified. No production deployment or production data access occurred.
+
+
+## Synchronous SOS terminal-action lock — 2026-10-26
+
+Strengthened the SOS terminal-action guard with a React ref in addition to the visible pending state. The ref is set synchronously at handler entry, preventing two rapid events from both passing the same stale render-state check; it is released after a failed remote update to allow retry, and after a completed operation. The UI still disables both controls while pending. CI for the prior commit is still running; this commit requires its own successful Safe CI run before verification is complete.
