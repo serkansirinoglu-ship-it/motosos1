@@ -45,4 +45,14 @@ describe("validateSOSRequestInput", () => {
     expect(validateSOSRequestInput("authenticated-rider", { ...validInput, latitude: -90, longitude: 180 })).toBeNull();
     expect(validateSOSRequestInput("authenticated-rider", { ...validInput, latitude: 90, longitude: -180 })).toBeNull();
   });
+
+  it("accepts an omitted or bounded SOS note", () => {
+    expect(validateSOSRequestInput("authenticated-rider", validInput)).toBeNull();
+    expect(validateSOSRequestInput("authenticated-rider", { ...validInput, note: "" })).toBeNull();
+    expect(validateSOSRequestInput("authenticated-rider", { ...validInput, note: "x".repeat(1000) })).toBeNull();
+  });
+
+  it.each([null, 7, {}, "x".repeat(1001)])("rejects invalid or oversized SOS notes", (note) => {
+    expect(validateSOSRequestInput("authenticated-rider", { ...validInput, note })).toBe("invalid_note");
+  });
 });

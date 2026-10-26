@@ -9,7 +9,7 @@ export interface SOSRequestInput {
   note?: unknown;
 }
 
-export type SOSInputError = "unauthenticated" | "requester_mismatch" | "invalid_help_type" | "invalid_coordinates";
+export type SOSInputError = "unauthenticated" | "requester_mismatch" | "invalid_help_type" | "invalid_coordinates" | "invalid_note";
 
 export function validateSOSRequestInput(
   authenticatedUid: string | null | undefined,
@@ -33,6 +33,9 @@ export function validateSOSRequestInput(
     data.longitude > 180
   ) {
     return "invalid_coordinates";
+  }
+  if (data.note !== undefined && (typeof data.note !== "string" || data.note.length > 1000)) {
+    return "invalid_note";
   }
   return null;
 }
