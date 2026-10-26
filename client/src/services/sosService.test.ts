@@ -41,6 +41,19 @@ describe("SOSService in-memory request lifecycle", () => {
     expect(updated?.helpersCount).toBe(1);
   });
 
+  it("does not allow a second helper to claim an already accepted request", () => {
+    const created = sosService.createRequest(request);
+
+    expect(sosService.updateStatus(created.id, "yanit_geliyor", "helper-one")).toBe(true);
+    expect(sosService.updateStatus(created.id, "yanit_geliyor", "helper-two")).toBe(false);
+    expect(sosService.updateStatus(created.id, "yardim_bulundu", "helper-two")).toBe(false);
+
+    const updated = sosService.getAllRequests().find((item) => item.id === created.id);
+    expect(updated?.status).toBe("yanit_geliyor");
+    expect(updated?.acceptedBy).toBe("helper-one");
+    expect(updated?.helpersCount).toBe(1);
+  });
+
   it("records completion time and removes completed requests from active requests", () => {
     const created = sosService.createRequest(request);
     expect(sosService.updateStatus(created.id, "tamamlandi")).toBe(true);

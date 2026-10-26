@@ -72,6 +72,11 @@ class SOSService {
     const req = this.activeRequests.find((r) => r.id === id);
     if (!req) return false;
     if (req.status === 'tamamlandi' || req.status === 'iptal_edildi') return false;
+    // A request can be claimed by only one helper, and claiming is only valid
+    // from the initial pending state.
+    if (acceptedBy && (req.acceptedBy || req.status !== 'bekleniyor' || newStatus !== 'yanit_geliyor')) {
+      return false;
+    }
     req.status = newStatus;
     if (acceptedBy) {
       req.acceptedBy = acceptedBy;
