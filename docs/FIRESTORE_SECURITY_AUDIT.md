@@ -406,3 +406,8 @@ No changes were made to client/src/pages/Home.tsx, firestore.rules, or firestore
 ## Help action duplicate-submission guard — 2026-10-26
 
 Reviewed ChatPage acceptance and resolution handlers. Both awaited server confirmation but had no synchronous in-flight guard, so rapid taps could issue duplicate requests and potentially credit a helper more than once. Added a shared ref lock set before the first await, visible pending state, disabled both actions while either operation is running, and a finally-based release so failures remain retryable. Chat now also labels local-only fallback messages as not delivered to the server. No authorization rules were loosened or modified; Home.tsx remains untouched. The changes require Safe CI on their own head.
+
+
+## Chat fallback visibility — 2026-10-26
+
+A further UI review found that ChatPage preferred the realtime callback array whenever it was non-empty. This could hide a new local-only fallback message behind an older cached/realtime list. The chat now merges provider state and callback state by message ID and sorts the merged list by timestamp, avoiding duplicate rendering while keeping local-only fallback messages visible. Requires Safe CI on the final branch head.
