@@ -179,7 +179,7 @@ service cloud.firestore {
         && request.resource.data.description is string
         && request.resource.data.description.size() <= 2000
         && request.resource.data.active == true
-        && request.resource.data.publicVisible == true
+        && request.resource.data.get('publicVisible', false) == true
         && request.resource.data.helpers is list
         && request.resource.data.helpers.size() == 0
         && request.resource.data.resolvedBy == null
@@ -202,7 +202,7 @@ service cloud.firestore {
         || (resource.data.active == true
           // Public discovery requires an explicit marker; legacy records remain private by default.
           && 'publicVisible' in resource.data
-          && resource.data.publicVisible == true
+          && resource.data.get('publicVisible', false) == true
           && resource.data.helpers is list
           && resource.data.helpers.size() == 0
           && resource.data.keys().hasOnly([
