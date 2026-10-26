@@ -365,3 +365,8 @@ Updated both one-shot and realtime active-SOS queries to filter by `status == ac
 ## SOS self-acceptance regression test — 2026-10-26
 
 Extended the non-production Firestore emulator suite to assert that an SOS requester cannot set themselves as the accepted helper. The test exercises the deployed-rules-equivalent emulator policy without modifying either rules file or accessing production. The existing test already verifies a different signed-in rider can claim an active request and that subsequent claim attempts cannot replace the accepted helper.
+
+
+## SOS duplicate-request query portability — 2026-10-26
+
+Updated the active-SOS duplicate guard in `createSOSRequest` to query by the authenticated requester ID and filter active status in memory. The previous two-field query (`requesterId` + `status`) could depend on a composite index that is not declared in this repository. This preserves the duplicate-active-request behavior while avoiding that undeclared index dependency. It does not change Firestore rules, access scope, document schema, or production configuration. Validation for this commit is pending Safe CI; no production data or deployment was used.
