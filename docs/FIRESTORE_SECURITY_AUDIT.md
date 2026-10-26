@@ -504,3 +504,5 @@ The help-chat context now validates message request ID, authenticated sender ide
 - Help cache hydration waits for auth resolution, realtime help-request subscriptions are refreshed when the account scope changes, and the context hides prior in-memory help/message state while the new account cache hydrates.
 - Added tests for distinct UID namespaces, isolated round-trips, malformed cache data, and unavailable browser storage.
 - This reduces localStorage cross-account exposure; it does not replace Firestore authorization or establish full end-to-end account-switch correctness. Full browser/E2E validation remains a release blocker. No production data, Firestore rules, or Home.tsx were changed.
+
+- Group chat's browser-local posts are now scoped to the resolved Firebase UID (or a separate anonymous namespace), and prior-account posts are hidden while the next cache hydrates. The UI explicitly states that group posts are device/account-local and are not broadcast. This is a local privacy boundary only; group posts are still not a persistent multi-user backend feature.
