@@ -411,3 +411,8 @@ Reviewed ChatPage acceptance and resolution handlers. Both awaited server confir
 ## Chat fallback visibility — 2026-10-26
 
 A further UI review found that ChatPage preferred the realtime callback array whenever it was non-empty. This could hide a new local-only fallback message behind an older cached/realtime list. The chat now merges provider state and callback state by message ID and sorts the merged list by timestamp, avoiding duplicate rendering while keeping local-only fallback messages visible. Requires Safe CI on the final branch head.
+
+
+## Help-request creation authorization and disclosure — 2026-10-26
+
+Reviewed HelpRequestsPage against the checked-in rules: Firestore help-request creation requires an authenticated owner UID, but the page previously allowed unauthenticated users to create a browser-only fallback. The create handler now requires a signed-in user, trims and validates title/description lengths, opens the existing authentication prompt when signed out, and disables submission for a blank title. Browser-only help requests are explicitly marked in the list, and their local-only flag is cleared when a later realtime snapshot confirms the same document ID. No rules were loosened or changed. Requires Safe CI on the latest head.
