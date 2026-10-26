@@ -6,7 +6,7 @@ const { createRequire } = require("node:module");
 const moduleRoot = path.resolve(".firestore-test-runtime/node_modules");
 const testRequire = createRequire(path.join(path.dirname(moduleRoot), "package.json"));
 const { initializeTestEnvironment, assertSucceeds, assertFails } = testRequire("@firebase/rules-unit-testing");
-const { doc, getDoc, setDoc, updateDoc, serverTimestamp, writeBatch } = testRequire("firebase/firestore");
+const { doc, getDoc, setDoc, updateDoc, serverTimestamp, writeBatch, deleteDoc } = testRequire("firebase/firestore");
 
 async function main() {
   const rulesFile = process.env.FIRESTORE_RULES_FILE || "firestore.rules";
@@ -322,7 +322,7 @@ async function main() {
     await assertFails(updateDoc(doc(owner, "communityPosts", "public-post"), { createdAt: serverTimestamp() }));
     // A different authenticated rider must not edit or delete another author's post.
     await assertFails(updateDoc(doc(outsider, "communityPosts", "public-post"), { content: "Unauthorized edit" }));
-    await assertFails(require("firebase/firestore").deleteDoc(doc(outsider, "communityPosts", "public-post")));
+    await assertFails(deleteDoc(doc(outsider, "communityPosts", "public-post")));
     // Likes/comments arrays are not an authorized client-side mutation surface.
     await assertFails(updateDoc(doc(owner, "communityPosts", "public-post"), { comments: [{ from: "owner", text: "injected" }] }));
     await assertFails(setDoc(doc(owner, "communityPosts", "invalid-post"), {
@@ -345,7 +345,7 @@ async function main() {
     await assertFails(updateDoc(doc(owner, "events", "public-event"), { createdAt: serverTimestamp() }));
     await assertFails(updateDoc(doc(owner, "events", "public-event"), { isAdmin: true }));
     await assertFails(updateDoc(doc(outsider, "events", "public-event"), { title: "Unauthorized event edit" }));
-    await assertFails(require("firebase/firestore").deleteDoc(doc(outsider, "events", "public-event")));
+    await assertFails(deleteDoc(doc(outsider, "events", "public-event")));
     await assertFails(setDoc(doc(owner, "events", "extra-field-event"), {
       organizerId: "owner", title: "Event", isAdmin: true,
     }));
