@@ -64,26 +64,26 @@ export default function AdminPanel() {
 
   const handleResolveReport = (id: string, action: "resolved" | "dismissed") => {
     moderationService.resolveReport(id, action);
-    toast.success(`Şikayet ${action === "resolved" ? "çözüldü" : "reddedildi"} olarak işaretlendi.`);
+    toast.info(`Şikâyet bu oturumda ${action === "resolved" ? "çözüldü" : "reddedildi"} olarak işaretlendi; kalıcı moderasyon kaydı oluşturulmadı.`);
     setReports(moderationService.getReports());
   };
 
   const handleDeletePost = (id: string) => {
     communityService.deletePost(id);
-    toast.info("Gönderi admin tarafından silindi.");
+    toast.info("Gönderi yalnızca bu oturumun yerel verisinden kaldırıldı; sunucudaki içerik silinmedi.");
     setPosts(communityService.getPosts());
   };
 
   const handleDeleteListing = (id: string) => {
     marketplaceService.deleteListing(id);
-    toast.info("İlan admin tarafından silindi.");
+    toast.info("İlan yalnızca bu oturumun yerel verisinden kaldırıldı; sunucudaki ilan silinmedi.");
     setListings(marketplaceService.getListings());
   };
 
   const handleToggleTier = (bizId: string, currentTier: BusinessProfile["tier"]) => {
     const nextTier: BusinessProfile["tier"] = currentTier === "sponsored" ? "standard" : "sponsored";
     businessService.updateTier(bizId, nextTier);
-    toast.success(`İşletme tier'ı '${nextTier}' olarak güncellendi.`);
+    toast.info(`İşletme tier'ı bu oturumda '${nextTier}' olarak değiştirildi; kalıcı sunucu kaydı güncellenmedi.`);
     setBusinesses(businessService.getBusinesses());
   };
 
@@ -101,7 +101,7 @@ export default function AdminPanel() {
       active: true,
       type: "banner",
     });
-    toast.success("Sponsorlu reklam banner'ı oluşturuldu!");
+    toast.info("Banner bu oturum için oluşturuldu; reklam sunucusuna kaydedilmedi ve yayınlanmadı.");
     setBannerTitle("");
     setBannerSub("");
     setBannerImg("");
@@ -113,7 +113,7 @@ export default function AdminPanel() {
 
   const handleRemoveBanner = (id: string) => {
     adService.removeBanner(id);
-    toast.info("Banner kaldırıldı.");
+    toast.info("Banner bu oturumun yerel listesinden kaldırıldı; sunucu kaydı değiştirilmedi.");
     setBanners(adService.getBanners());
   };
 
@@ -209,7 +209,7 @@ export default function AdminPanel() {
             <Card className="bg-card-gradient border-border p-4 rounded-xl space-y-2">
               <h3 className="font-display font-bold text-white text-xs uppercase">Sistem Durumu</h3>
               <p className="text-xs text-muted-foreground">
-                MotoGuard moderasyon ve veri adapte servisleri aktif durumda. Tüm içerikler anlık kontrol edilebilir.
+                Paneldeki listeler oturum içi servislerden gelir; kalıcı sunucu moderasyonu ve içerik yönetimi henüz bağlı değildir.
               </p>
             </Card>
           </div>
@@ -233,7 +233,7 @@ export default function AdminPanel() {
                       onClick={() => handleResolveReport(r.id, "resolved")}
                       className="flex-1 bg-green-600 text-white font-bold text-xs py-2 rounded-xl"
                     >
-                      İçeriği Kaldır / Çöz
+                      Şikâyeti Çözüldü İşaretle (Oturum İçi)
                     </button>
                     <button
                       onClick={() => handleResolveReport(r.id, "dismissed")}
@@ -348,7 +348,7 @@ export default function AdminPanel() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in">
           <Card className="w-full max-w-md bg-card-gradient border-border p-5 rounded-2xl shadow-2xl space-y-3">
             <div className="flex items-center justify-between border-b border-border pb-3">
-              <h3 className="font-display font-bold text-white uppercase text-base">Sponsorlu Banner Ekle</h3>
+              <h3 className="font-display font-bold text-white uppercase text-base">Oturum İçi Banner Ekle</h3>
               <button onClick={() => setIsNewBannerOpen(false)} className="p-1 rounded-lg hover:bg-muted text-muted-foreground">
                 <X className="w-5 h-5" />
               </button>
@@ -384,7 +384,7 @@ export default function AdminPanel() {
                 İptal
               </button>
               <button onClick={handleCreateBanner} className="flex-1 py-2.5 rounded-xl bg-primary text-white font-bold text-xs">
-                Kaydet & Yayınla
+                Oturumda Kaydet
               </button>
             </div>
           </Card>
