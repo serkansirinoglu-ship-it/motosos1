@@ -364,7 +364,25 @@ async function main() {
       sellerId: "owner", title: "Promoted", category: "Kask", price: 100, city: "İzmir", description: "Self-promoted", featured: true,
     }));
     await assertSucceeds(setDoc(doc(owner, "events", "owner-event"), {
-      organizerId: "owner", title: "Owner event",
+      organizerId: "owner", title: "Owner event", createdAt: serverTimestamp(),
+    }));
+    await assertFails(setDoc(doc(owner, "events", "event-missing-created-at"), {
+      organizerId: "owner", title: "Missing creation timestamp",
+    }));
+    await assertFails(setDoc(doc(owner, "events", "event-forged-created-at"), {
+      organizerId: "owner", title: "Forged creation timestamp", createdAt: new Date("2020-01-01T00:00:00Z"),
+    }));
+    await assertSucceeds(setDoc(doc(owner, "listings", "valid-owner-listing"), {
+      sellerId: "owner", title: "Valid", category: "Kask", price: 100, city: "İzmir",
+      description: "Valid listing", createdAt: serverTimestamp(),
+    }));
+    await assertFails(setDoc(doc(owner, "listings", "listing-missing-created-at"), {
+      sellerId: "owner", title: "Missing timestamp", category: "Kask", price: 100, city: "İzmir",
+      description: "Missing timestamp",
+    }));
+    await assertFails(setDoc(doc(owner, "listings", "listing-forged-created-at"), {
+      sellerId: "owner", title: "Forged timestamp", category: "Kask", price: 100, city: "İzmir",
+      description: "Forged timestamp", createdAt: new Date("2020-01-01T00:00:00Z"),
     }));
     await assertFails(setDoc(doc(outsider, "events", "spoofed-event"), {
       organizerId: "owner", title: "Spoofed event",
