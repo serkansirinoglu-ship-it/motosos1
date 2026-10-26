@@ -389,7 +389,8 @@ service cloud.firestore {
     // Online presence: only the authenticated owner can maintain their minimal heartbeat.
     // Public read is limited to uid + lastSeen fields so the client can display an aggregate count.
     match /presence/{uid} {
-      allow read: if true;
+      // Firestore cannot redact individual fields from a document read; deny malformed legacy records instead.
+      allow read: if resource.data.keys().hasOnly(['uid', 'lastSeen']);
       allow create, update: if isOwner(uid)
         && request.resource.data.keys().hasOnly(['uid', 'lastSeen'])
         && request.resource.data.uid == request.auth.uid
