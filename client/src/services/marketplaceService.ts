@@ -28,6 +28,15 @@ export interface ListingItem {
   featured?: boolean;
 }
 
+function isHttpUrl(value: string): boolean {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 class MarketplaceService {
   // Do not present hard-coded sample offers as real marketplace listings.
   // Listings remain session-local until a verified persistent backend is integrated.
