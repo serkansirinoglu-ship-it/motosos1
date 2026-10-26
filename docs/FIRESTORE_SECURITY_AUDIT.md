@@ -470,3 +470,7 @@ Removed the client-side `createInitialSeed` helper and its `VITE_FIREBASE_AUTO_S
 - Community post creation and comment submission now require an authenticated user; unauthenticated actions open the existing sign-in modal and are rejected.
 - Post deletion now verifies the current user owns the in-session post before removing it.
 - Delete feedback explicitly says the post was removed from this session only; community data is still not persisted or published to other users.
+
+## Admin session-local action disclosure — 2026-10-26
+
+Reviewed the admin handlers against the actual service implementations. Report status changes, post/listing removals, business tier changes, and banner creation/removal currently mutate in-memory service state only; they do not create persistent server-side moderation records or publish/delete remote content. Updated the admin feedback and action labels so they explicitly describe session-local behavior and no longer claim that a report was sent to moderation, content was deleted server-side, or an ad was published. The admin overview also now describes the actual limitation instead of implying all content is live-manageable. Persistent moderation, server-side content deletion, business tier updates, and ad publishing still require an authenticated backend implementation and server-side authorization. No homepage or Firestore rules changes were made.
