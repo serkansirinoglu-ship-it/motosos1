@@ -77,7 +77,7 @@ export default function MapPage() {
             category: categories[doc.helpType] || "diger",
             latitude: Number(doc.latitude),
             longitude: Number(doc.longitude),
-            status: "bekleniyor",
+            status: doc.acceptedBy ? "yanit_geliyor" : "bekleniyor",
             helpersCount: doc.acceptedBy ? 1 : 0,
             acceptedBy: doc.acceptedBy || undefined,
             createdAt,
