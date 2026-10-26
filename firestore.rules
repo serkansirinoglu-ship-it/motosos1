@@ -431,7 +431,8 @@ service cloud.firestore {
     // Public read is limited to uid + lastSeen fields so the client can display an aggregate count.
     match /presence/{uid} {
       // Firestore cannot redact individual fields from a document read; deny malformed legacy records instead.
-      allow read: if resource.data.keys().hasOnly(['uid', 'lastSeen'])
+      allow read: if isSignedIn()
+        && resource.data.keys().hasOnly(['uid', 'lastSeen'])
         && resource.data.uid == uid
         && resource.data.lastSeen is timestamp;
       allow create, update: if isOwner(uid)
