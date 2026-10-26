@@ -369,9 +369,9 @@ export default function ProfilePage() {
           <Card className="w-full max-w-sm bg-card-gradient border-destructive/50 p-5 rounded-2xl shadow-2xl text-center space-y-4">
             <Trash2 className="w-12 h-12 text-destructive mx-auto animate-bounce" />
             <div>
-              <h3 className="font-display font-bold text-white uppercase text-base">Hesabını Silmek İstiyor musun?</h3>
+              <h3 className="font-display font-bold text-white uppercase text-base">Kalıcı Hesap Silme Kullanılamıyor</h3>
               <p className="text-xs text-muted-foreground mt-1">
-                Bu işlem geri alınamaz. Tüm rozetlerin, yardım puanların ve geçmişiniz silinecektir.
+                Bu işlem henüz uygulamaya bağlanmadı. Bu ekrandan hesabınız veya verileriniz silinmeyecek.
               </p>
             </div>
             <div className="flex gap-2">
@@ -385,7 +385,7 @@ export default function ProfilePage() {
                 onClick={handleDeleteAccount}
                 className="flex-1 py-2.5 rounded-xl bg-destructive text-white text-xs font-bold active:scale-95 transition-all shadow-md shadow-destructive/30"
               >
-                Evet, Hesabımı Sil
+                Anladım
               </button>
             </div>
           </Card>
