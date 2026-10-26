@@ -1,3 +1,16 @@
+/**
+ * Return true only while the Firebase auth session still belongs to the user
+ * who initiated an asynchronous SOS write.
+ */
+export function isCurrentSOSAuthSession(
+  authenticatedUid: string | null | undefined,
+  currentUid: string | null | undefined,
+): boolean {
+  return typeof authenticatedUid === "string" &&
+    authenticatedUid.length > 0 &&
+    authenticatedUid === currentUid;
+}
+
 export const SOS_HELP_TYPES = ["lastik", "aku", "yakit", "ariza", "kaza", "cekici", "diger"] as const;
 
 export interface SOSRequestInput {

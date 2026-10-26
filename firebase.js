@@ -1,7 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut, onAuthStateChanged, getIdTokenResult } from "firebase/auth";
 import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, getDocs, doc, setDoc, getDoc, updateDoc, deleteDoc, where, Timestamp, writeBatch } from "firebase/firestore";
-import { validateSOSRequestInput, validateSOSStatusUpdatePatch, validateUserProfilePatch, validateUserProfileCreation, validateProductInput, validateProductPatch, validateBannerInput, validateBannerPatch, validateAdminDocumentId } from "./client/src/services/sosInputValidation";
+import { isCurrentSOSAuthSession, validateSOSRequestInput, validateSOSStatusUpdatePatch, validateUserProfilePatch, validateUserProfileCreation, validateProductInput, validateProductPatch, validateBannerInput, validateBannerPatch, validateAdminDocumentId } from "./client/src/services/sosInputValidation";
 import { validateHelpMessageInput, validateHelpRequestInput, validateHelpRequestUpdatePatch } from "./client/src/services/helpMessageValidation";
 
 // Read config from Vite environment variables
@@ -200,8 +200,12 @@ export async function updateUserProfile(uid, patch) {
 export async function createSOSRequest(data) {
   if (!db) return { id: null, error: "firebase_unavailable" };
 
+  // Capture one identity snapshot so a mid-flight account switch cannot mix identities.
+  const authenticatedUser = auth?.currentUser;
+  const authenticatedUid = authenticatedUser?.uid;
+  const authenticatedEmail = authenticatedUser?.email || "";
+
   // Treat client validation as defense in depth; Firestore rules remain authoritative.
-  const authenticatedUid = auth?.currentUser?.uid;
   const inputError = validateSOSRequestInput(authenticatedUid, data || {});
   if (inputError) return { id: null, error: inputError };
 
@@ -214,6 +218,9 @@ export async function createSOSRequest(data) {
       where("requesterId", "==", data.requesterId)
     );
     const requesterSnap = await getDocs(requesterQ);
+    if (!isCurrentSOSAuthSession(authenticatedUid, auth?.currentUser?.uid)) {
+      return { id: null, error: "auth_changed" };
+    }
     const hasActiveRequest = requesterSnap.docs.some(
       (item) => item.data()?.status === "active"
     );
@@ -239,12 +246,16 @@ export async function createSOSRequest(data) {
     };
     batch.set(sosRef, payload);
     batch.set(doc(db, "sosRequests", sosRef.id, "privateDetails", "owner"), {
-      requesterEmail: auth.currentUser.email || "",
+      requesterEmail: authenticatedEmail,
       latitude: data.latitude,
       longitude: data.longitude,
       note: typeof data.note === "string" ? data.note : "",
       createdAt: now,
     });
+    // Recheck immediately before the write; Firestore rules also validate request.auth.
+    if (!isCurrentSOSAuthSession(authenticatedUid, auth?.currentUser?.uid)) {
+      return { id: null, error: "auth_changed" };
+    }
     await batch.commit();
     return { id: sosRef.id, error: null };
   } catch (e) {

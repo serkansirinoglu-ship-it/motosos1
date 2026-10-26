@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validateSOSRequestInput, validateSOSStatusUpdatePatch, validateUserProfilePatch, validateUserProfileCreation, validateProductInput, validateProductPatch, validateBannerInput, validateBannerPatch, validateAdminDocumentId } from "./sosInputValidation";
+import { isCurrentSOSAuthSession, validateSOSRequestInput, validateSOSStatusUpdatePatch, validateUserProfilePatch, validateUserProfileCreation, validateProductInput, validateProductPatch, validateBannerInput, validateBannerPatch, validateAdminDocumentId } from "./sosInputValidation";
 
 const validInput = {
   requesterId: "authenticated-rider",
@@ -8,6 +8,23 @@ const validInput = {
   latitude: 38.4237,
   longitude: 27.1428,
 };
+
+describe("isCurrentSOSAuthSession", () => {
+  it("allows the original authenticated user while the session UID is unchanged", () => {
+    expect(isCurrentSOSAuthSession("rider-1", "rider-1")).toBe(true);
+  });
+
+  it.each([
+    ["rider-1", "rider-2"],
+    ["rider-1", null],
+    ["rider-1", undefined],
+    [null, "rider-1"],
+    [undefined, "rider-1"],
+    ["", ""],
+  ])("rejects a changed or missing session identity: %s -> %s", (originalUid, currentUid) => {
+    expect(isCurrentSOSAuthSession(originalUid, currentUid)).toBe(false);
+  });
+});
 
 describe("validateSOSRequestInput", () => {
   it("accepts an authenticated rider with a supported category and valid coordinates", () => {
