@@ -13,6 +13,7 @@ import { toast } from "sonner";
 
 export default function AdminPanel() {
   const { user } = useAuth();
+  const [adminAccess, setAdminAccess] = useState<"checking" | "allowed" | "denied">("checking");
   const [activeTab, setActiveTab] = useState<"stats" | "reports" | "users" | "posts" | "listings" | "businesses" | "banners">("stats");
 
   // Admin Data state
@@ -32,13 +33,34 @@ export default function AdminPanel() {
   const [sponsorName, setSponsorName] = useState("");
 
   useEffect(() => {
+    let cancelled = false;
+    async function verifyAdminClaim() {
+      if (!user?.uid || typeof user.getIdTokenResult !== "function") {
+        setAdminAccess("denied");
+        return;
+      }
+      setAdminAccess("checking");
+      try {
+        const token = await user.getIdTokenResult(true);
+        if (!cancelled) setAdminAccess(token?.claims?.admin === true ? "allowed" : "denied");
+      } catch (error) {
+        console.warn("Admin claim verification failed", error);
+        if (!cancelled) setAdminAccess("denied");
+      }
+    }
+    void verifyAdminClaim();
+    return () => { cancelled = true; };
+  }, [user]);
+
+  useEffect(() => {
+    if (adminAccess !== "allowed") return;
     setReports(moderationService.getReports());
     setPosts(communityService.getPosts());
     setListings(marketplaceService.getListings());
     setBusinesses(businessService.getBusinesses());
     setBanners(adService.getBanners());
     setActiveSOS(sosService.getActiveRequests());
-  }, []);
+  }, [adminAccess]);
 
   const handleResolveReport = (id: string, action: "resolved" | "dismissed") => {
     moderationService.resolveReport(id, action);
@@ -95,9 +117,47 @@ export default function AdminPanel() {
     setBanners(adService.getBanners());
   };
 
+  if (adminAccess === "checking") {
+    return (
+      <div className="min-h-screen bg-asphalt pb-8">
+        <Header />
+        <div className="px-4 pt-12 max-w-lg mx-auto">
+          <Card className="bg-card-gradient border-border p-6 text-center">
+            <ShieldCheck className="w-10 h-10 text-primary mx-auto mb-3" />
+            <p className="font-bold text-white">Yönetici yetkisi doğrulanıyor…</p>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (adminAccess !== "allowed") {
+    return (
+      <div className="min-h-screen bg-asphalt pb-8">
+        <Header />
+        <div className="px-4 pt-12 max-w-lg mx-auto">
+          <Card className="bg-card-gradient border-border p-6 text-center space-y-3">
+            <ShieldCheck className="w-10 h-10 text-destructive mx-auto" />
+            <p className="font-bold text-white">Yönetici erişimi reddedildi</p>
+            <p className="text-xs text-muted-foreground">Bu alan yalnızca Firebase kimlik belirtecinde admin=true yetkisi bulunan hesaplara açıktır.</p>
+            <a href="/" className="inline-flex justify-center rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white">Ana sayfaya dön</a>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-asphalt pb-8">
       <Header />
+
+      <div className="px-4 pt-3 max-w-lg mx-auto">
+        <Card className="bg-amber-500/10 border-amber-500/30 p-3 rounded-xl">
+          <p className="text-[11px] text-amber-200 leading-relaxed">
+            Not: Topluluk, pazar, işletme ve reklam yönetiminin bir bölümü hâlen oturum içi hizmetler kullanıyor. Bu işlemler kalıcı sunucu yönetimi olarak değerlendirilmemelidir.
+          </p>
+        </Card>
+      </div>
 
       <div className="px-4 pt-4 max-w-lg mx-auto">
         <div className="flex items-center gap-2 mb-4">
