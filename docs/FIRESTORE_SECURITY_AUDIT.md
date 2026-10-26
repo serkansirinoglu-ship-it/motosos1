@@ -176,3 +176,8 @@ The in-memory marketplace listing model and listing creation flow no longer stor
 ## Community-post legacy schema privacy gate — 2026-10-26
 
 Anonymous reads of community posts now require the stored document to contain only the approved public fields. Admins and the post owner retain access to legacy records that have extra fields, allowing review without exposing those records to the public. The emulator suite adds a legacy post with an email field and asserts anonymous denial plus owner access. This is document-level protection: Firestore rules cannot redact fields. Any future Firestore-backed feed must account for legacy documents that fail the public schema condition; the current community screen still uses local in-memory data. No production data was inspected or changed.
+
+
+## Event legacy-schema privacy gate — 2026-10-26
+
+Public event reads now require the document to contain only the approved public event fields. The organizer and admins retain access to legacy records with extra fields for review. Emulator coverage verifies anonymous denial and organizer access for a legacy event containing a contact email. Firestore rules deny the whole document rather than redact individual fields. The current Events page is an empty state and does not persist events; this is a defensive future-backend rule. No production data was inspected or changed.
