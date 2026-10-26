@@ -172,6 +172,13 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
     // Do not create even a local-only request before authentication is resolved.
     if (!authReady || !uid || (r.ownerId != null && r.ownerId !== uid)) return null;
 
+    const operationUid = uid;
+    const operationStorageKey = storageKey;
+    const operationIsCurrent = () => {
+      const active = identityRef.current;
+      return active.authReady && active.uid === operationUid &&
+        active.storageKey === operationStorageKey && active.cacheForKey === operationStorageKey;
+    };
     const id = nanoid();
     const hr: HelpRequest = {
       ...r,
@@ -199,6 +206,7 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
     try {
       const pending = createHelpRequestRealtime(hr);
       void Promise.resolve(pending).then((result) => {
+        if (!operationIsCurrent()) return;
         if (result) {
           localOnlyHelpRequestIds.current.delete(hr.id);
           setHelpRequests((current) => current.map((item) =>
@@ -212,6 +220,7 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
           item.id === hr.id ? { ...item, localOnly: true } : item
         ));
       }).catch((error) => {
+        if (!operationIsCurrent()) return;
         console.warn("Realtime help request failed; keeping a local copy", error);
         localOnlyHelpRequestIds.current.add(hr.id);
         setHelpRequests((current) => current.map((item) =>
@@ -245,9 +254,14 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
     if (isOwner || alreadyHelper) return false;
     const helpers = Array.from(new Set([...currentHelpers, helperUid]));
     try {
+      const operationStorageKey = storageKey;
+      const operationUid = uid;
       const pending = updateHelpRequestRealtime(requestId, { helpers });
       if (!pending) return false;
       await pending;
+      const activeIdentity = identityRef.current;
+      if (!activeIdentity.authReady || activeIdentity.uid !== operationUid ||
+        activeIdentity.storageKey !== operationStorageKey || activeIdentity.cacheForKey !== operationStorageKey) return false;
       setHelpRequests((current) =>
         current.map((item) => item.id === requestId ? { ...item, helpers } : item)
       );
@@ -272,6 +286,9 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
     if (isOwner || !isHelper) return false;
     const resolvedAt = Date.now();
     try {
+      const operationStorageKey = storageKey;
+      const operationUid = uid;
+      const operationEmail = authenticatedEmail;
       const pending = updateHelpRequestRealtime(requestId, {
         resolvedBy: helperUid,
         resolvedAt,
@@ -279,13 +296,16 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
       });
       if (!pending) return false;
       await pending;
+      const activeIdentity = identityRef.current;
+      if (!activeIdentity.authReady || activeIdentity.uid !== operationUid ||
+        activeIdentity.storageKey !== operationStorageKey || activeIdentity.cacheForKey !== operationStorageKey) return false;
       setHelpRequests((current) =>
         current.map((item) => item.id === requestId
           ? { ...item, resolvedBy: helperUid, resolvedAt, active: false }
           : item)
       );
       // Use the authenticated profile, not an email supplied by the UI caller.
-      const statsKey = typeof user?.email === "string" && user.email.trim() ? user.email : uid;
+      const statsKey = operationEmail && operationEmail.trim() ? operationEmail : operationUid;
       incrementHelpCount(statsKey);
       const newCount = (helpCounts[statsKey] || 0) + 1;
       if (newCount >= 1) addBadgeToProfile(statsKey, "Koruyucu Kardeş");
@@ -326,6 +346,8 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
     if (!isOwner && !isHelper) return null;
 
     if (validateHelpMessageInput({ requestId, text, from, fromName, authenticatedUid: uid })) return null;
+    const operationUid = uid;
+    const operationStorageKey = storageKey;
     const msg: Message = {
       id: nanoid(),
       from,
@@ -334,6 +356,9 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
       ts: Date.now(),
     };
     const keepLocal = () => {
+      const activeIdentity = identityRef.current;
+      if (!activeIdentity.authReady || activeIdentity.uid !== operationUid ||
+        activeIdentity.storageKey !== operationStorageKey || activeIdentity.cacheForKey !== operationStorageKey) return;
       const localMessage: Message = { ...msg, localOnly: true };
       const retained = localOnlyMessagesByRequest.current.get(requestId) || [];
       if (!retained.some((item) => item.id === localMessage.id)) {
