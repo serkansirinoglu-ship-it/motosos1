@@ -401,3 +401,8 @@ ProfilePage.tsx already contained a single motorcycle field, help counts, badges
 MessageContext now marks browser-only fallback messages explicitly, keeps them in a per-request local-only collection, merges them with realtime messages rather than replacing them, and immediately returns cached messages when realtime is unavailable. It also skips identical state writes to avoid needless provider rerenders and realtime subscription churn. Local-only records are not represented as server-persisted.
 
 No changes were made to client/src/pages/Home.tsx, firestore.rules, or firestore.prod.rules. No production deployment, rules publication, or production data access/mutation occurred. CI must pass on the final resulting branch head before this pass is considered verified.
+
+
+## Help action duplicate-submission guard — 2026-10-26
+
+Reviewed ChatPage acceptance and resolution handlers. Both awaited server confirmation but had no synchronous in-flight guard, so rapid taps could issue duplicate requests and potentially credit a helper more than once. Added a shared ref lock set before the first await, visible pending state, disabled both actions while either operation is running, and a finally-based release so failures remain retryable. Chat now also labels local-only fallback messages as not delivered to the server. No authorization rules were loosened or modified; Home.tsx remains untouched. The changes require Safe CI on their own head.
