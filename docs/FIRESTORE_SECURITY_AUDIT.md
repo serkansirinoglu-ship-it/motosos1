@@ -166,3 +166,8 @@ The public `presence/{uid}` read rule now requires exactly the `uid` and `lastSe
 ## Marketplace seller-email privacy gate — 2026-10-26
 
 Public marketplace listing documents must not contain `sellerEmail`: new listing writes reject that field, and anonymous/public reads of legacy documents containing it are denied. The listing owner and admins retain access to legacy records so they can be reviewed without exposing the email to everyone. Emulator regression tests cover both legacy reads and new writes for both identical rules files. This is a rules-level safeguard only; no production records were inspected or migrated. Because Firestore rules are not field filters, any future Firestore listing query must account for legacy email-bearing documents (for example, after a separately approved migration) rather than assuming the rules can redact `sellerEmail`.
+
+
+## Marketplace client model privacy alignment — 2026-10-26
+
+The in-memory marketplace listing model and listing creation flow no longer store or derive a public seller email. Seller display names use the profile display name or a neutral fallback instead of deriving a name from the email address. This aligns client-side data shape with the Firestore rule that rejects `sellerEmail` on new listing documents. Marketplace persistence remains in-memory in the current client implementation; no production data was accessed or changed.
