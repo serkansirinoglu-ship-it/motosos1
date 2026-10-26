@@ -249,3 +249,10 @@ Extended the isolated Firestore Emulator fixtures and assertions for legacy help
 ## Legacy helper chat authorization regression — 2026-10-26
 
 Added a seeded message under a legacy help request whose helper list contains an email address. The emulator suite verifies that the matching authenticated helper can read the message while an unrelated authenticated rider is denied. This checks the nested-message authorization path as well as parent-document visibility. Test-only change; no rules were edited and no production data was accessed.
+
+
+## Help-request legacy helper identity exposure — 2026-10-26
+
+CI exposed a real regression-test gap: an active help request with a legacy email value inside `helpers` could pass the public-read branch because the rules validated field names but not the identities inside the list. Public discovery now permits only active requests with an empty helper list, and the client subscription filters to `helpers == []` so accepted requests are no longer included in discovery. The matching legacy helper retains parent and nested-message access through the identity-specific rules; unrelated riders are denied in emulator tests.
+
+Compatibility caveat: strict public-schema checks can deny a broad collection query while unsafe legacy documents remain in the same collection, because Firestore rules do not filter query results. A controlled, separately reviewed migration or a dedicated public-discovery index is needed before claiming legacy collections are fully compatible. No production rules were published and no production data was read or modified.
