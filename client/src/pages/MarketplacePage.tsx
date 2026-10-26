@@ -61,8 +61,7 @@ export default function MarketplacePage() {
       city,
       description: description.trim(),
       image: image.trim() || undefined,
-      sellerName: user?.displayName || user?.email?.split("@")[0] || "Motorcu İlan Sahibi",
-      sellerEmail: user?.email || "anonim@motoguard.tr",
+      sellerName: user?.displayName || "Motorcu İlan Sahibi",
       sellerPhone: phone.trim() || undefined,
     });
 
