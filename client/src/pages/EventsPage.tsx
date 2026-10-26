@@ -4,8 +4,8 @@ import { Card } from "@/components/ui/card";
 import { subscribeMotoGuardEvents, type MotoGuardEvent } from "@/services/eventsService";
 
 /**
- * Events are read from Firestore. Publishing stays unavailable until the
- * security rules enforce the product's admin-only event management policy.
+ * Events are read from Firestore. Creation and editing stay unavailable in this UI
+ * because the current product policy requires admin-only event management.
  */
 export default function EventsPage() {
   const [events, setEvents] = useState<MotoGuardEvent[]>([]);
@@ -70,7 +70,7 @@ export default function EventsPage() {
         ) : events.length === 0 ? (
           <Card className="bg-card-gradient border-border p-6 flex flex-col items-center text-center rounded-xl">
             <AlertCircle className="w-8 h-8 text-muted-foreground mb-2" />
-            <p className="text-sm font-bold text-foreground">Henüz yayınlanmış etkinlik yok.</p>
+            <p className="text-sm font-bold text-foreground">Henüz etkinlik yok.</p>
             <p className="text-xs text-muted-foreground mt-1">Yeni etkinlikler yayınlandığında burada görünecek.</p>
           </Card>
         ) : (
