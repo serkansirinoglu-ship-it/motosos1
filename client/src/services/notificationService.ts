@@ -1,5 +1,5 @@
 /**
- * NotificationService — Manages in-app notifications and push notifications.
+ * NotificationService — Manages session-local in-app and browser notifications. No remote push delivery service is connected.
  * Examples:
  * - "Yakınında bir MotoGuard yardım talebi var."
  * - "Yardım talebine cevap geldi."
@@ -16,17 +16,8 @@ export interface AppNotification {
   createdAt: string;
 }
 
-const INITIAL_NOTIFICATIONS: AppNotification[] = [
-  {
-    id: 'n-1',
-    title: 'MotoGuard’a Hoş Geldin!',
-    body: 'Türkiye’nin motosiklet dayanışma ağına katıldın. Profilini güncelleyerek rozet kazanmaya başlayabilirsin.',
-    type: 'system',
-    targetUrl: '/profil',
-    read: false,
-    createdAt: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
-  },
-];
+// Do not seed fake unread notifications or imply that a real event occurred.
+const INITIAL_NOTIFICATIONS: AppNotification[] = [];
 
 class NotificationService {
   private notifications: AppNotification[] = [...INITIAL_NOTIFICATIONS];
