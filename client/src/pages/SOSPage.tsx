@@ -114,12 +114,15 @@ export default function SOSPage() {
             console.error("Firebase SOS save fallback to local mode", e);
           }
 
-          // Legacy chat sync
-          createHelpRequest({
-            title: `Acil Yardım - ${CATEGORY_LABELS[category].label}`,
-            description: "Acil yardım talebi. Kesin konum yalnızca yetkili katılımcılarla paylaşılır.",
-            ownerId: user.uid,
-          });
+          // Do not create a parallel legacy chat request when the authoritative SOS
+          // write failed; that could make a local-only SOS look like a shared request.
+          if (firebaseSaved) {
+            createHelpRequest({
+              title: `Acil Yardım - ${CATEGORY_LABELS[category].label}`,
+              description: "Acil yardım talebi. Kesin konum yalnızca yetkili katılımcılarla paylaşılır.",
+              ownerId: user.uid,
+            });
+          }
         }
 
         setSosActive(true);
