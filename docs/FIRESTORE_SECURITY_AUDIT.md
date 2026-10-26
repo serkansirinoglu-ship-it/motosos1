@@ -357,3 +357,7 @@ Added `subscribeActiveSOSRequests` in `firebase.js`, a Firestore `onSnapshot` su
 ## Map SOS acceptance flow — 2026-10-26
 
 Added an authenticated “Yardım Çağrısını Üstlen” action to the MapPage SOS detail modal for remote active requests only. The UI hides the action for local-only entries, the request owner, and requests already marked as accepted. It calls the existing `acceptSOSRequest` Firebase helper, shows a pending state while awaiting the server, and only reports success if the Firestore update resolves; failure is reported without optimistic success. The existing Firestore rule restricts the claim to a signed-in user other than the requester, with `acceptedBy == null`, so concurrent attempts should be rejected by the server after the first successful claim. This flow remains subject to Safe CI and multi-user runtime verification. No Firestore rules were changed or published, and no production deployment or data access occurred.
+
+## SOS discovery query portability — 2026-10-26
+
+Updated both one-shot and realtime active-SOS queries to filter by `status == active` using the single-field index and sort returned documents by `createdAt` in memory. The repository does not define a Firestore composite-index manifest, so the previous `status` + `createdAt` query could require an index that was not declared in source control and leave the map in local-only fallback mode. The change does not alter Firestore rules, document fields, access scope, or production configuration. CI verification for this commit is pending.
