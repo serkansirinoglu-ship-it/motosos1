@@ -39,6 +39,20 @@ service cloud.firestore {
           'privacyLocation', 'contacts', 'updatedAt'
         ])
         && request.resource.data.updatedAt == request.time
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['displayName'])
+          || (request.resource.data.displayName is string && request.resource.data.displayName.size() <= 80))
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['city'])
+          || (request.resource.data.city is string && request.resource.data.city.size() <= 100))
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['motorcycle'])
+          || (request.resource.data.motorcycle is string && request.resource.data.motorcycle.size() <= 100))
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['photoURL'])
+          || (request.resource.data.photoURL is string && request.resource.data.photoURL.size() <= 2048))
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['bio'])
+          || (request.resource.data.bio is string && request.resource.data.bio.size() <= 500))
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['privacyLocation'])
+          || request.resource.data.privacyLocation is bool)
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['contacts'])
+          || (request.resource.data.contacts is list && request.resource.data.contacts.size() <= 10))
       );
       allow delete: if isAdmin();
     }
