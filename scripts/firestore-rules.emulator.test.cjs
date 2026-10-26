@@ -278,6 +278,17 @@ async function main() {
       active: true, helpers: [], resolvedBy: null, resolvedAt: null,
       createdAt: serverTimestamp(),
     }));
+    await assertFails(setDoc(doc(owner, "helpRequests", "help-lat-only"), {
+      title: "Partial location", description: "test", ownerId: "owner",
+      lat: 40.12, active: true, helpers: [], resolvedBy: null, resolvedAt: null,
+      createdAt: serverTimestamp(),
+    }));
+    await assertFails(setDoc(doc(owner, "helpRequests", "help-lng-only"), {
+      title: "Partial location", description: "test", ownerId: "owner",
+      lng: 29.54, active: true, helpers: [], resolvedBy: null, resolvedAt: null,
+      createdAt: serverTimestamp(),
+    }));
+    console.log("PASS: help request creation rejects incomplete coordinate pairs");
     console.log("PASS: owner can create a valid help request");
     await assertFails(updateDoc(doc(outsider, "helpRequests", "valid-help"), {
       active: false, updatedAt: serverTimestamp(),
