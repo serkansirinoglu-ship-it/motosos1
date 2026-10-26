@@ -33,6 +33,11 @@ export default function CommunityPage() {
   }, [selectedCity]);
 
   const handleCreatePost = () => {
+    if (!user) {
+      (window as any).__openAuthModal?.();
+      toast.error("Gönderi oluşturmak için giriş yapın.");
+      return;
+    }
     if (!content.trim()) {
       toast.error("Lütfen bir gönderi metni girin.");
       return;
@@ -64,12 +69,22 @@ export default function CommunityPage() {
   };
 
   const handleDeletePost = (postId: string) => {
+    const target = communityService.getPosts().find((post) => post.id === postId);
+    if (!user || !target || target.authorEmail !== user.email) {
+      toast.error("Yalnızca kendi gönderinizi silebilirsiniz.");
+      return;
+    }
     communityService.deletePost(postId);
-    toast.info("Gönderi silindi.");
+    toast.info("Gönderi bu oturumdan silindi.");
     setPosts(communityService.getPosts(selectedCity));
   };
 
   const handleAddComment = (postId: string) => {
+    if (!user) {
+      (window as any).__openAuthModal?.();
+      toast.error("Yorum yapmak için giriş yapın.");
+      return;
+    }
     if (!commentText.trim()) return;
     communityService.addComment(postId, {
       authorName: user?.displayName || user?.email?.split("@")[0] || "Motorcu Kardeş",
