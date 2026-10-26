@@ -49,15 +49,24 @@ export default function MarketplacePage() {
   }, [selectedCategory, searchQuery, selectedCity]);
 
   const handleCreateListing = () => {
+    const numericPrice = Number(price);
     if (!title.trim() || !price || !description.trim()) {
       toast.error("Lütfen başlık, fiyat ve açıklama alanlarını doldurun.");
+      return;
+    }
+    if (!Number.isFinite(numericPrice) || numericPrice <= 0) {
+      toast.error("Fiyat sıfırdan büyük geçerli bir sayı olmalıdır.");
+      return;
+    }
+    if (title.trim().length > 120 || description.trim().length > 2000) {
+      toast.error("Başlık en fazla 120, açıklama en fazla 2000 karakter olabilir.");
       return;
     }
 
     marketplaceService.createListing({
       title: title.trim(),
       category,
-      price: Number(price),
+      price: numericPrice,
       city,
       description: description.trim(),
       image: image.trim() || undefined,
@@ -205,7 +214,7 @@ export default function MarketplacePage() {
                 <input
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Örn: Shoei NXR2 Kask - M Beden"
+                  placeholder="Örn: Motosiklet kaskı" maxLength={120}
                   className="w-full bg-card border border-border rounded-xl p-2.5 text-xs text-foreground focus:outline-none focus:border-primary"
                 />
               </div>
