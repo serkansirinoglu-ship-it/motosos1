@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut, onAuthStateChanged } from "firebase/auth";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut, onAuthStateChanged, getIdTokenResult } from "firebase/auth";
 import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, getDocs, doc, setDoc, getDoc, updateDoc, deleteDoc, where, Timestamp, writeBatch } from "firebase/firestore";
 import { validateSOSRequestInput, validateSOSStatusUpdatePatch, validateUserProfilePatch, validateUserProfileCreation, validateProductInput, validateProductPatch, validateBannerInput, validateBannerPatch, validateAdminDocumentId } from "./client/src/services/sosInputValidation";
 import { validateHelpMessageInput, validateHelpRequestInput, validateHelpRequestUpdatePatch } from "./client/src/services/helpMessageValidation";
@@ -33,6 +33,19 @@ if (hasFirebaseConfig) {
 }
 
 export { auth, db };
+
+/** Defense in depth for admin-only client operations; Firestore rules remain authoritative. */
+async function hasAdminClaim() {
+  const user = auth?.currentUser;
+  if (!user) return false;
+  try {
+    const token = await getIdTokenResult(user);
+    return token.claims.admin === true;
+  } catch (error) {
+    console.warn("Admin claim check failed", error);
+    return false;
+  }
+}
 
 // Online member presence (authenticated members only).
 // Presence records contain no profile details; stale sessions expire after 2 minutes.
@@ -460,7 +473,7 @@ export function subscribeProductsRealtime(onUpdate) {
 }
 
 export async function createProductRealtime(data) {
-  if (!db || !validateProductInput(data)) return null;
+  if (!db || !(await hasAdminClaim()) || !validateProductInput(data)) return null;
   const payload = {
     name: data.name.trim(),
     price: data.price,
@@ -478,7 +491,7 @@ export async function createProductRealtime(data) {
 }
 
 export async function updateProductRealtime(id, patch) {
-  if (!db || !validateProductPatch(id, patch)) return null;
+  if (!db || !(await hasAdminClaim()) || !validateProductPatch(id, patch)) return null;
   try {
     const dref = doc(db, "products", id);
     return await updateDoc(dref, patch);
@@ -489,7 +502,7 @@ export async function updateProductRealtime(id, patch) {
 }
 
 export async function deleteProductRealtime(id) {
-  if (!db || !validateAdminDocumentId(id)) return null;
+  if (!db || !(await hasAdminClaim()) || !validateAdminDocumentId(id)) return null;
   try {
     const dref = doc(db, "products", id);
     return await deleteDoc(dref);
@@ -514,7 +527,7 @@ export function subscribeBannersRealtime(onUpdate) {
 }
 
 export async function createBannerRealtime(data) {
-  if (!db || !validateBannerInput(data)) return null;
+  if (!db || !(await hasAdminClaim()) || !validateBannerInput(data)) return null;
   const payload = {
     title: data.title.trim(),
     active: data.active,
@@ -531,7 +544,7 @@ export async function createBannerRealtime(data) {
 }
 
 export async function updateBannerRealtime(id, patch) {
-  if (!db || !validateBannerPatch(id, patch)) return null;
+  if (!db || !(await hasAdminClaim()) || !validateBannerPatch(id, patch)) return null;
   try {
     const dref = doc(db, "banners", id);
     return await updateDoc(dref, patch);
@@ -542,7 +555,7 @@ export async function updateBannerRealtime(id, patch) {
 }
 
 export async function deleteBannerRealtime(id) {
-  if (!db || !validateAdminDocumentId(id)) return null;
+  if (!db || !(await hasAdminClaim()) || !validateAdminDocumentId(id)) return null;
   try {
     const dref = doc(db, "banners", id);
     return await deleteDoc(dref);
