@@ -261,3 +261,6 @@ Compatibility caveat: strict public-schema checks can deny a broad collection qu
 ## Explicit public-discovery marker
 
 Follow-up hardening adds `publicVisible: true` only to newly created help requests and requires that marker for public reads. The real-time discovery query now filters on `publicVisible == true`, `active == true`, and an empty helper list. Legacy records without the marker therefore cannot make the public query fail merely by sharing the collection. The marker is not a migration: legacy records remain private to their owner, authorized helper, or admin under the existing identity checks. Emulator fixtures for valid help requests were updated to exercise the new schema. Both rules files remain synchronized; CI must be green on the final commit before this change is considered verified.
+
+
+The emulator suite now explicitly checks both sides of the discovery boundary: a valid request created with `publicVisible: true` is readable by another signed-in rider, while a legacy request with an otherwise public-shaped schema but no marker remains readable only by its owner. This guards against accidentally treating legacy records as public by default.
