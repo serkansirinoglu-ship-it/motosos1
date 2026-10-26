@@ -309,7 +309,13 @@ service cloud.firestore {
 
     // Events: public read; organizer identity and creation timestamp cannot be rewritten.
     match /events/{eventId} {
-      allow read: if true;
+      // Public events must contain only approved public fields; organizers/admins can review legacy records.
+      allow read: if isAdmin()
+        || (isSignedIn() && resource.data.organizerId == request.auth.uid)
+        || resource.data.keys().hasOnly([
+          'organizerId', 'title', 'description', 'city', 'location',
+          'startsAt', 'endsAt', 'image', 'createdAt'
+        ]);
       allow create: if isSignedIn()
         && request.resource.data.organizerId == request.auth.uid
         && request.resource.data.createdAt == request.time
