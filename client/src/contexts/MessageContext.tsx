@@ -208,8 +208,10 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
 
   // Only report success after Firestore confirms the update.
   async function acceptHelp(requestId: string, helperUid: string): Promise<boolean> {
+    // Only the resolved Firebase account may claim help; never trust a caller-supplied UID.
+    if (!authReady || !uid || helperUid !== uid) return false;
     const request = helpRequests.find((item) => item.id === requestId);
-    if (!request || !request.active || !helperUid) return false;
+    if (!request || !request.active) return false;
     const helpers = Array.from(new Set([...(request.helpers || []), helperUid]));
     try {
       const pending = updateHelpRequestRealtime(requestId, { helpers });
@@ -226,9 +228,11 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
   }
 
   // Credit the helper and update local state only after Firestore confirms resolution.
-  async function resolveHelp(requestId: string, helperUid: string, helperEmail?: string | null): Promise<boolean> {
+  async function resolveHelp(requestId: string, helperUid: string, _helperEmail?: string | null): Promise<boolean> {
+    // Only the resolved Firebase account may resolve a request or receive credit.
+    if (!authReady || !uid || helperUid !== uid) return false;
     const request = helpRequests.find((item) => item.id === requestId);
-    if (!request || !request.active || !helperUid) return false;
+    if (!request || !request.active) return false;
     const resolvedAt = Date.now();
     try {
       const pending = updateHelpRequestRealtime(requestId, {
@@ -243,7 +247,8 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
           ? { ...item, resolvedBy: helperUid, resolvedAt, active: false }
           : item)
       );
-      const statsKey = helperEmail || helperUid;
+      // Use the authenticated profile, not an email supplied by the UI caller.
+      const statsKey = typeof user?.email === "string" && user.email.trim() ? user.email : uid;
       incrementHelpCount(statsKey);
       const newCount = (helpCounts[statsKey] || 0) + 1;
       if (newCount >= 1) addBadgeToProfile(statsKey, "Koruyucu Kardeş");
