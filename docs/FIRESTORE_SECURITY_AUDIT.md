@@ -181,3 +181,8 @@ Anonymous reads of community posts now require the stored document to contain on
 ## Event legacy-schema privacy gate — 2026-10-26
 
 Public event reads now require the document to contain only the approved public event fields. The organizer and admins retain access to legacy records with extra fields for review. Emulator coverage verifies anonymous denial and organizer access for a legacy event containing a contact email. Firestore rules deny the whole document rather than redact individual fields. The current Events page is an empty state and does not persist events; this is a defensive future-backend rule. No production data was inspected or changed.
+
+
+## Help-request legacy email privacy gate — 2026-10-26
+
+Active help requests remain discoverable to signed-in riders only when their document uses the approved public field schema. Legacy records with extra fields such as the old `user` email field are readable only by the owner, listed helpers, or admins. Emulator coverage verifies that an unrelated signed-in user is denied while the owner retains access. This can hide legacy email-bearing requests from the general feed until a separately approved migration or review; no production data was inspected or changed.
