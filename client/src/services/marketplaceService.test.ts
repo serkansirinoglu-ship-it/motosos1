@@ -8,6 +8,12 @@ describe("MarketplaceService local listing lifecycle", () => {
     for (const id of createdIds.splice(0)) marketplaceService.deleteListing(id);
   });
 
+  it("clears all local listings when the account scope changes", () => {
+    marketplaceService.createListing({ title: "Test", category: "Kask", price: 1, city: "İzmir", description: "Test", sellerName: "Rider" });
+    marketplaceService.clearLocalSession();
+    expect(marketplaceService.getListings()).toEqual([]);
+  });
+
   it("does not expose hard-coded sample offers as real listings", () => {
     expect(marketplaceService.getListings()).toEqual([]);
   });
