@@ -317,6 +317,7 @@ async function main() {
       title: "unauthorized",
     }));
     await assertSucceeds(updateDoc(doc(owner, "communityPosts", "public-post"), { content: "Edited public post" }));
+    await assertFails(updateDoc(doc(owner, "communityPosts", "public-post"), { city: "" }));
     await assertFails(updateDoc(doc(owner, "communityPosts", "public-post"), { authorId: "outsider" }));
     await assertFails(updateDoc(doc(owner, "communityPosts", "public-post"), { likes: ["outsider@example.test"] }));
     await assertFails(updateDoc(doc(owner, "communityPosts", "public-post"), { createdAt: serverTimestamp() }));
