@@ -463,3 +463,10 @@ Removed the client-side `createInitialSeed` helper and its `VITE_FIREBASE_AUTO_S
 - Added unit tests for unauthenticated calls, UID mismatch, unsupported categories, malformed/out-of-range coordinates, and valid boundary coordinates.
 - The report modal now clearly discloses that reports are session-local and are not sent to a moderation team; the success message no longer claims a team will review them. Report details are capped at 1,000 characters.
 - No Firestore rules, Home.tsx, production environment, or production data were changed.
+
+
+### Community interaction guards — 2026-10-26
+
+- Community post creation and comment submission now require an authenticated user; unauthenticated actions open the existing sign-in modal and are rejected.
+- Post deletion now verifies the current user owns the in-session post before removing it.
+- Delete feedback explicitly says the post was removed from this session only; community data is still not persisted or published to other users.
