@@ -41,16 +41,22 @@ export default function SOSPage() {
   // The subscription returns public active SOS fields only, never private GPS details.
   useEffect(() => {
     if (!sosId) return;
-    return subscribeActiveSOSRequests(
+    let active = true;
+    const unsubscribe = subscribeActiveSOSRequests(
       (requests: Array<{ id: string; acceptedBy?: string | null }>) => {
+        if (!active) return;
         const current = requests.find((request: { id: string; acceptedBy?: string | null }) => request.id === sosId);
         if (!current) return;
         setStatus(current.acceptedBy ? "yanit_geliyor" : "bekleniyor");
       },
       (error: unknown) => {
-        console.warn("Could not refresh active SOS status", error);
+        if (active) console.warn("Could not refresh active SOS status", error);
       },
     );
+    return () => {
+      active = false;
+      unsubscribe();
+    };
   }, [sosId]);
 
   const handleSOS = async (catOverride?: SOSHelpCategory) => {
