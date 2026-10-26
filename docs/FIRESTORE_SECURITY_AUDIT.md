@@ -269,3 +269,15 @@ The emulator suite now explicitly checks both sides of the discovery boundary: a
 ## CI follow-up: visibility marker must be enforced by the read rule
 
 The first explicit-marker iteration updated the create schema and client query, but the public-read predicate still used the prior field whitelist. The emulator test caught this because a newly created public request was denied. Corrected the read predicate to require `publicVisible == true` and allow the marker in the exact public schema; mirrored the same rules into both rule files. This is a test-driven correction, not a production deployment.
+
+## Latest verification snapshot — 2026-10-26
+
+Latest audited commit: `e3afdadbdf952bdc09c596cab0226fed796aa73e`.
+
+Both CI runs for this exact commit completed successfully:
+- [Push CI](https://github.com/serkansirinoglu-ship-it/motosos1/actions/runs/40292514054)
+- [Pull-request CI](https://github.com/serkansirinoglu-ship-it/motosos1/actions/runs/40292520155)
+
+The successful jobs include TypeScript, unit tests, build without deployment, Firestore static audit and strict gate, rules-file synchronization, and emulator authorization tests against both checked-in rules files. The migration-assessment tests also cover redaction of raw email values from blocked and ambiguous results.
+
+This status applies only to the isolated branch and exact commit above. It does not certify production data cleanliness or production deployment. `client/src/pages/Home.tsx` remains unchanged, `firestore.rules` and `firestore.prod.rules` remain byte-identical, PR #3 remains open and unmerged, and no production Firestore rules or records were changed.
