@@ -375,3 +375,8 @@ Updated the active-SOS duplicate guard in `createSOSRequest` to query by the aut
 ## SOS cancel/resolve failure-state correction — 2026-10-26
 
 Updated `client/src/pages/SOSPage.tsx` so remote SOS cancellation and resolution must be confirmed by Firestore before the local request is marked terminal and the active SOS screen is dismissed. If the remote update fails, the screen keeps the call active and offers a retry path through the existing controls, avoiding a false local completion that could hide an active server-side SOS. Local-only calls still complete locally with explicit disclosure that server persistence is unconfirmed. This is a client reliability correction; no Firestore rules or production systems were changed. Safe CI validation is pending.
+
+
+## SOS duplicate terminal-action guard — 2026-10-26
+
+Added a client-side in-flight guard to the SOS cancel and complete controls. While a terminal action is awaiting Firestore confirmation, both controls are disabled and additional handler calls return immediately; if the remote update fails, the controls are re-enabled and the SOS remains active for retry. This reduces accidental duplicate writes from rapid taps without changing authorization rules or the remote document schema. The latest CI run for the preceding head (`967ffc74a17a6f5fd872eb3fce62e31314c8326e`) passed TypeScript, unit tests, build, static rules gates, rules parity, and both emulator rules suites. This new guard requires its own CI run before it is considered verified. No production deployment or production data access occurred.
