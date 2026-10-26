@@ -123,11 +123,19 @@ export default function SOSPage() {
           // Do not create a parallel legacy chat request when the authoritative SOS
           // write failed; that could make a local-only SOS look like a shared request.
           if (firebaseSaved) {
-            createHelpRequest({
-              title: `Acil Yardım - ${CATEGORY_LABELS[category].label}`,
-              description: "Acil yardım talebi. Kesin konum yalnızca yetkili katılımcılarla paylaşılır.",
-              ownerId: user.uid,
-            });
+            // The authoritative SOS is already saved. A legacy chat-sync failure
+            // must not block the active SOS UI or create an unhandled rejection.
+            try {
+              void Promise.resolve(createHelpRequest({
+                title: `Acil Yardım - ${CATEGORY_LABELS[category].label}`,
+                description: "Acil yardım talebi. Kesin konum yalnızca yetkili katılımcılarla paylaşılır.",
+                ownerId: user.uid,
+              })).catch((error) => {
+                console.warn("Legacy SOS chat sync failed; authoritative SOS remains saved", error);
+              });
+            } catch (error) {
+              console.warn("Legacy SOS chat sync could not be started; authoritative SOS remains saved", error);
+            }
           }
         }
 
