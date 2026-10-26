@@ -192,3 +192,7 @@ Active help requests remain discoverable to signed-in riders only when their doc
 The emulator suite now also asserts that a successful SOS claim cannot be taken over by a second rider, that the accepted helper cannot mutate the public coordinates, and that neither the requester nor an unrelated signed-in rider can delete the SOS parent document. These are regression checks against claim-race and post-creation tampering paths; the admin-only deletion policy remains unchanged. They run against both synchronized rules files in the isolated CI workflow.
 
 9. **Marketplace listing read schema:** public reads now require the document to contain only approved listing fields. Previously, excluding only the known `sellerEmail` field still allowed a legacy listing with any other unexpected field to be read publicly. The emulator suite now seeds a legacy listing with an `internalNotes` field and verifies public access is denied while the seller can still read it. Both rules files remain synchronized; no production records were inspected or changed.
+
+## User-profile read isolation regression — 2026-10-26
+
+The non-production Firestore Emulator suite now explicitly verifies that an authenticated rider cannot read another rider's private profile, while the profile owner can read their own profile. This supplements the existing anonymous-read denial and server-controlled profile-field mutation checks. The test runs against both synchronized rules files; no production data was accessed.
