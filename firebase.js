@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut, onAuthStateChanged } from "firebase/auth";
 import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, getDocs, doc, setDoc, getDoc, updateDoc, deleteDoc, where, Timestamp, writeBatch } from "firebase/firestore";
+import { validateSOSRequestInput } from "./client/src/services/sosInputValidation";
 
 // Read config from Vite environment variables
 const firebaseConfig = {
@@ -175,7 +176,13 @@ export async function updateUserProfile(uid, patch) {
  * (rate limit / duplicate active SOS control).
  */
 export async function createSOSRequest(data) {
-  if (!db) return null;
+  if (!db) return { id: null, error: "firebase_unavailable" };
+
+  // Treat client validation as defense in depth; Firestore rules remain authoritative.
+  const authenticatedUid = auth?.currentUser?.uid;
+  const inputError = validateSOSRequestInput(authenticatedUid, data || {});
+  if (inputError) return { id: null, error: inputError };
+
   try {
     // Prevent multiple active SOS by same user
     // Query by requester only so duplicate protection does not depend on
@@ -198,9 +205,9 @@ export async function createSOSRequest(data) {
     // Exact coordinates, contact email and free-text notes stay in an owner-only subdocument.
     const payload = {
       requesterId: data.requesterId,
-      helpType: data.helpType || "other",
-      latitude: Math.round(Number(data.latitude || 0) * 100) / 100,
-      longitude: Math.round(Number(data.longitude || 0) * 100) / 100,
+      helpType: data.helpType,
+      latitude: Math.round(data.latitude * 100) / 100,
+      longitude: Math.round(data.longitude * 100) / 100,
       status: "active",
       acceptedBy: null,
       createdAt: now,
@@ -210,9 +217,9 @@ export async function createSOSRequest(data) {
     };
     batch.set(sosRef, payload);
     batch.set(doc(db, "sosRequests", sosRef.id, "privateDetails", "owner"), {
-      requesterEmail: data.requesterEmail || "",
-      latitude: Number(data.latitude || 0),
-      longitude: Number(data.longitude || 0),
+      requesterEmail: auth.currentUser.email || "",
+      latitude: data.latitude,
+      longitude: data.longitude,
       note: typeof data.note === "string" ? data.note : "",
       createdAt: now,
     });
