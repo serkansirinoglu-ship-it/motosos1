@@ -15,6 +15,8 @@ export default function ChatPage() {
   const { user } = useAuth();
   const [text, setText] = useState("");
   const [localMsgs, setLocalMsgs] = useState<any[]>([]);
+  const [actionPending, setActionPending] = useState<"accept" | "resolve" | null>(null);
+  const actionPendingRef = useRef(false);
   const listRef = useRef<HTMLDivElement | null>(null);
 
   const chatId = id || "";
@@ -59,30 +61,50 @@ export default function ChatPage() {
   };
 
   const handleAccept = async () => {
-    if (!chatId) return;
+    if (!chatId || actionPendingRef.current) return;
     if (!userUid) {
       (window as any).__openAuthModal?.();
       return;
     }
-    const confirmed = await acceptHelp(chatId, userUid);
-    if (confirmed) {
-      toast.success("Yardım talebi sunucuya kaydedildi. Sürücü ile iletişime geçebilirsiniz.");
-    } else {
-      toast.error("Yardım kabulü sunucuda doğrulanamadı. Bağlantınızı kontrol edip tekrar deneyin.");
+    actionPendingRef.current = true;
+    setActionPending("accept");
+    try {
+      const confirmed = await acceptHelp(chatId, userUid);
+      if (confirmed) {
+        toast.success("Yardım talebi sunucuya kaydedildi. Sürücü ile iletişime geçebilirsiniz.");
+      } else {
+        toast.error("Yardım kabulü sunucuda doğrulanamadı. Bağlantınızı kontrol edip tekrar deneyin.");
+      }
+    } catch (error) {
+      console.error("Help acceptance action failed", error);
+      toast.error("Yardım kabul edilemedi. Lütfen tekrar deneyin.");
+    } finally {
+      actionPendingRef.current = false;
+      setActionPending(null);
     }
   };
 
   const handleResolveClick = async () => {
-    if (!chatId) return;
+    if (!chatId || actionPendingRef.current) return;
     if (!userUid) {
       (window as any).__openAuthModal?.();
       return;
     }
-    const confirmed = await resolveHelp(chatId, userUid, user?.email);
-    if (confirmed) {
-      toast.success("Yardım sunucuda tamamlandı olarak kaydedildi; puan ve rozetiniz güncellendi.");
-    } else {
-      toast.error("Yardımın tamamlandığı sunucuda doğrulanamadı. Puan ve rozet güncellenmedi.");
+    actionPendingRef.current = true;
+    setActionPending("resolve");
+    try {
+      const confirmed = await resolveHelp(chatId, userUid, user?.email);
+      if (confirmed) {
+        toast.success("Yardım sunucuda tamamlandı olarak kaydedildi; puan ve rozetiniz güncellendi.");
+      } else {
+        toast.error("Yardımın tamamlandığı sunucuda doğrulanamadı. Puan ve rozet güncellenmedi.");
+      }
+    } catch (error) {
+      console.error("Help resolution action failed", error);
+      toast.error("Yardım tamamlanamadı. Lütfen tekrar deneyin.");
+    } finally {
+      actionPendingRef.current = false;
+      setActionPending(null);
     }
   };
 
@@ -135,6 +157,7 @@ export default function ChatPage() {
                     </div>
                     <span className="text-[9px] text-muted-foreground/70 mt-1 px-1">
                       {m.ts ? new Date(m.ts).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }) : "Şimdi"}
+                      {m.localOnly && <span className="block text-amber-400">Yalnızca bu cihazda kayıtlı; sunucuya gönderilemedi.</span>}
                     </span>
                   </div>
                 );
@@ -170,15 +193,19 @@ export default function ChatPage() {
               <div className="flex gap-2 pt-1">
                 <button
                   onClick={handleAccept}
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold text-xs py-2 rounded-xl active:scale-95 transition-all shadow-md shadow-green-600/20"
+                  disabled={actionPending !== null}
+                  aria-busy={actionPending === "accept"}
+                  className="flex-1 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs py-2 rounded-xl active:scale-95 transition-all shadow-md shadow-green-600/20"
                 >
-                  Yardımı Kabul Et
+                  {actionPending === "accept" ? "Kaydediliyor..." : "Yardımı Kabul Et"}
                 </button>
                 <button
                   onClick={handleResolveClick}
-                  className="flex-1 bg-primary hover:bg-primary/90 text-white font-bold text-xs py-2 rounded-xl active:scale-95 transition-all shadow-md shadow-primary/20"
+                  disabled={actionPending !== null}
+                  aria-busy={actionPending === "resolve"}
+                  className="flex-1 bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs py-2 rounded-xl active:scale-95 transition-all shadow-md shadow-primary/20"
                 >
-                  Yardım Tamamlandı
+                  {actionPending === "resolve" ? "Tamamlanıyor..." : "Yardım Tamamlandı"}
                 </button>
               </div>
             )}
