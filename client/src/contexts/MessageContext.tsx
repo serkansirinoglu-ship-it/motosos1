@@ -62,7 +62,12 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
   });
 
   useEffect(() => {
-	localStorage.setItem(STORAGE_KEY, JSON.stringify({ helpRequests, messages }));
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ helpRequests, messages }));
+    } catch (error) {
+      // Browser storage may be unavailable or full. Keep the in-memory state usable.
+      console.warn("Could not persist local help requests/messages in browser storage", error);
+    }
   }, [helpRequests, messages]);
 
   // helpCounts per user
