@@ -73,6 +73,7 @@ async function main() {
       await setDoc(doc(db, "communityPosts", "public-post"), { authorId: "owner", authorName: "Owner", city: "İzmir", content: "Public post fixture", likes: [], comments: [], createdAt: new Date() });
       await setDoc(doc(db, "events", "public-event"), { organizerId: "owner", title: "Public event fixture" });
       await setDoc(doc(db, "listings", "public-listing"), { sellerId: "owner", sellerName: "Owner", title: "Public listing fixture", category: "Kask", price: 1000, city: "İzmir", description: "Valid listing fixture", createdAt: new Date(), featured: false });
+      await setDoc(doc(db, "listings", "legacy-email-listing"), { sellerId: "owner", sellerName: "Owner", sellerEmail: "legacy@example.test", title: "Legacy listing with email", category: "Kask", price: 500, city: "İzmir", description: "Legacy fixture", createdAt: new Date(), featured: false });
       await setDoc(doc(db, "presence", "owner"), { uid: "owner", lastSeen: new Date() });
       // Simulate a legacy document that would expose an extra field if public reads were unconditional.
       await setDoc(doc(db, "presence", "malformed-legacy"), { uid: "owner", lastSeen: new Date(), email: "private@example.test" });
@@ -297,6 +298,9 @@ async function main() {
     await assertSucceeds(getDoc(doc(anonymous, "communityPosts", "public-post")));
     await assertSucceeds(getDoc(doc(anonymous, "events", "public-event")));
     await assertSucceeds(getDoc(doc(anonymous, "listings", "public-listing")));
+    await assertFails(getDoc(doc(anonymous, "listings", "legacy-email-listing")));
+    await assertSucceeds(getDoc(doc(owner, "listings", "legacy-email-listing")));
+    console.log("PASS: legacy listings containing seller email are private to owner/admin");
     console.log("PASS: explicitly public catalog, banners, posts, events, and listings remain readable");
 
     await assertSucceeds(setDoc(doc(owner, "presence", "owner"), {
@@ -381,6 +385,10 @@ async function main() {
     await assertFails(setDoc(doc(owner, "listings", "promoted-listing"), {
       sellerId: "owner", title: "Promoted", category: "Kask", price: 100, city: "İzmir", description: "Self-promoted", featured: true,
     }));
+    await assertFails(setDoc(doc(owner, "listings", "email-listing"), {
+      sellerId: "owner", title: "Email-bearing listing", category: "Kask", price: 100, city: "İzmir", description: "Must not publish email", sellerEmail: "owner@example.test", createdAt: serverTimestamp(),
+    }));
+    console.log("PASS: new listings cannot store seller email in publicly readable documents");
     await assertSucceeds(setDoc(doc(owner, "events", "owner-event"), {
       organizerId: "owner", title: "Owner event", createdAt: serverTimestamp(),
     }));
