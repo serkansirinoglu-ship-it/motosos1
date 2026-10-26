@@ -212,7 +212,13 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
     if (!authReady || !uid || helperUid !== uid) return false;
     const request = helpRequests.find((item) => item.id === requestId);
     if (!request || !request.active) return false;
-    const helpers = Array.from(new Set([...(request.helpers || []), helperUid]));
+    const currentHelpers = request.helpers || [];
+    const authenticatedEmail = typeof user?.email === "string" ? user.email : null;
+    const isOwner = request.ownerId === uid || (!!authenticatedEmail && request.user === authenticatedEmail);
+    const alreadyHelper = currentHelpers.includes(uid) ||
+      (!!authenticatedEmail && currentHelpers.includes(authenticatedEmail));
+    if (isOwner || alreadyHelper) return false;
+    const helpers = Array.from(new Set([...currentHelpers, helperUid]));
     try {
       const pending = updateHelpRequestRealtime(requestId, { helpers });
       if (!pending) return false;
@@ -233,6 +239,12 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
     if (!authReady || !uid || helperUid !== uid) return false;
     const request = helpRequests.find((item) => item.id === requestId);
     if (!request || !request.active) return false;
+    const currentHelpers = request.helpers || [];
+    const authenticatedEmail = typeof user?.email === "string" ? user.email : null;
+    const isOwner = request.ownerId === uid || (!!authenticatedEmail && request.user === authenticatedEmail);
+    const isHelper = currentHelpers.includes(uid) ||
+      (!!authenticatedEmail && currentHelpers.includes(authenticatedEmail));
+    if (isOwner || !isHelper) return false;
     const resolvedAt = Date.now();
     try {
       const pending = updateHelpRequestRealtime(requestId, {
