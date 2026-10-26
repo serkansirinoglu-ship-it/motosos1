@@ -5,7 +5,9 @@ import Header from "@/components/Header";
 import { businessService, BusinessProfile, BusinessCategory } from "@/services/businessService";
 import { sosService, SOSRequestItem } from "@/services/sosService";
 import { makeDirectionsUrl } from "@/lib/places";
-import { subscribeActiveSOSRequests } from "../../../firebase";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+import { acceptSOSRequest, subscribeActiveSOSRequests } from "../../../firebase";
 
 export default function MapPage() {
   const [activeFilter, setActiveFilter] = useState<string>("all");
@@ -14,6 +16,40 @@ export default function MapPage() {
   const [selectedPlace, setSelectedPlace] = useState<BusinessProfile | SOSRequestItem | null>(null);
   const [businesses, setBusinesses] = useState<BusinessProfile[]>([]);
   const [activeSOS, setActiveSOS] = useState<SOSRequestItem[]>([]);
+  const [acceptingSOSId, setAcceptingSOSId] = useState<string | null>(null);
+  const { user } = useAuth();
+
+  const handleAcceptSOS = async (request: SOSRequestItem) => {
+    if (!user?.uid) {
+      (window as any).__openAuthModal?.();
+      toast.error("SOS çağrısını üstlenmek için giriş yapmalısınız.");
+      return;
+    }
+    if (request.requesterId === user.uid) {
+      toast.error("Kendi SOS çağrınızı üstlenemezsiniz.");
+      return;
+    }
+    if (request.acceptedBy) {
+      toast.info("Bu çağrı başka bir sürücü tarafından üstlenilmiş.");
+      return;
+    }
+
+    setAcceptingSOSId(request.id);
+    try {
+      const confirmed = await acceptSOSRequest(request.id);
+      if (confirmed) {
+        toast.success("SOS çağrısını üstlendiniz. Harita sunucu güncellemesini gösterecek.");
+        setSelectedPlace(null);
+      } else {
+        toast.error("SOS çağrısı sunucuda üstlenilemedi. Çağrı kapanmış veya başka biri tarafından alınmış olabilir.");
+      }
+    } catch (error) {
+      console.error("SOS acceptance failed", error);
+      toast.error("SOS çağrısı üstlenilemedi. Bağlantınızı kontrol edin.");
+    } finally {
+      setAcceptingSOSId(null);
+    }
+  };
 
   useEffect(() => {
     setBusinesses(businessService.getBusinesses());
@@ -292,6 +328,20 @@ export default function MapPage() {
                   </a>
                 </div>
               )}
+
+              {!("name" in selectedPlace) &&
+                !selectedPlace.id.startsWith("sos-") &&
+                selectedPlace.requesterId !== user?.uid &&
+                !selectedPlace.acceptedBy && (
+                  <button
+                    type="button"
+                    disabled={acceptingSOSId === selectedPlace.id}
+                    onClick={() => void handleAcceptSOS(selectedPlace)}
+                    className="w-full bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white font-bold text-xs py-3 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all mt-2"
+                  >
+                    {acceptingSOSId === selectedPlace.id ? "Sunucu onayı bekleniyor..." : "🆘 Yardım Çağrısını Üstlen"}
+                  </button>
+                )}
 
               <a
                 href={makeDirectionsUrl(
