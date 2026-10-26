@@ -154,7 +154,6 @@ export default function SOSPage() {
       if (!remoteUpdated) {
         toast.error("Sunucu çağrısı iptal edilemedi. Çağrı aktif tutuldu; bağlantınızı kontrol edip yeniden deneyin.");
         finishingRef.current = false;
-        finishingRef.current = false;
         setFinishing(false);
         return;
       }
@@ -184,6 +183,7 @@ export default function SOSPage() {
       }
       if (!remoteUpdated) {
         toast.error("Sunucu çağrısı tamamlandı olarak işaretlenemedi. Çağrı aktif tutuldu; bağlantınızı kontrol edip yeniden deneyin.");
+        finishingRef.current = false;
         setFinishing(false);
         return;
       }
@@ -228,6 +228,11 @@ export default function SOSPage() {
           <h1 className="font-display text-2xl font-extrabold text-white uppercase tracking-wide text-center">
             Yardım Çağrınız Aktif
           </h1>
+          {!sosId && (
+            <p role="status" className="w-full mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs leading-relaxed text-amber-200">
+              Bu çağrı yalnızca bu oturumda kayıtlı. Sunucuya kaydedildiği ve diğer sürücülere ulaştığı doğrulanmadı. Acil tehlikede 112’yi arayın.
+            </p>
+          )}
 
           <p className="text-muted-foreground mt-1 text-xs font-mono bg-card px-3 py-1 rounded-full border border-border">
             Süre: {String(Math.floor(elapsed / 60)).padStart(2, "0")}:{String(elapsed % 60).padStart(2, "0")}
@@ -317,7 +322,7 @@ export default function SOSPage() {
             Acil Yardım
           </h1>
           <p className="text-muted-foreground mt-1.5 text-xs sm:text-sm leading-relaxed">
-            Tek tuşla konumunu paylaş ve çevrendeki MotoGuard sürücülerinden acil destek çağır.
+            Konumunu alıp SOS kaydı oluşturmayı deneriz. Diğer sürücülere bildirim iletimi henüz doğrulanmış değildir.
           </p>
         </div>
 
@@ -369,7 +374,7 @@ export default function SOSPage() {
                 Koruyucu Kardeş Rozet Sistemi
               </p>
               <p className="text-xs text-muted-foreground mt-0.5 leading-snug">
-                Yardım talebine ilk giden sürücüler koruyucu kardeş puanı ve rozeti kazanır.
+                Puan ve rozetlerin sunucu tarafında güvenilir biçimde hesaplanması henüz etkinleştirilmedi.
               </p>
             </div>
           </div>
