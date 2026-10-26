@@ -36,7 +36,7 @@ export default function ChatPage() {
 
   if (!id || !chatId) {
     return (
-      <div className="min-h-screen bg-asphalt pb-8 page-surface-light">
+      <div className="min-h-screen bg-asphalt-light pb-8 page-surface-light">
         <Header />
         <div className="px-4 pt-12 text-center max-w-md mx-auto">
           <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
@@ -147,7 +147,7 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="min-h-screen bg-asphalt pb-8 flex flex-col page-surface-light">
+    <div className="min-h-screen bg-asphalt-light pb-8 flex flex-col page-surface-light">
       <Header />
 
       <div className="px-4 pt-3 max-w-lg mx-auto w-full flex-1 flex flex-col">
