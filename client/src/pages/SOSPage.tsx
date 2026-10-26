@@ -49,7 +49,8 @@ export default function SOSPage() {
 
     toast.loading("Konumunuz alınıyor...");
 
-    navigator.geolocation.getCurrentPosition(
+    try {
+      navigator.geolocation.getCurrentPosition(
       async (pos) => {
         toast.dismiss();
         const lat = pos.coords.latitude;
@@ -140,7 +141,13 @@ export default function SOSPage() {
         setSubmitting(false);
       },
       { enableHighAccuracy: true, timeout: 10000 }
-    );
+      );
+    } catch (error) {
+      toast.dismiss();
+      console.error("GPS request could not be started", error);
+      toast.error("Konum isteği başlatılamadı. Konum iznini ve tarayıcı ayarlarını kontrol edin.");
+      setSubmitting(false);
+    }
   };
 
   const handleCancel = async () => {
