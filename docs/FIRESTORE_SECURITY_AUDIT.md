@@ -239,3 +239,8 @@ Extended the non-production Firestore Emulator suite to verify that help-request
 ## Help-request helper-list integrity regression — 2026-10-26
 
 Added an emulator regression asserting that a rider cannot accept a help request while appending another rider's UID to the helper list. The valid acceptance path remains tested immediately afterward. This is test-only hardening against unauthorized helper enrollment; no rules or production data were changed. CI for the new commit is the required verification gate.
+
+
+## Legacy help-request visibility regression coverage — 2026-10-26
+
+Extended the isolated Firestore Emulator fixtures and assertions for legacy help requests. The suite now checks that an email-bearing legacy helper entry is readable only by the authenticated matching helper, and that an active legacy request with an unexpected private field is not exposed to unrelated signed-in users. The owner retains access for review/cleanup. This is test-only; no Firestore rules or production records were changed. Await CI for the latest commit before treating the tests as verified.
