@@ -112,7 +112,7 @@ export default function LastikciPage() {
           ) : (
             <Card className="bg-card-gradient border-border p-8 flex flex-col items-center justify-center text-center rounded-xl">
               <AlertCircle className="w-10 h-10 text-muted-foreground/40 mb-2" />
-              <p className="text-sm font-bold text-foreground">Bu şehirde henüz kayıtlı lastikçi bulunmuyor.</p>
+              <p className="text-sm font-bold text-foreground">Henüz doğrulanmış lastikçi kaydı bağlı değil.</p>
             </Card>
           )}
         </div>
