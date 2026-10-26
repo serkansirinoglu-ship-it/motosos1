@@ -8,6 +8,8 @@ type Message = {
   fromName?: string;
   text: string;
   ts: number;
+  // Explicitly marks a browser-only fallback; it is never proof of server persistence.
+  localOnly?: boolean;
 };
 
 type HelpRequest = {
@@ -63,6 +65,15 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
 	  return {};
 	}
   });
+
+  // Preserve explicitly local-only messages across realtime snapshots and reloads.
+  const localOnlyMessagesByRequest = useRef<Map<string, Message[]>>(
+    new Map(
+      Object.entries(messages)
+        .map(([requestId, items]) => [requestId, items.filter((item) => item.localOnly)] as [string, Message[]])
+        .filter(([, items]) => items.length > 0),
+    ),
+  );
 
   useEffect(() => {
     try {
@@ -239,11 +250,16 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
   function sendMessage(requestId: string, text: string, from: string | null = null, fromName = "Motorcu") {
     const msg: Message = { id: nanoid(), from, fromName, text, ts: Date.now() };
     const keepLocal = () => {
+      const localMessage: Message = { ...msg, localOnly: true };
+      const retained = localOnlyMessagesByRequest.current.get(requestId) || [];
+      if (!retained.some((item) => item.id === localMessage.id)) {
+        localOnlyMessagesByRequest.current.set(requestId, [...retained, localMessage]);
+      }
       setMessages((current) => {
         const existing = current[requestId] || [];
-        return existing.some((item) => item.id === msg.id)
+        return existing.some((item) => item.id === localMessage.id)
           ? current
-          : { ...current, [requestId]: [...existing, msg] };
+          : { ...current, [requestId]: [...existing, localMessage] };
       });
     };
 
@@ -269,10 +285,15 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
   function subscribeToMessages(requestId: string, onUpdate: (arr: Message[]) => void) {
 	try {
 	  return subscribeMessagesRealtime(requestId, (arr: any[]) => {
-		const normalized = arr.map((d) => ({ ...d, ts: d.ts && d.ts.toMillis ? d.ts.toMillis() : d.ts }));
-		// update local messages store as well
-		setMessages((m) => ({ ...m, [requestId]: normalized }));
-		onUpdate(normalized as Message[]);
+		const normalized = arr.map((d) => ({ ...d, ts: d.ts && d.ts.toMillis ? d.ts.toMillis() : d.ts })) as Message[];
+        const remoteIds = new Set(normalized.map((item) => item.id));
+        const localOnly = (localOnlyMessagesByRequest.current.get(requestId) || [])
+          .filter((item) => !remoteIds.has(item.id));
+        localOnlyMessagesByRequest.current.set(requestId, localOnly);
+        const merged = [...normalized, ...localOnly].sort((a, b) => a.ts - b.ts);
+        // Realtime snapshots replace server messages but must not erase browser-only fallbacks.
+		setMessages((m) => ({ ...m, [requestId]: merged }));
+		onUpdate(merged);
 	  });
 	} catch (e) {
 	  // fallback: no-op unsubscribe
