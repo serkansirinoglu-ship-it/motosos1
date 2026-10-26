@@ -124,8 +124,8 @@ export default function UstaPage() {
           ) : (
             <Card className="bg-card-gradient border-border p-8 flex flex-col items-center justify-center text-center rounded-xl">
               <AlertCircle className="w-10 h-10 text-muted-foreground/40 mb-2" />
-              <p className="text-sm font-bold text-foreground">Bu şehirde henüz kayıtlı usta bulunmuyor.</p>
-              <p className="text-xs text-muted-foreground mt-1">Genişleyen ağımıza yeni ustalar eklenmeye devam ediyor.</p>
+              <p className="text-sm font-bold text-foreground">Henüz doğrulanmış usta kaydı bağlı değil.</p>
+              <p className="text-xs text-muted-foreground mt-1">Gerçek işletme verisi bağlanana kadar doğrulanmamış kayıt göstermiyoruz.</p>
             </Card>
           )}
         </div>
