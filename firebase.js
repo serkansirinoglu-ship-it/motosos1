@@ -178,13 +178,17 @@ export async function createSOSRequest(data) {
   if (!db) return null;
   try {
     // Prevent multiple active SOS by same user
-    const activeQ = query(
+    // Query by requester only so duplicate protection does not depend on
+    // an undeclared requesterId + status composite index.
+    const requesterQ = query(
       collection(db, "sosRequests"),
-      where("requesterId", "==", data.requesterId),
-      where("status", "==", "active")
+      where("requesterId", "==", data.requesterId)
     );
-    const activeSnap = await getDocs(activeQ);
-    if (!activeSnap.empty) {
+    const requesterSnap = await getDocs(requesterQ);
+    const hasActiveRequest = requesterSnap.docs.some(
+      (item) => item.data()?.status === "active"
+    );
+    if (hasActiveRequest) {
       return { id: null, error: "active_duplicate" };
     }
     const batch = writeBatch(db);
