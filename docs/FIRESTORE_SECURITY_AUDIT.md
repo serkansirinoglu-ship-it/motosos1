@@ -196,3 +196,7 @@ The emulator suite now also asserts that a successful SOS claim cannot be taken 
 ## User-profile read isolation regression — 2026-10-26
 
 The non-production Firestore Emulator suite now explicitly verifies that an authenticated rider cannot read another rider's private profile, while the profile owner can read their own profile. This supplements the existing anonymous-read denial and server-controlled profile-field mutation checks. The test runs against both synchronized rules files; no production data was accessed.
+
+## Profile update input validation — 2026-10-26
+
+Profile-owner updates now validate the types and maximum lengths of changed display name, city, motorcycle, photo URL, and bio fields; the location privacy toggle must be boolean, and contacts must remain a list capped at 10 entries. This prevents malformed or oversized values from being stored through the client rules path while preserving the existing editable fields. Emulator regressions cover wrong display-name type, oversized bio, non-boolean privacy toggle, and excessive contacts. Both checked-in rules files are synchronized. No production rules were published and no production data was accessed.
