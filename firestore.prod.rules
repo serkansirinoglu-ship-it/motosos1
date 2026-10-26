@@ -38,7 +38,7 @@ service cloud.firestore {
         && (!('motorcycle' in request.resource.data) || (request.resource.data.motorcycle is string && request.resource.data.motorcycle.size() <= 100))
         && (!('photoURL' in request.resource.data) || (request.resource.data.photoURL is string && request.resource.data.photoURL.size() <= 2048))
         && (!('bio' in request.resource.data) || (request.resource.data.bio is string && request.resource.data.bio.size() <= 500))
-        && (!('privacyLocation' in request.resource.data) || request.resource.data.privacyLocation is bool)
+        && (!('privacyLocation' in request.resource.data) || request.resource.data.privacyLocation == false)
         && (!('contacts' in request.resource.data) || (request.resource.data.contacts is list && request.resource.data.contacts.size() <= 10));
       allow update: if isAdmin() || (
         isOwner(uid)
