@@ -58,24 +58,32 @@ export default function ChatPage() {
     setText("");
   };
 
-  const handleAccept = () => {
+  const handleAccept = async () => {
     if (!chatId) return;
     if (!userUid) {
       (window as any).__openAuthModal?.();
       return;
     }
-    acceptHelp(chatId, userUid);
-    toast.success("Yardım talebi kabul edildi. Sürücü ile iletişime geçebilirsiniz.");
+    const confirmed = await acceptHelp(chatId, userUid);
+    if (confirmed) {
+      toast.success("Yardım talebi sunucuya kaydedildi. Sürücü ile iletişime geçebilirsiniz.");
+    } else {
+      toast.error("Yardım kabulü sunucuda doğrulanamadı. Bağlantınızı kontrol edip tekrar deneyin.");
+    }
   };
 
-  const handleResolveClick = () => {
+  const handleResolveClick = async () => {
     if (!chatId) return;
     if (!userUid) {
       (window as any).__openAuthModal?.();
       return;
     }
-    resolveHelp(chatId, userUid, user?.email);
-    toast.success("Yardım çözüldü olarak işaretlendi! Puan ve rozetiniz güncellendi.");
+    const confirmed = await resolveHelp(chatId, userUid, user?.email);
+    if (confirmed) {
+      toast.success("Yardım sunucuda tamamlandı olarak kaydedildi; puan ve rozetiniz güncellendi.");
+    } else {
+      toast.error("Yardımın tamamlandığı sunucuda doğrulanamadı. Puan ve rozet güncellenmedi.");
+    }
   };
 
   return (
