@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Shield, Wrench, Fuel, Bike, Phone, X, Check, Award, Zap, Truck, HelpCircle, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -20,6 +20,7 @@ export default function SOSPage() {
   const [status, setStatus] = useState<SOSStatus>("bekleniyor");
   const [submitting, setSubmitting] = useState(false);
   const [finishing, setFinishing] = useState(false);
+  const finishingRef = useRef(false);
   const [nearbyServices, setNearbyServices] = useState<Array<{ key: string; label: string; searchUrl: string; directionsUrl: string }>>([]);
 
   const { user } = useAuth();
@@ -140,7 +141,8 @@ export default function SOSPage() {
   };
 
   const handleCancel = async () => {
-    if (finishing) return;
+    if (finishingRef.current) return;
+    finishingRef.current = true;
     setFinishing(true);
     if (sosId) {
       let remoteUpdated = false;
@@ -151,6 +153,8 @@ export default function SOSPage() {
       }
       if (!remoteUpdated) {
         toast.error("Sunucu çağrısı iptal edilemedi. Çağrı aktif tutuldu; bağlantınızı kontrol edip yeniden deneyin.");
+        finishingRef.current = false;
+        finishingRef.current = false;
         setFinishing(false);
         return;
       }
@@ -162,12 +166,14 @@ export default function SOSPage() {
     setLocalSosId(null);
     setElapsed(0);
     setSelectedCategory(null);
+    finishingRef.current = false;
     setFinishing(false);
     toast.info(sosId ? "Yardım çağrısı sunucuda iptal edildi." : "Yerel yardım çağrısı iptal edildi; sunucu kaydı doğrulanmadı.");
   };
 
   const handleResolve = async () => {
-    if (finishing) return;
+    if (finishingRef.current) return;
+    finishingRef.current = true;
     setFinishing(true);
     if (sosId) {
       let remoteUpdated = false;
@@ -189,6 +195,7 @@ export default function SOSPage() {
     setLocalSosId(null);
     setElapsed(0);
     setSelectedCategory(null);
+    finishingRef.current = false;
     setFinishing(false);
     toast.success(sosId
       ? "Yardım talebiniz sunucuda tamamlandı olarak işaretlendi. Puan ve rozet güncellemesi henüz doğrulanmadı."
