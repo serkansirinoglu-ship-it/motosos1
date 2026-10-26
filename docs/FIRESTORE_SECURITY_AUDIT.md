@@ -244,3 +244,8 @@ Added an emulator regression asserting that a rider cannot accept a help request
 ## Legacy help-request visibility regression coverage — 2026-10-26
 
 Extended the isolated Firestore Emulator fixtures and assertions for legacy help requests. The suite now checks that an email-bearing legacy helper entry is readable only by the authenticated matching helper, and that an active legacy request with an unexpected private field is not exposed to unrelated signed-in users. The owner retains access for review/cleanup. This is test-only; no Firestore rules or production records were changed. Await CI for the latest commit before treating the tests as verified.
+
+
+## Legacy helper chat authorization regression — 2026-10-26
+
+Added a seeded message under a legacy help request whose helper list contains an email address. The emulator suite verifies that the matching authenticated helper can read the message while an unrelated authenticated rider is denied. This checks the nested-message authorization path as well as parent-document visibility. Test-only change; no rules were edited and no production data was accessed.
