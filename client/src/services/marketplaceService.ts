@@ -95,7 +95,6 @@ class MarketplaceService {
       sellerName,
       image: image || undefined,
       sellerPhone: sellerPhone || undefined,
-      ...listing,
       id: `mkt-${Date.now()}`,
       createdAt: new Date().toISOString().split('T')[0],
     };
