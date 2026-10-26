@@ -84,3 +84,49 @@ describe("validateSOSStatusUpdatePatch", () => {
     expect(validateSOSStatusUpdatePatch(patch)).toBe(false);
   });
 });
+
+
+describe("validateUserProfilePatch", () => {
+  it("accepts supported profile fields with valid values", () => {
+    expect(validateUserProfilePatch({
+      displayName: "Rider",
+      city: "İzmir",
+      motorcycle: "Honda",
+      photoURL: "https://example.test/photo.jpg",
+      bio: "Weekend rider",
+      privacyLocation: true,
+      contacts: [{ name: "Yakın", phone: "05550000000" }],
+    })).toBeNull();
+  });
+
+  it("accepts partial profile preference updates", () => {
+    expect(validateUserProfilePatch({ privacyLocation: false })).toBeNull();
+  });
+
+  it.each([
+    null,
+    undefined,
+    "profile",
+    [],
+    {},
+    { uid: "other-user" },
+    { email: "attacker@example.test" },
+    { points: 999999 },
+    { helpCount: 999999 },
+    { badges: ["admin"] },
+    { updatedAt: new Date() },
+    { displayName: "x".repeat(81) },
+    { city: "x".repeat(101) },
+    { motorcycle: "x".repeat(101) },
+    { photoURL: "x".repeat(2049) },
+    { bio: "x".repeat(501) },
+    { privacyLocation: "true" },
+    { contacts: "not-an-array" },
+    { contacts: Array.from({ length: 11 }, () => ({ name: "A", phone: "1" })) },
+    { contacts: [{ name: "A", phone: "1", email: "private@example.test" }] },
+    { contacts: [{ name: 42, phone: "1" }] },
+    { contacts: [{ name: "A", phone: "x".repeat(41) }] },
+  ])("rejects unsupported or malformed profile patch: %s", (patch) => {
+    expect(validateUserProfilePatch(patch)).not.toBeNull();
+  });
+});

@@ -1,7 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut, onAuthStateChanged } from "firebase/auth";
 import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, getDocs, doc, setDoc, getDoc, updateDoc, deleteDoc, where, Timestamp, writeBatch } from "firebase/firestore";
-import { validateSOSRequestInput, validateSOSStatusUpdatePatch } from "./client/src/services/sosInputValidation";
+import { validateSOSRequestInput, validateSOSStatusUpdatePatch, validateUserProfilePatch } from "./client/src/services/sosInputValidation";
 
 // Read config from Vite environment variables
 const firebaseConfig = {
@@ -160,7 +160,9 @@ export async function getUserProfile(uid) {
 }
 
 export async function updateUserProfile(uid, patch) {
-  if (!db || !uid) return null;
+  // Only the authenticated owner may update explicitly editable profile fields.
+  // Firestore rules remain authoritative; this rejects over-broad writes before network I/O.
+  if (!db || !uid || auth?.currentUser?.uid !== uid || validateUserProfilePatch(patch)) return false;
   try {
     const ref = doc(db, "users", uid);
     await updateDoc(ref, { ...patch, updatedAt: serverTimestamp() });
