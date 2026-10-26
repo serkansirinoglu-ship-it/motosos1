@@ -31,7 +31,7 @@ export default function ProfilePage() {
 
   // Privacy toggles
   const [notifEnabled, setNotifEnabled] = useState(true);
-  const [locationEnabled, setLocationEnabled] = useState(true);
+  const [locationEnabled, setLocationEnabled] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -49,6 +49,8 @@ export default function ProfilePage() {
         setPhotoURL(p.photoURL || "");
         setBio(p.bio || "");
         if (p.contacts && p.contacts.length) setContacts(p.contacts);
+        setNotifEnabled(p.notificationsEnabled !== false);
+        setLocationEnabled(p.privacyLocation === true);
       } else {
         const created = await createUserProfile(user.uid, user.email || "");
         setProfile(created);
@@ -68,6 +70,8 @@ export default function ProfilePage() {
       bio: bio.trim(),
       contacts: contacts.filter((c) => c.name || c.phone),
       privacyLocation: locationEnabled,
+      notificationsEnabled: notifEnabled,
+      contacts: contacts.filter((c) => c.name.trim() || c.phone.trim()),
     });
 
     if (ok) {
@@ -78,12 +82,35 @@ export default function ProfilePage() {
         motorcycle,
         photoURL,
         bio,
+        contacts: contacts.filter((c) => c.name.trim() || c.phone.trim()),
+        privacyLocation: locationEnabled,
+        notificationsEnabled: notifEnabled,
       }));
       toast.success("Profiliniz güncellendi.");
       setIsEditOpen(false);
     } else {
       toast.error("Profil güncellenirken bir hata oluştu.");
     }
+  };
+
+  const persistPreference = async (
+    field: "notificationsEnabled" | "privacyLocation",
+    nextValue: boolean,
+    setValue: (value: boolean) => void,
+  ) => {
+    const previousValue = field === "notificationsEnabled" ? notifEnabled : locationEnabled;
+    if (!user?.uid) {
+      toast.error("Bu ayarı kaydetmek için oturum açmalısınız.");
+      return;
+    }
+    setValue(nextValue);
+    const ok = await updateUserProfile(user.uid, { [field]: nextValue });
+    if (!ok) {
+      setValue(previousValue);
+      toast.error("Ayar kaydedilemedi. Lütfen bağlantınızı kontrol edip tekrar deneyin.");
+      return;
+    }
+    setProfile((prev: any) => ({ ...prev, [field]: nextValue }));
   };
 
   const handleDeleteAccount = () => {
@@ -143,6 +170,8 @@ export default function ProfilePage() {
                   <Bike className="w-3.5 h-3.5 text-amber-400" /> {profile.motorcycle}
                 </p>
               )}
+
+              {profile?.bio && <p className="text-xs text-muted-foreground mt-2 leading-relaxed line-clamp-3">{profile.bio}</p>}
 
               <div className="flex gap-1.5 mt-2 flex-wrap">
                 {badges.map((b: string, i: number) => (
@@ -215,13 +244,13 @@ export default function ProfilePage() {
               icon={Bell}
               label="Push Bildirimleri"
               enabled={notifEnabled}
-              onToggle={() => setNotifEnabled(!notifEnabled)}
+              onToggle={() => void persistPreference("notificationsEnabled", !notifEnabled, setNotifEnabled)}
             />
             <ToggleRow
               icon={MapPin}
               label="Konum Paylaşım İzni"
               enabled={locationEnabled}
-              onToggle={() => setLocationEnabled(!locationEnabled)}
+              onToggle={() => void persistPreference("privacyLocation", !locationEnabled, setLocationEnabled)}
             />
           </div>
         </Card>
@@ -288,6 +317,19 @@ export default function ProfilePage() {
                   onChange={(e) => setMotorcycle(e.target.value)}
                   className="w-full bg-card border border-border rounded-xl p-2.5 text-foreground focus:outline-none focus:border-primary"
                 />
+              </div>
+
+              <div>
+                <label className="font-bold text-muted-foreground uppercase block mb-1">Motorcu Hakkında</label>
+                <textarea
+                  placeholder="Sürüş tarzını, deneyimini veya motorcu olarak ilgi alanlarını anlat..."
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value.slice(0, 280))}
+                  maxLength={280}
+                  rows={3}
+                  className="w-full resize-y bg-card border border-border rounded-xl p-2.5 text-foreground focus:outline-none focus:border-primary"
+                />
+                <p className="text-[10px] text-muted-foreground mt-1 text-right">{bio.length}/280</p>
               </div>
 
               <div>
