@@ -301,8 +301,16 @@ async function main() {
     await assertFails(setDoc(doc(outsider, "presence", "owner"), {
       uid: "owner", lastSeen: serverTimestamp(),
     }));
+    await assertFails(updateDoc(doc(owner, "presence", "owner"), {
+      lastSeen: new Date("2020-01-01T00:00:00Z"),
+    }));
+    await assertFails(updateDoc(doc(owner, "presence", "owner"), {
+      email: "owner@example.test", lastSeen: serverTimestamp(),
+    }));
+    await assertFails(deleteDoc(doc(outsider, "presence", "owner")));
     await assertSucceeds(getDoc(doc(anonymous, "presence", "owner")));
     console.log("PASS: presence is publicly readable but only its owner can update it");
+    console.log("PASS: presence rejects stale heartbeat timestamps, extra identity fields, and cross-user deletion");
 
     await assertFails(setDoc(doc(outsider, "communityPosts", "spoofed-post"), {
       authorId: "owner", text: "spoofed",
