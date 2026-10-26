@@ -36,12 +36,12 @@ export function planLegacyHelpMigration(records, emailToUid) {
     const reasons = [];
     if (!id) reasons.push("missing_document_id");
     if (id && idCounts.get(id) > 1) reasons.push("duplicate_document_id");
-    if (id && (id.length > 1500 || id.includes("/") || id === "." || id === ".." || /^__.*__$/.test(id))) {
+    if (id && (id.length > 1500 || id.includes("/") || id.includes("@") || id === "." || id === ".." || /^__.*__$/.test(id))) {
       reasons.push("invalid_document_id");
     }
     if (!data || typeof data !== "object" || Array.isArray(data)) {
       reasons.push("invalid_document_data");
-      return { id: id || null, status: "blocked", reasonCodes: [...new Set(reasons)] };
+      return { id: id && !id.includes("@") ? id : null, status: "blocked", reasonCodes: [...new Set(reasons)] };
     }
 
     const legacyOwnerEmail = normalizeEmail(data.user);
@@ -83,7 +83,7 @@ export function planLegacyHelpMigration(records, emailToUid) {
       !("user" in data) && helpers.every((helper) => typeof helper === "string" && SAFE_UID_RE.test(helper.trim()));
     const status = reasons.length ? "blocked" : alreadyModern ? "already_modern" : "ready_for_review";
     return {
-      id: id || null,
+      id: id && !id.includes("@") ? id : null,
       status,
       reasonCodes: [...new Set(reasons)],
       counts: {
