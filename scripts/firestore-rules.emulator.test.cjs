@@ -384,12 +384,13 @@ async function main() {
       email: "owner@example.test", lastSeen: serverTimestamp(),
     }));
     await assertFails(deleteDoc(doc(outsider, "presence", "owner")));
-    await assertSucceeds(getDoc(doc(anonymous, "presence", "owner")));
-    await assertFails(getDoc(doc(anonymous, "presence", "malformed-legacy")));
-    await assertFails(getDoc(doc(anonymous, "presence", "wrong-uid")));
-    await assertFails(getDoc(doc(anonymous, "presence", "invalid-timestamp")));
-    console.log("PASS: public presence reads reject extra fields, mismatched UIDs, and non-timestamp heartbeats");
-    console.log("PASS: presence is publicly readable but only its owner can update it");
+    await assertFails(getDoc(doc(anonymous, "presence", "owner")));
+    await assertSucceeds(getDoc(doc(outsider, "presence", "owner")));
+    await assertFails(getDoc(doc(outsider, "presence", "malformed-legacy")));
+    await assertFails(getDoc(doc(outsider, "presence", "wrong-uid")));
+    await assertFails(getDoc(doc(outsider, "presence", "invalid-timestamp")));
+    console.log("PASS: presence records require authentication and reject extra fields, mismatched UIDs, and non-timestamp heartbeats");
+    console.log("PASS: authenticated riders can read valid presence; only its owner can update it");
     console.log("PASS: presence rejects stale heartbeat timestamps, extra identity fields, and cross-user deletion");
 
     await assertFails(setDoc(doc(outsider, "communityPosts", "spoofed-post"), {
