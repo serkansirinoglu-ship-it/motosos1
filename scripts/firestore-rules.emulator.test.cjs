@@ -245,6 +245,10 @@ async function main() {
     }));
     console.log("PASS: unaccepted user cannot resolve another rider request");
 
+    await assertFails(updateDoc(doc(outsider, "helpRequests", "private-help"), {
+      helpers: ["outsider", "attacker"], updatedAt: serverTimestamp(),
+    }));
+    console.log("PASS: helper cannot accept a request while adding another rider to the helper list");
     await assertSucceeds(updateDoc(doc(outsider, "helpRequests", "private-help"), {
       helpers: ["outsider"], updatedAt: serverTimestamp(),
     }));
