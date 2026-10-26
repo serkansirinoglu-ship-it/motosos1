@@ -283,6 +283,8 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
 
   // Allow components to subscribe to realtime messages for a specific request
   function subscribeToMessages(requestId: string, onUpdate: (arr: Message[]) => void) {
+    // Deliver the cached conversation immediately, including local-only messages, even without Firebase.
+    onUpdate([...(messages[requestId] || [])].sort((a, b) => a.ts - b.ts));
 	try {
 	  return subscribeMessagesRealtime(requestId, (arr: any[]) => {
 		const normalized = arr.map((d) => ({ ...d, ts: d.ts && d.ts.toMillis ? d.ts.toMillis() : d.ts })) as Message[];
