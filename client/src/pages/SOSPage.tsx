@@ -19,6 +19,7 @@ export default function SOSPage() {
   const [localSosId, setLocalSosId] = useState<string | null>(null);
   const [status, setStatus] = useState<SOSStatus>("bekleniyor");
   const [submitting, setSubmitting] = useState(false);
+  const [finishing, setFinishing] = useState(false);
   const [nearbyServices, setNearbyServices] = useState<Array<{ key: string; label: string; searchUrl: string; directionsUrl: string }>>([]);
 
   const { user } = useAuth();
@@ -139,6 +140,8 @@ export default function SOSPage() {
   };
 
   const handleCancel = async () => {
+    if (finishing) return;
+    setFinishing(true);
     if (sosId) {
       let remoteUpdated = false;
       try {
@@ -148,6 +151,7 @@ export default function SOSPage() {
       }
       if (!remoteUpdated) {
         toast.error("Sunucu çağrısı iptal edilemedi. Çağrı aktif tutuldu; bağlantınızı kontrol edip yeniden deneyin.");
+        setFinishing(false);
         return;
       }
     }
@@ -158,10 +162,13 @@ export default function SOSPage() {
     setLocalSosId(null);
     setElapsed(0);
     setSelectedCategory(null);
+    setFinishing(false);
     toast.info(sosId ? "Yardım çağrısı sunucuda iptal edildi." : "Yerel yardım çağrısı iptal edildi; sunucu kaydı doğrulanmadı.");
   };
 
   const handleResolve = async () => {
+    if (finishing) return;
+    setFinishing(true);
     if (sosId) {
       let remoteUpdated = false;
       try {
@@ -171,6 +178,7 @@ export default function SOSPage() {
       }
       if (!remoteUpdated) {
         toast.error("Sunucu çağrısı tamamlandı olarak işaretlenemedi. Çağrı aktif tutuldu; bağlantınızı kontrol edip yeniden deneyin.");
+        setFinishing(false);
         return;
       }
     }
@@ -181,6 +189,7 @@ export default function SOSPage() {
     setLocalSosId(null);
     setElapsed(0);
     setSelectedCategory(null);
+    setFinishing(false);
     toast.success(sosId
       ? "Yardım talebiniz sunucuda tamamlandı olarak işaretlendi. Puan ve rozet güncellemesi henüz doğrulanmadı."
       : "Yerel yardım talebiniz tamamlandı; sunucu kaydı doğrulanmadı.");
@@ -270,6 +279,7 @@ export default function SOSPage() {
           <div className="w-full mt-6 flex gap-3">
             <Button
               onClick={handleResolve}
+              disabled={finishing}
               className="flex-1 h-12 bg-green-600 hover:bg-green-700 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-green-600/30"
             >
               <Check className="w-4 h-4 mr-1.5" />
@@ -277,6 +287,7 @@ export default function SOSPage() {
             </Button>
             <Button
               onClick={handleCancel}
+              disabled={finishing}
               variant="outline"
               className="flex-1 h-12 border-destructive text-destructive hover:bg-destructive/10 font-bold text-xs uppercase tracking-wider rounded-xl"
             >
