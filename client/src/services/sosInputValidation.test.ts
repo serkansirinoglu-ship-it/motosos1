@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validateSOSRequestInput, validateSOSStatusUpdatePatch, validateUserProfilePatch } from "./sosInputValidation";
+import { validateSOSRequestInput, validateSOSStatusUpdatePatch, validateUserProfilePatch, validateUserProfileCreation } from "./sosInputValidation";
 
 const validInput = {
   requesterId: "authenticated-rider",
@@ -128,5 +128,35 @@ describe("validateUserProfilePatch", () => {
     { contacts: [{ name: "A", phone: "x".repeat(41) }] },
   ])("rejects unsupported or malformed profile patch: %s", (patch) => {
     expect(validateUserProfilePatch(patch)).not.toBeNull();
+  });
+});
+
+
+describe("validateUserProfileCreation", () => {
+  const identity = {
+    uid: "rider-uid",
+    email: "rider@example.test",
+    authenticatedUid: "rider-uid",
+    authenticatedEmail: "rider@example.test",
+  };
+
+  it("accepts a matching authenticated identity and bounded public fields", () => {
+    expect(validateUserProfileCreation(
+      identity.uid, identity.email, { displayName: "Rider", city: "İzmir" },
+      identity.authenticatedUid, identity.authenticatedEmail,
+    )).toBeNull();
+  });
+
+  it("rejects unauthenticated or mismatched UID/email values", () => {
+    expect(validateUserProfileCreation(identity.uid, identity.email, {}, null, identity.authenticatedEmail)).toBe("invalid_identity");
+    expect(validateUserProfileCreation("another-user", identity.email, {}, identity.authenticatedUid, identity.authenticatedEmail)).toBe("invalid_identity");
+    expect(validateUserProfileCreation(identity.uid, "attacker@example.test", {}, identity.authenticatedUid, identity.authenticatedEmail)).toBe("invalid_email");
+  });
+
+  it("rejects protected fields and malformed profile values before document creation", () => {
+    expect(validateUserProfileCreation(identity.uid, identity.email, { points: 999 }, identity.authenticatedUid, identity.authenticatedEmail)).toBe("invalid_extra");
+    expect(validateUserProfileCreation(identity.uid, identity.email, { uid: "attacker" }, identity.authenticatedUid, identity.authenticatedEmail)).toBe("invalid_extra");
+    expect(validateUserProfileCreation(identity.uid, identity.email, { displayName: "x".repeat(81) }, identity.authenticatedUid, identity.authenticatedEmail)).toBe("invalid_display_name");
+    expect(validateUserProfileCreation(identity.uid, identity.email, null, identity.authenticatedUid, identity.authenticatedEmail)).toBe("invalid_extra");
   });
 });

@@ -1,7 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut, onAuthStateChanged } from "firebase/auth";
 import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, getDocs, doc, setDoc, getDoc, updateDoc, deleteDoc, where, Timestamp, writeBatch } from "firebase/firestore";
-import { validateSOSRequestInput, validateSOSStatusUpdatePatch, validateUserProfilePatch } from "./client/src/services/sosInputValidation";
+import { validateSOSRequestInput, validateSOSStatusUpdatePatch, validateUserProfilePatch, validateUserProfileCreation } from "./client/src/services/sosInputValidation";
 import { validateHelpMessageInput, validateHelpRequestInput, validateHelpRequestUpdatePatch } from "./client/src/services/helpMessageValidation";
 
 // Read config from Vite environment variables
@@ -116,7 +116,7 @@ export function onAuthStateChangedListener(callback) {
  * This does NOT overwrite an existing profile.
  */
 export async function createUserProfile(uid, email, extra = {}) {
-  if (!db || !uid) return null;
+  if (!db || validateUserProfileCreation(uid, email, extra, auth?.currentUser?.uid, auth?.currentUser?.email)) return null;
   try {
     const ref = doc(db, "users", uid);
     const snap = await getDoc(ref);

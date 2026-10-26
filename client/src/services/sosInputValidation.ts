@@ -94,3 +94,39 @@ export function validateUserProfilePatch(patch: unknown): UserProfilePatchError 
   }
   return null;
 }
+
+
+export type UserProfileCreationError =
+  | "invalid_identity"
+  | "invalid_email"
+  | "invalid_extra"
+  | "invalid_display_name"
+  | "invalid_city"
+  | "invalid_motorcycle"
+  | "invalid_photo_url"
+  | "invalid_bio";
+
+const USER_PROFILE_CREATION_FIELDS = ["displayName", "city", "motorcycle", "photoURL", "bio"] as const;
+
+/** Validate profile creation inputs against the current Firebase identity and public profile schema. */
+export function validateUserProfileCreation(
+  uid: unknown,
+  email: unknown,
+  extra: unknown,
+  authenticatedUid: unknown,
+  authenticatedEmail: unknown,
+): UserProfileCreationError | null {
+  if (typeof uid !== "string" || !uid.trim() || uid.length > 128 ||
+      typeof authenticatedUid !== "string" || uid !== authenticatedUid) return "invalid_identity";
+  if (typeof email !== "string" || !email.trim() ||
+      typeof authenticatedEmail !== "string" || email !== authenticatedEmail) return "invalid_email";
+  if (!extra || typeof extra !== "object" || Array.isArray(extra)) return "invalid_extra";
+  const candidate = extra as Record<string, unknown>;
+  if (Object.keys(candidate).some((key) => !(USER_PROFILE_CREATION_FIELDS as readonly string[]).includes(key))) return "invalid_extra";
+  if ("displayName" in candidate && (typeof candidate.displayName !== "string" || candidate.displayName.length > 80)) return "invalid_display_name";
+  if ("city" in candidate && (typeof candidate.city !== "string" || candidate.city.length > 100)) return "invalid_city";
+  if ("motorcycle" in candidate && (typeof candidate.motorcycle !== "string" || candidate.motorcycle.length > 100)) return "invalid_motorcycle";
+  if ("photoURL" in candidate && (typeof candidate.photoURL !== "string" || candidate.photoURL.length > 2048)) return "invalid_photo_url";
+  if ("bio" in candidate && (typeof candidate.bio !== "string" || candidate.bio.length > 500)) return "invalid_bio";
+  return null;
+}
