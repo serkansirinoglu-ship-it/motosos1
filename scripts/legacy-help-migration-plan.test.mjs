@@ -63,6 +63,19 @@ describe("planLegacyHelpMigration", () => {
     expect(result.summary.blocked).toBe(3);
   });
 
+  it("blocks document IDs that Firestore cannot address safely", () => {
+    const result = planLegacyHelpMigration([
+      { id: "nested/path", data: { ownerId: "owner-uid", helpers: [] } },
+      { id: ".", data: { ownerId: "owner-uid", helpers: [] } },
+      { id: "..", data: { ownerId: "owner-uid", helpers: [] } },
+      { id: "__reserved__", data: { ownerId: "owner-uid", helpers: [] } },
+      { id: "valid-id", data: { ownerId: "owner-uid", helpers: [] } },
+    ], {});
+    expect(result.items.slice(0, 4).every((item) => item.reasonCodes.includes("invalid_document_id"))).toBe(true);
+    expect(result.items[4].status).toBe("already_modern");
+    expect(result.summary.blocked).toBe(4);
+  });
+
   it("blocks malformed records and missing document IDs without throwing", () => {
     const result = planLegacyHelpMigration([
       null,
