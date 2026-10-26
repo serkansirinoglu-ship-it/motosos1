@@ -171,3 +171,8 @@ Public marketplace listing documents must not contain `sellerEmail`: new listing
 ## Marketplace client model privacy alignment — 2026-10-26
 
 The in-memory marketplace listing model and listing creation flow no longer store or derive a public seller email. Seller display names use the profile display name or a neutral fallback instead of deriving a name from the email address. This aligns client-side data shape with the Firestore rule that rejects `sellerEmail` on new listing documents. Marketplace persistence remains in-memory in the current client implementation; no production data was accessed or changed.
+
+
+## Community-post legacy schema privacy gate — 2026-10-26
+
+Anonymous reads of community posts now require the stored document to contain only the approved public fields. Admins and the post owner retain access to legacy records that have extra fields, allowing review without exposing those records to the public. The emulator suite adds a legacy post with an email field and asserts anonymous denial plus owner access. This is document-level protection: Firestore rules cannot redact fields. Any future Firestore-backed feed must account for legacy documents that fail the public schema condition; the current community screen still uses local in-memory data. No production data was inspected or changed.
