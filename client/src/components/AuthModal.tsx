@@ -63,7 +63,13 @@ export function AuthModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
     try {
       if (mode === "register") {
         const cred = await signUp(trimmedEmail, password);
-        await createUserProfile(cred.user.uid, trimmedEmail);
+        // Use Firebase's canonical authenticated email, not the raw form value.
+        const profile = await createUserProfile(cred.user.uid, cred.user.email ?? "");
+        if (!profile) {
+          toast.error("Hesabın açıldı ancak profil kaydedilemedi. Profil ekranından tekrar deneyebilirsin.");
+          closeModal();
+          return;
+        }
         toast.success("Hesabın oluşturuldu. Hoş geldin!");
       } else {
         await signIn(trimmedEmail, password);
