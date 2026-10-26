@@ -65,7 +65,7 @@ export default function MarketplacePage() {
       sellerPhone: phone.trim() || undefined,
     });
 
-    toast.success("İlanınız başarıyla yayınlandı!");
+    toast.success("İlan bu oturumda yerel olarak oluşturuldu; kalıcı olarak yayınlanmadı.");
     setTitle("");
     setPrice("");
     setDescription("");
@@ -86,6 +86,7 @@ export default function MarketplacePage() {
             İkinci El Pazar
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">Motosiklet ve ekipman alım/satım dayanışması</p>
+          <p className="text-[11px] text-amber-300 mt-1">Bilgi: İlanlar şu anda yalnızca bu oturumda tutulur; diğer kullanıcılara yayınlanmaz ve sayfa yenilendiğinde kaybolabilir.</p>
         </div>
 
         <button
