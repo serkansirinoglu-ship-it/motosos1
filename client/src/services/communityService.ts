@@ -105,6 +105,10 @@ class CommunityService {
     return newComment;
   }
 
+  public clearLocalSession(): void {
+    this.posts = [];
+  }
+
   public deletePost(postId: string): boolean {
     const initLen = this.posts.length;
     this.posts = this.posts.filter((p) => p.id !== postId);
