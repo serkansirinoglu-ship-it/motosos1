@@ -67,6 +67,18 @@ const USER_PROFILE_FIELDS = [
   "displayName", "city", "motorcycle", "photoURL", "bio", "privacyLocation", "contacts",
 ] as const;
 
+/** Empty profile photos are allowed; non-empty values must be absolute HTTP(S) URLs. */
+function isValidProfilePhotoURL(value: unknown): boolean {
+  if (typeof value !== "string" || value.length > 2048) return false;
+  if (value === "") return true;
+  try {
+    const parsed = new URL(value);
+    return (parsed.protocol === "https:" || parsed.protocol === "http:") && Boolean(parsed.hostname);
+  } catch {
+    return false;
+  }
+}
+
 /** Defense-in-depth allowlist matching the profile fields editable under Firestore rules. */
 export function validateUserProfilePatch(patch: unknown): UserProfilePatchError | null {
   if (!patch || typeof patch !== "object" || Array.isArray(patch)) return "invalid_patch";
@@ -78,8 +90,8 @@ export function validateUserProfilePatch(patch: unknown): UserProfilePatchError 
   if ("displayName" in candidate && (typeof candidate.displayName !== "string" || candidate.displayName.length > 80)) return "invalid_display_name";
   if ("city" in candidate && (typeof candidate.city !== "string" || candidate.city.length > 100)) return "invalid_city";
   if ("motorcycle" in candidate && (typeof candidate.motorcycle !== "string" || candidate.motorcycle.length > 100)) return "invalid_motorcycle";
-  if ("photoURL" in candidate && (typeof candidate.photoURL !== "string" || candidate.photoURL.length > 2048)) return "invalid_photo_url";
-  if ("bio" in candidate && (typeof candidate.bio !== "string" || candidate.bio.length > 500)) return "invalid_bio";
+  if ("photoURL" in candidate && (!isValidProfilePhotoURL(candidate.photoURL))) return "invalid_photo_url";
+  if ("bio" in candidate && (typeof candidate.bio !== "string" || candidate.bio.length > 280)) return "invalid_bio";
   if ("privacyLocation" in candidate && typeof candidate.privacyLocation !== "boolean") return "invalid_privacy_location";
   if ("contacts" in candidate) {
     if (!Array.isArray(candidate.contacts) || candidate.contacts.length > 10) return "invalid_contacts";
@@ -126,8 +138,8 @@ export function validateUserProfileCreation(
   if ("displayName" in candidate && (typeof candidate.displayName !== "string" || candidate.displayName.length > 80)) return "invalid_display_name";
   if ("city" in candidate && (typeof candidate.city !== "string" || candidate.city.length > 100)) return "invalid_city";
   if ("motorcycle" in candidate && (typeof candidate.motorcycle !== "string" || candidate.motorcycle.length > 100)) return "invalid_motorcycle";
-  if ("photoURL" in candidate && (typeof candidate.photoURL !== "string" || candidate.photoURL.length > 2048)) return "invalid_photo_url";
-  if ("bio" in candidate && (typeof candidate.bio !== "string" || candidate.bio.length > 500)) return "invalid_bio";
+  if ("photoURL" in candidate && (!isValidProfilePhotoURL(candidate.photoURL))) return "invalid_photo_url";
+  if ("bio" in candidate && (typeof candidate.bio !== "string" || candidate.bio.length > 280)) return "invalid_bio";
   return null;
 }
 
