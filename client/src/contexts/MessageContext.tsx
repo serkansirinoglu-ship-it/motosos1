@@ -181,9 +181,9 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
       }).catch((error) => {
         console.warn("Realtime help request failed; keeping a local copy", error);
         localOnlyHelpRequestIds.current.add(hr.id);
-        setHelpRequests((current) =>
-          current.some((item) => item.id === hr.id) ? current : [hr, ...current]
-        );
+        setHelpRequests((current) => current.map((item) =>
+          item.id === hr.id ? { ...item, localOnly: true } : item
+        ));
       });
       setMessages((current) => ({ ...current, [id]: [] }));
       return hr;
