@@ -330,19 +330,19 @@ async function main() {
       points: 0, helpCount: 0, receivedHelpCount: 0, badges: [],
       createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
     };
-    await assertFails(setDoc(doc(outsider, "users", "invalid-name-profile"), {
+    await assertFails(setDoc(doc(outsider, "users", "outsider"), {
       ...validNewProfile, uid: "outsider", displayName: 123,
     }));
-    await assertFails(setDoc(doc(outsider, "users", "oversized-bio-profile"), {
+    await assertFails(setDoc(doc(outsider, "users", "outsider"), {
       ...validNewProfile, bio: "x".repeat(501),
     }));
-    await assertFails(setDoc(doc(outsider, "users", "invalid-privacy-profile"), {
+    await assertFails(setDoc(doc(outsider, "users", "outsider"), {
       ...validNewProfile, privacyLocation: "yes",
     }));
-    await assertFails(setDoc(doc(outsider, "users", "too-many-contacts-profile"), {
+    await assertFails(setDoc(doc(outsider, "users", "outsider"), {
       ...validNewProfile, contacts: Array.from({ length: 11 }, (_, i) => ({ name: `Contact ${i}`, phone: "123" })),
     }));
-    await assertSucceeds(setDoc(doc(outsider, "users", "valid-new-profile"), validNewProfile));
+    await assertSucceeds(setDoc(doc(outsider, "users", "outsider"), validNewProfile));
     console.log("PASS: profile creation validates field types, text bounds, privacy flag, and contact-list size");
 
     await assertFails(getDoc(doc(outsider, "users", "owner")));
