@@ -139,53 +139,51 @@ export default function SOSPage() {
   };
 
   const handleCancel = async () => {
-    if (localSosId) sosService.updateStatus(localSosId, "iptal_edildi");
-
-    let remoteUpdated = true;
     if (sosId) {
+      let remoteUpdated = false;
       try {
         remoteUpdated = (await updateSOSRequest(sosId, { status: "cancelled" })) === true;
       } catch (error) {
         console.error("Firebase SOS cancellation failed", error);
-        remoteUpdated = false;
+      }
+      if (!remoteUpdated) {
+        toast.error("Sunucu çağrısı iptal edilemedi. Çağrı aktif tutuldu; bağlantınızı kontrol edip yeniden deneyin.");
+        return;
       }
     }
 
+    if (localSosId) sosService.updateStatus(localSosId, "iptal_edildi");
     setSosActive(false);
     setSosId(null);
     setLocalSosId(null);
     setElapsed(0);
     setSelectedCategory(null);
-    if (remoteUpdated) {
-      toast.info(sosId ? "Yardım çağrısı iptal edildi." : "Yerel yardım çağrısı iptal edildi; sunucu kaydı doğrulanmadı.");
-    } else {
-      toast.error("Yerel çağrı iptal edildi ancak sunucu kaydı güncellenemedi. Bağlantınızı kontrol edin.");
-    }
+    toast.info(sosId ? "Yardım çağrısı sunucuda iptal edildi." : "Yerel yardım çağrısı iptal edildi; sunucu kaydı doğrulanmadı.");
   };
 
   const handleResolve = async () => {
-    if (localSosId) sosService.updateStatus(localSosId, "tamamlandi");
-
-    let remoteUpdated = true;
     if (sosId) {
+      let remoteUpdated = false;
       try {
         remoteUpdated = (await updateSOSRequest(sosId, { status: "resolved" })) === true;
       } catch (error) {
         console.error("Firebase SOS completion failed", error);
-        remoteUpdated = false;
+      }
+      if (!remoteUpdated) {
+        toast.error("Sunucu çağrısı tamamlandı olarak işaretlenemedi. Çağrı aktif tutuldu; bağlantınızı kontrol edip yeniden deneyin.");
+        return;
       }
     }
 
+    if (localSosId) sosService.updateStatus(localSosId, "tamamlandi");
     setSosActive(false);
     setSosId(null);
     setLocalSosId(null);
     setElapsed(0);
     setSelectedCategory(null);
-    if (remoteUpdated) {
-      toast.success("Yardım talebiniz tamamlandı olarak işaretlendi. Puan ve rozet güncellemesi henüz doğrulanmadı.");
-    } else {
-      toast.error("Yerel çağrı tamamlandı olarak işaretlendi ancak sunucu kaydı güncellenemedi. Bağlantınızı kontrol edin.");
-    }
+    toast.success(sosId
+      ? "Yardım talebiniz sunucuda tamamlandı olarak işaretlendi. Puan ve rozet güncellemesi henüz doğrulanmadı."
+      : "Yerel yardım talebiniz tamamlandı; sunucu kaydı doğrulanmadı.");
   };
 
   if (sosActive) {
