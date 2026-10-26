@@ -443,3 +443,13 @@ Reviewed the business directory, community feed, and advertising services and fo
 AdminPanel was reachable through the client route without checking the Firebase admin custom claim. It now refreshes the signed-in user's ID token and only renders administrative controls when `claims.admin === true`, matching the `admin` claim used by Firestore rules. Admin actions remain partially session-local; the panel now discloses that they are not all persistent server-side operations.
 
 Removed the client-side `createInitialSeed` helper and its `VITE_FIREBASE_AUTO_SEED` trigger. The old helper could write fabricated products and sponsor banners to Firestore whenever those collections were empty, which was an avoidable production data mutation risk. Removed the obsolete env-example flag as well. NotificationService now starts empty instead of showing a fabricated unread welcome notification; its comments clarify that remote push delivery is not connected. The regression test now covers empty business, community, advertising, marketplace, and notification seed data. No production database was queried or modified during this source change.
+
+
+### SOS retry and truthful delivery state — 2026-10-26
+
+- Fixed a terminal-action lock leak: when marking a remotely persisted SOS as completed failed, the in-flight ref is now reset so the user can retry instead of being permanently blocked.
+- Removed a duplicate lock reset in the cancellation failure path.
+- The active SOS screen now persistently warns when the request exists only in the current session and remote persistence / delivery to other riders has not been confirmed.
+- Updated the SOS introduction to avoid promising delivery to nearby riders before notification delivery is implemented and verified.
+- Corrected the Koruyucu Kardeş points/badges copy to disclose that trusted server-side crediting is not enabled.
+- No Firestore rules, production environment, or Home.tsx changes.
