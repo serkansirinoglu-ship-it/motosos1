@@ -143,7 +143,14 @@ export default function SOSPage() {
       (err) => {
         toast.dismiss();
         console.error("GPS error", err);
-        toast.error("Konum alınamadı. Lütfen cihazınızın GPS iznini açın.");
+        const message = err.code === 1
+          ? "Konum izni reddedildi. Tarayıcı veya cihaz ayarlarından konum iznini açın."
+          : err.code === 2
+            ? "Cihaz konumu belirleyemedi. GPS'i açıp daha iyi sinyal olan bir yerde yeniden deneyin."
+            : err.code === 3
+              ? "Konum isteği zaman aşımına uğradı. GPS bağlantısını kontrol edip yeniden deneyin."
+              : "Konum alınamadı. GPS iznini ve cihaz ayarlarını kontrol edin.";
+        toast.error(message);
         setSubmitting(false);
         submittingRef.current = false;
       },
