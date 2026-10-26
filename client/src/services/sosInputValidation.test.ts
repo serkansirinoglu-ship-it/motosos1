@@ -14,6 +14,13 @@ describe("validateSOSRequestInput", () => {
     expect(validateSOSRequestInput("authenticated-rider", validInput)).toBeNull();
   });
 
+  it.each(["lastik", "aku", "yakit", "ariza", "kaza", "cekici", "diger"])(
+    "accepts each supported help category: %s",
+    (helpType) => {
+      expect(validateSOSRequestInput("authenticated-rider", { ...validInput, helpType })).toBeNull();
+    },
+  );
+
   it("rejects requests when there is no authenticated user", () => {
     expect(validateSOSRequestInput(null, validInput)).toBe("unauthenticated");
   });
