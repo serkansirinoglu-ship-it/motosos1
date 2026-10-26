@@ -36,7 +36,9 @@ export function planLegacyHelpMigration(records, emailToUid) {
     const reasons = [];
     if (!id) reasons.push("missing_document_id");
     if (id && idCounts.get(id) > 1) reasons.push("duplicate_document_id");
-    if (id && id.length > 1500) reasons.push("invalid_document_id");
+    if (id && (id.length > 1500 || id.includes("/") || id === "." || id === ".." || /^__.*__$/.test(id))) {
+      reasons.push("invalid_document_id");
+    }
     if (!data || typeof data !== "object" || Array.isArray(data)) {
       reasons.push("invalid_document_data");
       return { id: id || null, status: "blocked", reasonCodes: [...new Set(reasons)] };
