@@ -199,9 +199,8 @@ service cloud.firestore {
           request.auth.uid in resource.data.helpers
           || (request.auth.token.email != null && request.auth.token.email in resource.data.helpers)
         ))
-        || (resource.data.active == true
+        || ('active' in resource.data && resource.data.active == true
           // Public discovery requires an explicit marker; legacy records remain private by default.
-          && 'publicVisible' in resource.data
           && resource.data.get('publicVisible', false) == true
           && resource.data.helpers is list
           && resource.data.helpers.size() == 0
