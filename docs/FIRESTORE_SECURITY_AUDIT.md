@@ -147,7 +147,7 @@ The current application community and marketplace screens use local in-memory se
 
 The strict Firestore rules now constrain the public community-post and marketplace-listing schemas and owner-editable fields:
 
-- Community-post creation uses an explicit field allowlist and validates content/city and optional text/list fields. Owners can edit only content, city, image, and tag; they cannot rewrite author identity, likes/comments arrays, or creation time. Admins retain moderation access.
+- Community-post creation uses an explicit field allowlist and validates content/city and optional text/list fields. Owners can edit only content, city, image, and tag; they cannot rewrite author identity, likes/comments arrays, or creation time. Admins retain moderation access. Owner edits now also reject an empty city, matching the create-time non-empty schema requirement; the emulator suite covers this regression.
 - Listing creation uses an explicit field allowlist and validates title, category, non-negative numeric price, description, city, and optional contact/image text. Sellers cannot self-assign the featured/promotion flag or rewrite seller identity/contact email and creation time through ordinary updates. Editable listing content is allowlisted.
 - Event writes now use a bounded field allowlist and validate title and optional descriptive fields. Organizer identity and creation timestamp are immutable to non-admins; event deletion remains admin-only.
 - Emulator regression tests cover oversized community content, extra privilege fields, unauthorized likes/creation-time mutation, self-promotion, seller email changes, negative prices, and owner-field spoofing.
