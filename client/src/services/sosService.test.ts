@@ -58,6 +58,29 @@ describe("SOSService in-memory request lifecycle", () => {
     expect(sosService.getActiveRequests().some((item) => item.id === created.id)).toBe(false);
   });
 
+  it.each(["tamamlandi", "iptal_edildi"] as const)(
+    "does not reopen a terminal request (%s)",
+    (terminalStatus) => {
+      const created = sosService.createRequest(request);
+      expect(sosService.updateStatus(created.id, terminalStatus)).toBe(true);
+
+      const terminalBefore = sosService.getAllRequests().find((item) => item.id === created.id);
+      const terminalTimestamp =
+        terminalStatus === "tamamlandi" ? terminalBefore?.resolvedAt : terminalBefore?.cancelledAt;
+      const otherTerminalStatus = terminalStatus === "tamamlandi" ? "iptal_edildi" : "tamamlandi";
+
+      expect(sosService.updateStatus(created.id, "bekleniyor")).toBe(false);
+      expect(sosService.updateStatus(created.id, otherTerminalStatus)).toBe(false);
+
+      const terminalAfter = sosService.getAllRequests().find((item) => item.id === created.id);
+      expect(terminalAfter?.status).toBe(terminalStatus);
+      expect(
+        terminalStatus === "tamamlandi" ? terminalAfter?.resolvedAt : terminalAfter?.cancelledAt,
+      ).toBe(terminalTimestamp);
+      expect(sosService.getActiveRequests().some((item) => item.id === created.id)).toBe(false);
+    },
+  );
+
   it("returns false when asked to update a missing request", () => {
     expect(sosService.updateStatus("missing-sos-id", "iptal_edildi")).toBe(false);
   });
