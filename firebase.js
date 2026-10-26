@@ -273,7 +273,7 @@ export function subscribeHelpRequestsRealtime(onUpdate) {
   }
 
   try {
-    const q = query(collection(db, "helpRequests"), where("active", "==", true), where("helpers", "==", []), orderBy("createdAt", "desc"));
+    const q = query(collection(db, "helpRequests"), where("active", "==", true), where("publicVisible", "==", true), where("helpers", "==", []), orderBy("createdAt", "desc"));
     return onSnapshot(q, (snap) => {
       const arr = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       onUpdate(arr);
@@ -293,7 +293,7 @@ export async function createHelpRequestRealtime(data) {
   // Keep the request ID used by the client and nested message path aligned with
   // the Firestore document ID. Fall back to an auto-ID for older callers.
   const { id, user: _legacyEmailField, ...payload } = data || {};
-  const documentData = { ...payload, createdAt: serverTimestamp(), active: true };
+  const documentData = { ...payload, createdAt: serverTimestamp(), active: true, publicVisible: true };
   if (id) {
     const requestRef = doc(db, "helpRequests", id);
     await setDoc(requestRef, documentData);
