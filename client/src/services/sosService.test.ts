@@ -49,6 +49,15 @@ describe("SOSService in-memory request lifecycle", () => {
     expect(sosService.getActiveRequests().some((item) => item.id === created.id)).toBe(false);
   });
 
+  it("records cancellation time and removes cancelled requests from active requests", () => {
+    const created = sosService.createRequest(request);
+    expect(sosService.updateStatus(created.id, "iptal_edildi")).toBe(true);
+
+    const updated = sosService.getAllRequests().find((item) => item.id === created.id);
+    expect(updated?.cancelledAt).toBeTruthy();
+    expect(sosService.getActiveRequests().some((item) => item.id === created.id)).toBe(false);
+  });
+
   it("returns false when asked to update a missing request", () => {
     expect(sosService.updateStatus("missing-sos-id", "iptal_edildi")).toBe(false);
   });
