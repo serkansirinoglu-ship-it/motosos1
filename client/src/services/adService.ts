@@ -16,28 +16,8 @@ export interface AdBanner {
   type: 'banner' | 'native' | 'sponsored_business';
 }
 
-const SAMPLE_BANNERS: AdBanner[] = [
-  {
-    id: 'ban-1',
-    title: 'Motosiklet Sigortanı Kolayca Al',
-    subtitle: 'MotoGuard üyelerine özel %15 indirim avantajı!',
-    image: 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=800&q=80',
-    link: 'https://example.com/sigorta',
-    sponsorName: 'Motovip Sigorta',
-    active: true,
-    type: 'banner',
-  },
-  {
-    id: 'ban-2',
-    title: 'Shoei & Alpinestars Bahar Fırsatları',
-    subtitle: 'Ekipmanlarda peşin fiyatına 6 taksit.',
-    image: 'https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&w=800&q=80',
-    link: 'https://example.com/ekipman',
-    sponsorName: 'MotoMağaza Türkiye',
-    active: true,
-    type: 'native',
-  },
-];
+// No invented users, comments, sponsors, offers, or discount claims are shown as real data.
+const SAMPLE_BANNERS: AdBanner[] = [];
 
 class AdService {
   private banners: AdBanner[] = [...SAMPLE_BANNERS];
