@@ -52,7 +52,7 @@ async function main() {
       });
       await setDoc(doc(db, "helpRequests", "private-help"), {
         id: "private-help", ownerId: "owner", title: "Private help",
-        description: "test fixture", active: true, helpers: [], resolvedBy: null,
+        description: "test fixture", active: true, publicVisible: true, helpers: [], resolvedBy: null,
         resolvedAt: null, createdAt: new Date(),
       });
       await setDoc(doc(db, "helpRequests", "closed-help"), {
@@ -301,7 +301,7 @@ async function main() {
 
     await assertSucceeds(setDoc(doc(owner, "helpRequests", "valid-help"), {
       title: "Valid help", description: "test", ownerId: "owner",
-      active: true, helpers: [], resolvedBy: null, resolvedAt: null,
+      active: true, publicVisible: true, helpers: [], resolvedBy: null, resolvedAt: null,
       createdAt: serverTimestamp(),
     }));
     await assertFails(setDoc(doc(owner, "helpRequests", "help-lat-only"), {
