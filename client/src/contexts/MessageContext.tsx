@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { subscribeHelpRequestsRealtime, createHelpRequestRealtime, subscribeMessagesRealtime, sendMessageRealtime, updateHelpRequestRealtime } from '../../../firebase';
 import { nanoid } from "nanoid";
 
@@ -43,6 +43,9 @@ const MessageContext = createContext<MessageContextType | undefined>(undefined);
 const STORAGE_KEY = "motosos_help_requests_v1";
 
 export function MessageProvider({ children }: { children: React.ReactNode }) {
+  // Track requests that could not be persisted so realtime snapshots do not erase local-only fallback entries.
+  const localOnlyHelpRequestIds = useRef(new Set<string>());
+
   const [helpRequests, setHelpRequests] = useState<HelpRequest[]>(() => {
 	try {
 	  const raw = localStorage.getItem(STORAGE_KEY);
@@ -106,7 +109,13 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
 		  ...d,
 		  createdAt: d.createdAt && d.createdAt.toMillis ? d.createdAt.toMillis() : d.createdAt || Date.now(),
 		}));
-		setHelpRequests(normalized as HelpRequest[]);
+        setHelpRequests((current) => {
+          const remoteIds = new Set(normalized.map((item: HelpRequest) => item.id));
+          const localOnly = current.filter((item) =>
+            localOnlyHelpRequestIds.current.has(item.id) && !remoteIds.has(item.id)
+          );
+          return [...localOnly, ...(normalized as HelpRequest[])];
+        });
 	  });
 	} catch (e) {
 	  console.info("Realtime helpRequests not available", e);
@@ -142,11 +151,13 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
       void Promise.resolve(pending).then((result) => {
         if (result) return;
         console.warn("Realtime help request unavailable; keeping a local copy");
+        localOnlyHelpRequestIds.current.add(hr.id);
         setHelpRequests((current) =>
           current.some((item) => item.id === hr.id) ? current : [hr, ...current]
         );
       }).catch((error) => {
         console.warn("Realtime help request failed; keeping a local copy", error);
+        localOnlyHelpRequestIds.current.add(hr.id);
         setHelpRequests((current) =>
           current.some((item) => item.id === hr.id) ? current : [hr, ...current]
         );
@@ -155,6 +166,7 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
       return hr;
     } catch (error) {
       console.warn("Realtime help request unavailable; keeping a local copy", error);
+      localOnlyHelpRequestIds.current.add(hr.id);
       setHelpRequests((current) => [hr, ...current]);
       setMessages((current) => ({ ...current, [id]: [] }));
       return hr;
