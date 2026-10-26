@@ -121,7 +121,7 @@ export default function ProfilePage() {
   const badges = profile?.badges || ["Yeni Motorcu"];
 
   return (
-    <div className="min-h-screen bg-asphalt-light-light pb-8 page-surface-light">
+    <div className="min-h-screen bg-asphalt-light pb-8 page-surface-light">
       <Header />
 
       <div className="px-4 pt-4 max-w-lg mx-auto space-y-4">
