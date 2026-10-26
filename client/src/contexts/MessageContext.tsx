@@ -171,8 +171,9 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
     };
     if (validateHelpRequestInput(hr, uid)) return null;
 
-    // Render optimistically so a slow or unavailable realtime connection does
-    // not leave the newly created request invisible in the current session.
+    // Track the optimistic ID immediately so an early realtime snapshot cannot
+    // drop the request before the create promise confirms success or failure.
+    localOnlyHelpRequestIds.current.add(hr.id);
     setHelpRequests((current) =>
       current.some((item) => item.id === hr.id) ? current : [hr, ...current]
     );
