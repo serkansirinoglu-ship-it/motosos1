@@ -169,6 +169,24 @@ describe("validateUserProfileCreation", () => {
     )).toBeNull();
   });
 
+  it("validates photo URLs and bio limits during profile creation too", () => {
+    expect(validateUserProfileCreation(
+      identity.uid, identity.email,
+      { photoURL: "https://example.test/avatar.png", bio: "x".repeat(280) },
+      identity.authenticatedUid, identity.authenticatedEmail,
+    )).toBeNull();
+    expect(validateUserProfileCreation(
+      identity.uid, identity.email,
+      { photoURL: "javascript:alert(1)" },
+      identity.authenticatedUid, identity.authenticatedEmail,
+    )).toBe("invalid_photo_url");
+    expect(validateUserProfileCreation(
+      identity.uid, identity.email,
+      { bio: "x".repeat(281) },
+      identity.authenticatedUid, identity.authenticatedEmail,
+    )).toBe("invalid_bio");
+  });
+
   it("rejects unauthenticated or mismatched UID/email values", () => {
     expect(validateUserProfileCreation(identity.uid, identity.email, {}, null, identity.authenticatedEmail)).toBe("invalid_identity");
     expect(validateUserProfileCreation("another-user", identity.email, {}, identity.authenticatedUid, identity.authenticatedEmail)).toBe("invalid_identity");
