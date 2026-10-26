@@ -6,6 +6,7 @@ import Header from "@/components/Header";
 import { getUserProfile, updateUserProfile, createUserProfile } from "../../../firebase";
 import TURKEY_PROVINCES from "@/lib/turkeyProvinces";
 import { toast } from "sonner";
+import ProfileMusicCard from "@/components/ProfileMusicCard";
 
 export default function ProfilePage() {
   const { user, signOut } = useAuth();
@@ -185,6 +186,8 @@ export default function ProfilePage() {
           <StatBox value={String(points)} label="Yardım Puanı" icon={Star} />
           <StatBox value={String(receivedHelpCount)} label="Alınan Yardım" icon={Bike} />
         </div>
+
+        <ProfileMusicCard userId={user?.uid || null} />
 
         {/* Emergency Contacts Section */}
         <Card className="bg-card-gradient border-border p-4 rounded-xl space-y-3">
