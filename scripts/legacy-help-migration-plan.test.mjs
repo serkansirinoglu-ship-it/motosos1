@@ -76,6 +76,18 @@ describe("planLegacyHelpMigration", () => {
     expect(result.summary.blocked).toBe(4);
   });
 
+  it("redacts email-shaped document IDs from assessment output", () => {
+    const emailId = "private-record@example.test";
+    const result = planLegacyHelpMigration([
+      { id: emailId, data: { ownerId: "owner-uid", helpers: [] } },
+    ], {});
+    expect(result.summary.blocked).toBe(1);
+    expect(result.items[0].reasonCodes).toContain("invalid_document_id");
+    expect(result.items[0].id).toBeNull();
+    expect(JSON.stringify(result)).not.toContain(emailId);
+    expect(JSON.stringify(result)).not.toContain("@");
+  });
+
   it("blocks malformed records and missing document IDs without throwing", () => {
     const result = planLegacyHelpMigration([
       null,
