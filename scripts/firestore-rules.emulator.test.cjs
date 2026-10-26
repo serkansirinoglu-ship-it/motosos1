@@ -288,6 +288,22 @@ async function main() {
       lng: 29.54, active: true, helpers: [], resolvedBy: null, resolvedAt: null,
       createdAt: serverTimestamp(),
     }));
+    await assertFails(setDoc(doc(owner, "helpRequests", "help-lat-out-of-range"), {
+      title: "Invalid latitude", description: "test", ownerId: "owner",
+      lat: 90.01, lng: 29.54, active: true, helpers: [], resolvedBy: null, resolvedAt: null,
+      createdAt: serverTimestamp(),
+    }));
+    await assertFails(setDoc(doc(owner, "helpRequests", "help-lng-out-of-range"), {
+      title: "Invalid longitude", description: "test", ownerId: "owner",
+      lat: 40.12, lng: -180.01, active: true, helpers: [], resolvedBy: null, resolvedAt: null,
+      createdAt: serverTimestamp(),
+    }));
+    await assertFails(setDoc(doc(owner, "helpRequests", "help-nonnumeric-coordinates"), {
+      title: "Invalid coordinate types", description: "test", ownerId: "owner",
+      lat: "40.12", lng: 29.54, active: true, helpers: [], resolvedBy: null, resolvedAt: null,
+      createdAt: serverTimestamp(),
+    }));
+    console.log("PASS: help request creation rejects incomplete, nonnumeric, and out-of-range coordinates");
     console.log("PASS: help request creation rejects incomplete coordinate pairs");
     console.log("PASS: owner can create a valid help request");
     await assertFails(updateDoc(doc(outsider, "helpRequests", "valid-help"), {
