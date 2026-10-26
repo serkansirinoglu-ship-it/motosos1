@@ -60,6 +60,11 @@ async function main() {
         description: "closed test fixture", active: false, helpers: ["helper"], resolvedBy: "helper",
         resolvedAt: new Date(), createdAt: new Date(),
       });
+      await setDoc(doc(db, "helpRequests", "legacy-email-help"), {
+        id: "legacy-email-help", ownerId: "owner", user: "owner@example.test",
+        title: "Legacy help", description: "legacy email fixture", active: true,
+        helpers: [], resolvedBy: null, resolvedAt: null, createdAt: new Date(),
+      });
       await setDoc(doc(db, "helpRequests", "private-help", "messages", "seed"), {
         id: "seed", from: "owner", fromName: "Owner", text: "private message", ts: Date.now(),
       });
@@ -205,6 +210,9 @@ async function main() {
     console.log("PASS: negative rounded SOS coordinates are accepted without weakening precision checks");
 
     const publicHelp = await getDoc(doc(outsider, "helpRequests", "private-help"));
+    await assertFails(getDoc(doc(outsider, "helpRequests", "legacy-email-help")));
+    await assertSucceeds(getDoc(doc(owner, "helpRequests", "legacy-email-help")));
+    console.log("PASS: legacy email-bearing help requests are not readable by unrelated signed-in users");
     assert.equal("user" in publicHelp.data(), false);
     assert.equal(publicHelp.data().ownerId, "owner");
     assert.equal(publicHelp.data().ownerEmail, undefined);
