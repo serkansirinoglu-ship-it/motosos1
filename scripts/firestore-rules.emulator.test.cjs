@@ -116,6 +116,12 @@ async function main() {
     console.log("PASS: outsider cannot read inactive SOS");
     await assertFails(getDoc(doc(anonymous, "sosRequests", "active-sos")));
     console.log("PASS: anonymous user cannot read active SOS");
+    await assertFails(setDoc(doc(anonymous, "sosRequests", "anonymous-sos"), {
+      requesterId: "anonymous", status: "active", helpType: "ariza",
+      latitude: 40.12, longitude: 29.54, acceptedBy: null,
+      createdAt: serverTimestamp(), updatedAt: serverTimestamp(), resolvedAt: null, cancelledAt: null,
+    }));
+    console.log("PASS: anonymous user cannot create SOS");
     const publicSOS = await getDoc(doc(outsider, "sosRequests", "active-sos"));
     assert.equal("requesterEmail" in publicSOS.data(), false);
     assert.equal("note" in publicSOS.data(), false);
