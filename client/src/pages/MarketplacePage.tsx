@@ -63,7 +63,7 @@ export default function MarketplacePage() {
       return;
     }
 
-    marketplaceService.createListing({
+    const created = marketplaceService.createListing({
       title: title.trim(),
       category,
       price: numericPrice,
@@ -73,6 +73,11 @@ export default function MarketplacePage() {
       sellerName: user?.displayName || "Motorcu İlan Sahibi",
       sellerPhone: phone.trim() || undefined,
     });
+
+    if (!created) {
+      toast.error("İlan bilgileri geçersiz. Görsel bağlantısı HTTP/HTTPS olmalı; alan uzunluklarını ve fiyatı kontrol edin.");
+      return;
+    }
 
     toast.success("İlan bu oturumda yerel olarak oluşturuldu; kalıcı olarak yayınlanmadı.");
     setTitle("");
