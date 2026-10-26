@@ -324,6 +324,26 @@ async function main() {
       createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
     }));
     console.log("PASS: user cannot create a profile with forged points");
+    const validNewProfile = {
+      uid: "outsider", email: "outsider@example.test", displayName: "New rider",
+      city: "İzmir", motorcycle: "", photoURL: "", bio: "", privacyLocation: false,
+      points: 0, helpCount: 0, receivedHelpCount: 0, badges: [],
+      createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+    };
+    await assertFails(setDoc(doc(outsider, "users", "invalid-name-profile"), {
+      ...validNewProfile, uid: "outsider", displayName: 123,
+    }));
+    await assertFails(setDoc(doc(outsider, "users", "oversized-bio-profile"), {
+      ...validNewProfile, bio: "x".repeat(501),
+    }));
+    await assertFails(setDoc(doc(outsider, "users", "invalid-privacy-profile"), {
+      ...validNewProfile, privacyLocation: "yes",
+    }));
+    await assertFails(setDoc(doc(outsider, "users", "too-many-contacts-profile"), {
+      ...validNewProfile, contacts: Array.from({ length: 11 }, (_, i) => ({ name: `Contact ${i}`, phone: "123" })),
+    }));
+    await assertSucceeds(setDoc(doc(outsider, "users", "valid-new-profile"), validNewProfile));
+    console.log("PASS: profile creation validates field types, text bounds, privacy flag, and contact-list size");
 
     await assertFails(getDoc(doc(outsider, "users", "owner")));
     await assertSucceeds(getDoc(doc(owner, "users", "owner")));
