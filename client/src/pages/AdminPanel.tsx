@@ -134,7 +134,7 @@ export default function AdminPanel() {
 
   if (adminAccess === "checking") {
     return (
-      <div className="min-h-screen bg-asphalt pb-8">
+      <div className="min-h-screen bg-asphalt pb-8 page-surface-light">
         <Header />
         <div className="px-4 pt-12 max-w-lg mx-auto">
           <Card className="bg-card-gradient border-border p-6 text-center">
@@ -148,7 +148,7 @@ export default function AdminPanel() {
 
   if (adminAccess !== "allowed") {
     return (
-      <div className="min-h-screen bg-asphalt pb-8">
+      <div className="min-h-screen bg-asphalt pb-8 page-surface-light">
         <Header />
         <div className="px-4 pt-12 max-w-lg mx-auto">
           <Card className="bg-card-gradient border-border p-6 text-center space-y-3">
@@ -163,7 +163,7 @@ export default function AdminPanel() {
   }
 
   return (
-    <div className="min-h-screen bg-asphalt pb-8">
+    <div className="min-h-screen bg-asphalt pb-8 page-surface-light">
       <Header />
 
       <div className="px-4 pt-3 max-w-lg mx-auto">
