@@ -31,7 +31,15 @@ service cloud.firestore {
         && request.resource.data.badges is list
         && request.resource.data.badges.size() == 0
         && request.resource.data.createdAt == request.time
-        && request.resource.data.updatedAt == request.time;
+        && request.resource.data.updatedAt == request.time
+        // Validate optional profile fields at creation, not only on later edits.
+        && (!('displayName' in request.resource.data) || (request.resource.data.displayName is string && request.resource.data.displayName.size() <= 80))
+        && (!('city' in request.resource.data) || (request.resource.data.city is string && request.resource.data.city.size() <= 100))
+        && (!('motorcycle' in request.resource.data) || (request.resource.data.motorcycle is string && request.resource.data.motorcycle.size() <= 100))
+        && (!('photoURL' in request.resource.data) || (request.resource.data.photoURL is string && request.resource.data.photoURL.size() <= 2048))
+        && (!('bio' in request.resource.data) || (request.resource.data.bio is string && request.resource.data.bio.size() <= 500))
+        && (!('privacyLocation' in request.resource.data) || request.resource.data.privacyLocation is bool)
+        && (!('contacts' in request.resource.data) || (request.resource.data.contacts is list && request.resource.data.contacts.size() <= 10));
       allow update: if isAdmin() || (
         isOwner(uid)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
