@@ -490,3 +490,8 @@ The Firestore listing create/update rules now require a strictly positive price,
 ## Marketplace service-boundary validation — 2026-10-26
 
 Marketplace input validation now runs inside marketplaceService.createListing, not only in the page form. The service rejects invalid/non-positive/non-finite prices, unsupported categories, empty or overlong title/description/city/seller fields, overlong phone/image fields, and image URLs outside HTTP/HTTPS. The page handles rejection without clearing the user's draft or showing a success toast. Unit tests cover invalid data and accepted HTTP(S) image URLs. This is client-side/session-local validation and does not replace server-side Firestore rules. No homepage changes or production operations were made; Safe CI on the final head remains required.
+
+
+## Help-chat client boundary validation — 2026-10-26
+
+The help-chat context now validates message request ID, authenticated sender identity presence, non-empty message text, and the 2,000-character server rule limit before attempting local or Firestore delivery. It trims message text/display name, rejects invalid messages without creating a local fallback, and the chat UI keeps the draft visible when rejected. The input also has a 2,000-character maximum. Unit tests cover blank/non-text bodies, the length boundary, sender identity and request ID validation. This is defense-in-depth; Firestore rules remain authoritative for access control. No production data or rules were published, and client/src/pages/Home.tsx remains untouched.
