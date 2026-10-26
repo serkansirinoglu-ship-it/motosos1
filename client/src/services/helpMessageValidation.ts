@@ -1,10 +1,12 @@
-export type HelpMessageInputError = "invalid_request_id" | "invalid_sender" | "invalid_text" | "text_too_long" | "sender_name_too_long";
+export type HelpMessageInputError = "invalid_request_id" | "invalid_sender" | "sender_mismatch" | "invalid_text" | "text_too_long" | "sender_name_too_long";
 
 export interface HelpMessageInput {
   requestId: unknown;
   text: unknown;
   from: unknown;
   fromName?: unknown;
+  /** When supplied, the message sender must match the authenticated Firebase UID. */
+  authenticatedUid?: unknown;
 }
 
 export function validateHelpMessageInput(input: HelpMessageInput): HelpMessageInputError | null {
@@ -13,6 +15,12 @@ export function validateHelpMessageInput(input: HelpMessageInput): HelpMessageIn
   }
   if (typeof input.from !== "string" || input.from.trim().length === 0 || input.from.length > 128) {
     return "invalid_sender";
+  }
+  if (input.authenticatedUid !== undefined && (
+    typeof input.authenticatedUid !== "string" || !input.authenticatedUid.trim() ||
+    input.from !== input.authenticatedUid
+  )) {
+    return "sender_mismatch";
   }
   if (typeof input.text !== "string" || input.text.trim().length === 0) {
     return "invalid_text";
