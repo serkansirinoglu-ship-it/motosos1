@@ -252,13 +252,19 @@ export async function updateSOSRequest(id, patch) {
 export async function getActiveSOSRequests() {
   if (!db) return [];
   try {
+    // Filter on the single indexed status field, then sort client-side.
+    // This avoids requiring an undeclared composite index for status + createdAt.
     const q = query(
       collection(db, "sosRequests"),
-      where("status", "==", "active"),
-      orderBy("createdAt", "desc")
+      where("status", "==", "active")
     );
     const snap = await getDocs(q);
-    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    return snap.docs
+      .map((d) => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => {
+        const time = (value) => value?.toMillis?.() ?? (typeof value === "string" ? Date.parse(value) : 0);
+        return time(b.createdAt) - time(a.createdAt);
+      });
   } catch (e) {
     console.error("getActiveSOSRequests error", e);
     return [];
@@ -276,14 +282,22 @@ export function subscribeActiveSOSRequests(onUpdate, onError) {
     return () => {};
   }
   try {
+    // Use the single-field status index; sort timestamps in memory so the
+    // live map does not depend on an undeclared composite Firestore index.
     const q = query(
       collection(db, "sosRequests"),
-      where("status", "==", "active"),
-      orderBy("createdAt", "desc")
+      where("status", "==", "active")
     );
     return onSnapshot(
       q,
-      (snap) => onUpdate(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+      (snap) => onUpdate(
+        snap.docs
+          .map((d) => ({ id: d.id, ...d.data() }))
+          .sort((a, b) => {
+            const time = (value) => value?.toMillis?.() ?? (typeof value === "string" ? Date.parse(value) : 0);
+            return time(b.createdAt) - time(a.createdAt);
+          })
+      ),
       (error) => {
         console.error("subscribeActiveSOSRequests error", error);
         if (typeof onError === "function") onError(error);
