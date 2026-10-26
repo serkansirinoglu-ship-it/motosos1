@@ -259,7 +259,13 @@ service cloud.firestore {
 
     // Community posts: public read, owner create/edit of content fields, admin moderation.
     match /communityPosts/{postId} {
-      allow read: if true;
+      // Public posts must match the approved public schema; owners/admins retain access to legacy records.
+      allow read: if isAdmin()
+        || (isSignedIn() && resource.data.authorId == request.auth.uid)
+        || resource.data.keys().hasOnly([
+          'id', 'authorId', 'authorName', 'authorPhoto',
+          'city', 'content', 'image', 'tag', 'likes', 'comments', 'createdAt'
+        ]);
       allow create: if isSignedIn()
         && request.resource.data.keys().hasOnly([
           'id', 'authorId', 'authorName', 'authorPhoto',
