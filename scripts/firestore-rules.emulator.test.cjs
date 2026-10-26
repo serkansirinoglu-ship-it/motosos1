@@ -136,6 +136,11 @@ async function main() {
       note: "forged private details", createdAt: serverTimestamp(),
     }));
     console.log("PASS: another rider cannot create private SOS details for the request owner");
+    // The requester must not be able to claim their own SOS as a helper.
+    await assertFails(updateDoc(doc(owner, "sosRequests", "active-sos"), {
+      acceptedBy: "owner", updatedAt: serverTimestamp(),
+    }));
+    console.log("PASS: SOS requester cannot accept their own request");
     await assertSucceeds(updateDoc(doc(helper, "sosRequests", "active-sos"), {
       acceptedBy: "helper", updatedAt: serverTimestamp(),
     }));
