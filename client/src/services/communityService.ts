@@ -26,39 +26,8 @@ export interface CommunityPost {
   createdAt: string;
 }
 
-const INITIAL_POSTS: CommunityPost[] = [
-  {
-    id: 'post-1',
-    authorName: 'Motorcu Efe',
-    authorEmail: 'efe@motoguard.tr',
-    city: 'İzmir',
-    content: 'Hafta sonu Karaburun kıyı rotası yapıyoruz. Çeşmealtı kavşağında saat 09:30 buluşma. Katılmak isteyen kardeşler yoruma yazsın! 🏍️💨',
-    tag: 'Grup Sürüşü',
-    likes: ['ahmet@motoguard.tr', 'can@motoguard.tr'],
-    comments: [
-      {
-        id: 'c-1',
-        postId: 'post-1',
-        authorName: 'Ahmet Y.',
-        authorEmail: 'ahmet@motoguard.tr',
-        content: 'Harika fikir, depoyu fulleyip geliyorum!',
-        createdAt: '2026-08-12 14:30',
-      },
-    ],
-    createdAt: '2026-08-12 12:00',
-  },
-  {
-    id: 'post-2',
-    authorName: 'Selin Yıldız',
-    authorEmail: 'selin@motoguard.tr',
-    city: 'İstanbul',
-    content: 'Şile otoyolunda viraj sonrasında mazot döküntüsü var, geçen arkadaşlar lütfen dikkat etsin! Kaskınız sağlam olsun.',
-    tag: 'Tehlikeli Yol',
-    likes: ['efe@motoguard.tr'],
-    comments: [],
-    createdAt: '2026-08-12 10:15',
-  },
-];
+// No invented users, comments, sponsors, offers, or discount claims are shown as real data.
+const INITIAL_POSTS: CommunityPost[] = [];
 
 class CommunityService {
   private posts: CommunityPost[] = [...INITIAL_POSTS];
