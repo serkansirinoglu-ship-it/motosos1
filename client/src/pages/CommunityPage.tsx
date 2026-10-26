@@ -132,7 +132,7 @@ export default function CommunityPage() {
   };
 
   return (
-    <div className="min-h-screen bg-asphalt-light pb-8">
+    <div className="min-h-screen bg-asphalt-light pb-8 page-surface-light">
       <Header />
 
       <div className="px-4 pt-3 max-w-lg mx-auto">
