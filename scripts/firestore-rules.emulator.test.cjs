@@ -251,8 +251,6 @@ async function main() {
     await assertFails(getDoc(doc(outsider, "helpRequests", "legacy-no-public-marker")));
     await assertSucceeds(getDoc(doc(owner, "helpRequests", "legacy-no-public-marker")));
     console.log("PASS: legacy help requests without explicit public marker remain private");
-    await assertSucceeds(getDoc(doc(outsider, "helpRequests", "valid-help")));
-    console.log("PASS: explicitly public, valid help requests are readable by other riders");
     await assertFails(getDoc(doc(outsider, "helpRequests", "legacy-extra-private-field")));
     await assertSucceeds(getDoc(doc(owner, "helpRequests", "legacy-extra-private-field")));
     console.log("PASS: active legacy help requests with unexpected private fields are not public");
@@ -314,6 +312,8 @@ async function main() {
       active: true, publicVisible: true, helpers: [], resolvedBy: null, resolvedAt: null,
       createdAt: serverTimestamp(),
     }));
+    await assertSucceeds(getDoc(doc(outsider, "helpRequests", "valid-help")));
+    console.log("PASS: explicitly public, valid help requests are readable by other riders");
     await assertFails(setDoc(doc(owner, "helpRequests", "help-lat-only"), {
       title: "Partial location", description: "test", ownerId: "owner",
       lat: 40.12, active: true, helpers: [], resolvedBy: null, resolvedAt: null,
