@@ -48,7 +48,7 @@ export default function GroupPage() {
 
   const visiblePosts = authReady && cacheForKey === storageKey ? (store[city || ""] || []) : [];
 
-  if (!city) return <div className="min-h-screen bg-asphalt p-4 text-white">Geçersiz grup.</div>;
+  if (!city) return <div className="min-h-screen bg-asphalt p-4 text-white page-surface-light">Geçersiz grup.</div>;
 
   return (
     <div className="min-h-screen bg-asphalt p-4">
