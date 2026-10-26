@@ -31,39 +31,12 @@ type AdminContextType = {
 
 const AdminContext = createContext<AdminContextType | undefined>(undefined);
 
-const STORAGE_KEY = "motosos_admin_data_v1";
-
-function generateId(prefix = "p") {
-  return `${prefix}_${Math.random().toString(36).slice(2, 9)}`;
-}
 
 export function AdminProvider({ children }: { children: React.ReactNode }) {
-  const [products, setProducts] = useState<Product[]>(() => {
-	try {
-	  const raw = localStorage.getItem(STORAGE_KEY);
-	  return raw ? JSON.parse(raw).products || [] : [];
-	} catch (e) {
-	  return [];
-	}
-  });
-
-  const [banners, setBanners] = useState<Banner[]>(() => {
-	try {
-	  const raw = localStorage.getItem(STORAGE_KEY);
-	  return raw ? JSON.parse(raw).banners || [] : [];
-	} catch (e) {
-	  return [];
-	}
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ products, banners }));
-    } catch (error) {
-      // Storage can be unavailable in private browsing or quota-exhausted contexts.
-      console.warn("Admin cache could not be saved locally", error);
-    }
-  }, [products, banners]);
+  // Remote Firestore snapshots are the only source of truth. Never hydrate admin
+  // catalogs from localStorage, which can resurrect deleted or never-saved banners.
+  const [products, setProducts] = useState<Product[]>([]);
+  const [banners, setBanners] = useState<Banner[]>([]);
 
   // subscribe to realtime products/banners if Firestore configured
   useEffect(() => {
