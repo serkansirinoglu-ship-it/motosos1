@@ -170,6 +170,17 @@ async function main() {
     await assertSucceeds(updateDoc(doc(owner, "sosRequests", "active-sos"), {
       status: "cancelled", cancelledAt: serverTimestamp(), updatedAt: serverTimestamp(),
     }));
+    // A terminal SOS must remain terminal: no reopening or second terminal transition.
+    await assertFails(updateDoc(doc(owner, "sosRequests", "active-sos"), {
+      status: "active", cancelledAt: null, updatedAt: serverTimestamp(),
+    }));
+    await assertFails(updateDoc(doc(owner, "sosRequests", "active-sos"), {
+      status: "resolved", cancelledAt: null, resolvedAt: serverTimestamp(), updatedAt: serverTimestamp(),
+    }));
+    await assertFails(updateDoc(doc(owner, "sosRequests", "active-sos"), {
+      status: "cancelled", cancelledAt: serverTimestamp(), updatedAt: serverTimestamp(),
+    }));
+    console.log("PASS: terminal SOS requests cannot be reopened or transitioned again");
     await assertFails(updateDoc(doc(owner, "sosRequests", "active-sos"), {
       status: "active", updatedAt: serverTimestamp(),
     }));
