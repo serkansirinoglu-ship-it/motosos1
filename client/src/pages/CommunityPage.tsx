@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Users, MapPin, Hash, Heart, MessageSquare, Plus, Flag, Trash2, Image, Send, X, AlertCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import Header from "@/components/Header";
@@ -28,24 +28,41 @@ export default function CommunityPage() {
 
   const { user, authReady } = useAuth();
   const scopeKey = user?.uid || "anonymous";
+  const currentScopeRef = useRef({ scopeKey, authReady });
+  currentScopeRef.current = { scopeKey, authReady };
   const [cacheForScope, setCacheForScope] = useState("");
 
   useEffect(() => {
     if (!authReady) return;
     setPosts([]);
+    
     setCacheForScope(scopeKey);
+    let disposed = false;
     let unsubscribe = () => {};
+    const isCurrentScope = () => {
+      const active = currentScopeRef.current;
+      return !disposed && active.authReady && active.scopeKey === scopeKey;
+    };
     try {
-      unsubscribe = communityService.subscribeRemotePosts(setPosts, (error) => {
-        console.error("Community feed subscription failed", error);
+      unsubscribe = communityService.subscribeRemotePosts((items) => {
+        if (!isCurrentScope()) return;
+        setPosts(items);
+      }, (error) => {
+        if (!isCurrentScope()) return;
+        console.error("community feed failed", error);
         setPosts([]);
         toast.error("Topluluk akışı sunucudan alınamadı. Bağlantıyı veya erişim izinlerini kontrol edin.");
       });
     } catch (error) {
-      console.error("Community feed unavailable", error);
-      toast.error(error instanceof Error ? error.message : "Topluluk akışı sunucuya bağlanamadı.");
+      if (isCurrentScope()) {
+        console.error("Community feed unavailable", error);
+        toast.error(error instanceof Error ? error.message : "Topluluk akışı sunucuya bağlanamadı.");
+      }
     }
-    return () => unsubscribe();
+    return () => {
+      disposed = true;
+      unsubscribe();
+    };
   }, [authReady, scopeKey]);
 
   const visiblePosts = cacheForScope === scopeKey ? posts.filter((post) => selectedCity === "Tümü" || post.city.toLocaleLowerCase("tr-TR") === selectedCity.toLocaleLowerCase("tr-TR")) : [];
