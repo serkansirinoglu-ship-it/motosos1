@@ -273,7 +273,7 @@ export function subscribeHelpRequestsRealtime(onUpdate) {
   }
 
   try {
-    const q = query(collection(db, "helpRequests"), where("active", "==", true), orderBy("createdAt", "desc"));
+    const q = query(collection(db, "helpRequests"), where("active", "==", true), where("helpers", "==", []), orderBy("createdAt", "desc"));
     return onSnapshot(q, (snap) => {
       const arr = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       onUpdate(arr);
