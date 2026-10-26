@@ -108,7 +108,7 @@ export default function SOSPage() {
         let firebaseSaved = false;
 
         // Save to Firebase if online & user logged in
-        if (user?.uid && user?.email) {
+        if (user?.uid) {
           try {
             const res = await createSOSRequest({
               requesterId: user.uid,
