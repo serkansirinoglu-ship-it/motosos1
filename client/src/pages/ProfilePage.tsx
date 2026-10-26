@@ -30,7 +30,6 @@ export default function ProfilePage() {
   ]);
 
   // Privacy toggles
-  const [notifEnabled, setNotifEnabled] = useState(true);
   const [locationEnabled, setLocationEnabled] = useState(false);
 
   useEffect(() => {
@@ -49,7 +48,6 @@ export default function ProfilePage() {
         setPhotoURL(p.photoURL || "");
         setBio(p.bio || "");
         if (p.contacts && p.contacts.length) setContacts(p.contacts);
-        setNotifEnabled(p.notificationsEnabled !== false);
         setLocationEnabled(p.privacyLocation === true);
       } else {
         const created = await createUserProfile(user.uid, user.email || "");
@@ -70,7 +68,6 @@ export default function ProfilePage() {
       bio: bio.trim(),
       contacts: contacts.filter((c) => c.name.trim() || c.phone.trim()),
       privacyLocation: locationEnabled,
-      notificationsEnabled: notifEnabled,
     });
 
     if (ok) {
@@ -83,7 +80,6 @@ export default function ProfilePage() {
         bio,
         contacts: contacts.filter((c) => c.name.trim() || c.phone.trim()),
         privacyLocation: locationEnabled,
-        notificationsEnabled: notifEnabled,
       }));
       toast.success("Profiliniz güncellendi.");
       setIsEditOpen(false);
@@ -93,11 +89,11 @@ export default function ProfilePage() {
   };
 
   const persistPreference = async (
-    field: "notificationsEnabled" | "privacyLocation",
+    field: "privacyLocation",
     nextValue: boolean,
     setValue: (value: boolean) => void,
   ) => {
-    const previousValue = field === "notificationsEnabled" ? notifEnabled : locationEnabled;
+    const previousValue = locationEnabled;
     if (!user?.uid) {
       toast.error("Bu ayarı kaydetmek için oturum açmalısınız.");
       return;
@@ -239,18 +235,25 @@ export default function ProfilePage() {
           </h3>
 
           <div className="space-y-2">
-            <ToggleRow
-              icon={Bell}
-              label="Push Bildirimleri"
-              enabled={notifEnabled}
-              onToggle={() => void persistPreference("notificationsEnabled", !notifEnabled, setNotifEnabled)}
-            />
+            <div className="flex items-center justify-between gap-3 p-2.5 rounded-xl bg-card border border-border text-xs">
+              <div className="flex items-center gap-2">
+                <Bell className="w-4 h-4 text-muted-foreground" />
+                <span className="font-semibold text-foreground">Push bildirimleri</span>
+              </div>
+              <span className="text-[10px] text-muted-foreground text-right">Altyapı bağlı değil</span>
+            </div>
             <ToggleRow
               icon={MapPin}
-              label="Konum Paylaşım İzni"
+              label="Profil konum tercihi"
               enabled={locationEnabled}
               onToggle={() => void persistPreference("privacyLocation", !locationEnabled, setLocationEnabled)}
             />
+            <p className="text-[10px] leading-relaxed text-muted-foreground">
+              Konum tercihi profilinde saklanır; canlı harita ve SOS konum paylaşımını henüz otomatik olarak yönetmez.
+            </p>
+            <p className="text-[10px] leading-relaxed text-muted-foreground">
+              Push bildirimleri için ayrıca gerçek bildirim servisi ve cihaz izinleri gerekir.
+            </p>
           </div>
         </Card>
 
