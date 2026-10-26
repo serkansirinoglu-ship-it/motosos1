@@ -349,7 +349,7 @@ export function subscribeHelpRequestsRealtime(onUpdate) {
   try {
     const q = query(collection(db, "helpRequests"), where("active", "==", true), where("publicVisible", "==", true), where("helpers", "==", []), orderBy("createdAt", "desc"));
     return onSnapshot(q, (snap) => {
-      const arr = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const arr = snap.docs.map((d) => ({ ...d.data(), id: d.id }));
       onUpdate(arr);
     });
   } catch (e) {
@@ -404,7 +404,7 @@ export function subscribeMessagesRealtime(requestId, onUpdate) {
   try {
     const q = query(collection(db, "helpRequests", requestId, "messages"), orderBy("ts", "asc"));
     return onSnapshot(q, (snap) => {
-      const arr = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const arr = snap.docs.map((d) => ({ ...d.data(), id: d.id }));
       onUpdate(arr);
     });
   } catch (e) {
@@ -463,7 +463,7 @@ export function subscribeProductsRealtime(onUpdate) {
   try {
     const q = query(collection(db, "products"), orderBy("createdAt", "desc"));
     return onSnapshot(q, (snap) => {
-      const arr = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const arr = snap.docs.map((d) => ({ ...d.data(), id: d.id }));
       onUpdate(arr);
     });
   } catch (e) {
@@ -517,7 +517,7 @@ export function subscribeBannersRealtime(onUpdate) {
   try {
     const q = query(collection(db, "banners"), orderBy("createdAt", "desc"));
     return onSnapshot(q, (snap) => {
-      const arr = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const arr = snap.docs.map((d) => ({ ...d.data(), id: d.id }));
       onUpdate(arr);
     });
   } catch (e) {

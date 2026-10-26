@@ -45,7 +45,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 	try {
 	  unsubProducts = subscribeProductsRealtime((arr: any[]) => {
 		// normalize createdAt timestamps if present
-		const normalized = arr.map((d) => ({ id: d.id, ...d }));
+		const normalized = arr.map((d) => ({ ...d, id: d.id }));
 		setProducts(normalized as Product[]);
 	  });
 	} catch (e) {
@@ -53,7 +53,7 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 	}
 	try {
 	  unsubBanners = subscribeBannersRealtime((arr: any[]) => {
-		const normalized = arr.map((d) => ({ id: d.id, ...d }));
+		const normalized = arr.map((d) => ({ ...d, id: d.id }));
 		setBanners(normalized as Banner[]);
 	  });
 	} catch (e) {
