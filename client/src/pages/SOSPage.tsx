@@ -19,6 +19,7 @@ export default function SOSPage() {
   const [localSosId, setLocalSosId] = useState<string | null>(null);
   const [status, setStatus] = useState<SOSStatus>("bekleniyor");
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const [finishing, setFinishing] = useState(false);
   const finishingRef = useRef(false);
   const [nearbyServices, setNearbyServices] = useState<Array<{ key: string; label: string; searchUrl: string; directionsUrl: string }>>([]);
@@ -37,6 +38,8 @@ export default function SOSPage() {
   }, [sosActive]);
 
   const handleSOS = async (catOverride?: SOSHelpCategory) => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     const category = catOverride || selectedCategory || "diger";
     setSelectedCategory(category);
     setSubmitting(true);
@@ -44,6 +47,7 @@ export default function SOSPage() {
     if (!navigator.geolocation) {
       toast.error("Konum erişimi tarayıcınız tarafından desteklenmiyor.");
       setSubmitting(false);
+      submittingRef.current = false;
       return;
     }
 
@@ -106,6 +110,7 @@ export default function SOSPage() {
               setLocalSosId(null);
               setSosId(null);
               setSubmitting(false);
+              submittingRef.current = false;
               toast.error("Zaten aktif bir SOS çağrınız var. Yeni çağrı açmadan önce mevcut çağrınızı kontrol edin.");
               return;
             } else {
@@ -128,6 +133,7 @@ export default function SOSPage() {
 
         setSosActive(true);
         setSubmitting(false);
+        submittingRef.current = false;
         toast.success(
           firebaseSaved
             ? "SOS talebiniz kaydedildi. Yakındaki motorculara otomatik bildirim gönderildiği henüz doğrulanamıyor."
@@ -139,6 +145,7 @@ export default function SOSPage() {
         console.error("GPS error", err);
         toast.error("Konum alınamadı. Lütfen cihazınızın GPS iznini açın.");
         setSubmitting(false);
+        submittingRef.current = false;
       },
       { enableHighAccuracy: true, timeout: 10000 }
       );
@@ -147,6 +154,7 @@ export default function SOSPage() {
       console.error("GPS request could not be started", error);
       toast.error("Konum isteği başlatılamadı. Konum iznini ve tarayıcı ayarlarını kontrol edin.");
       setSubmitting(false);
+      submittingRef.current = false;
     }
   };
 
@@ -363,13 +371,13 @@ export default function SOSPage() {
             Özel Durum Seç (7 Kategori)
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-            <CategoryCard icon={Bike} title="Lastik" desc="Patlak / İnik" onClick={() => handleSOS("lastik")} />
-            <CategoryCard icon={Zap} title="Akü" desc="Takviye Lazım" onClick={() => handleSOS("aku")} />
-            <CategoryCard icon={Fuel} title="Yakıt" desc="Benzin Bitti" onClick={() => handleSOS("yakit")} />
-            <CategoryCard icon={Wrench} title="Arıza" desc="Mekanik Arıza" onClick={() => handleSOS("ariza")} />
-            <CategoryCard icon={Phone} title="Kaza" desc="Maddi Hasarlı" onClick={() => handleSOS("kaza")} />
-            <CategoryCard icon={Truck} title="Çekici" desc="Çekici Desteği" onClick={() => handleSOS("cekici")} />
-            <CategoryCard icon={HelpCircle} title="Diğer" desc="Farklı yardım ihtiyacı" onClick={() => handleSOS("diger")} />
+            <CategoryCard icon={Bike} title="Lastik" desc="Patlak / İnik" disabled={submitting} onClick={() => handleSOS("lastik")} />
+            <CategoryCard icon={Zap} title="Akü" desc="Takviye Lazım" disabled={submitting} onClick={() => handleSOS("aku")} />
+            <CategoryCard icon={Fuel} title="Yakıt" desc="Benzin Bitti" disabled={submitting} onClick={() => handleSOS("yakit")} />
+            <CategoryCard icon={Wrench} title="Arıza" desc="Mekanik Arıza" disabled={submitting} onClick={() => handleSOS("ariza")} />
+            <CategoryCard icon={Phone} title="Kaza" desc="Maddi Hasarlı" disabled={submitting} onClick={() => handleSOS("kaza")} />
+            <CategoryCard icon={Truck} title="Çekici" desc="Çekici Desteği" disabled={submitting} onClick={() => handleSOS("cekici")} />
+            <CategoryCard icon={HelpCircle} title="Diğer" desc="Farklı yardım ihtiyacı" disabled={submitting} onClick={() => handleSOS("diger")} />
           </div>
         </div>
 
@@ -399,16 +407,19 @@ function CategoryCard({
   title,
   desc,
   onClick,
+  disabled = false,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   title: string;
   desc: string;
   onClick: () => void;
+  disabled?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
-      className="bg-card-gradient border border-border/80 hover:border-primary/50 rounded-xl p-3.5 flex flex-col items-start gap-1.5 active:scale-95 transition-all text-left group cursor-pointer"
+      disabled={disabled}
+      className="bg-card-gradient border border-border/80 hover:border-primary/50 rounded-xl p-3.5 flex flex-col items-start gap-1.5 active:scale-95 transition-all text-left group cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
     >
       <Icon className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
       <span className="font-bold text-white text-xs uppercase tracking-wide">{title}</span>
