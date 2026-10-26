@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validateSOSRequestInput, validateSOSStatusUpdatePatch } from "./sosInputValidation";
+import { validateSOSRequestInput, validateSOSStatusUpdatePatch, validateUserProfilePatch } from "./sosInputValidation";
 
 const validInput = {
   requesterId: "authenticated-rider",
