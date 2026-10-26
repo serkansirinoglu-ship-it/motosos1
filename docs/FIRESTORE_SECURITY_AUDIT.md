@@ -186,3 +186,7 @@ Public event reads now require the document to contain only the approved public 
 ## Help-request legacy email privacy gate — 2026-10-26
 
 Active help requests remain discoverable to signed-in riders only when their document uses the approved public field schema. Legacy records with extra fields such as the old `user` email field are readable only by the owner, listed helpers, or admins. Emulator coverage verifies that an unrelated signed-in user is denied while the owner retains access. This can hide legacy email-bearing requests from the general feed until a separately approved migration or review; no production data was inspected or changed.
+
+## SOS claim and deletion regression coverage
+
+The emulator suite now also asserts that a successful SOS claim cannot be taken over by a second rider, that the accepted helper cannot mutate the public coordinates, and that neither the requester nor an unrelated signed-in rider can delete the SOS parent document. These are regression checks against claim-race and post-creation tampering paths; the admin-only deletion policy remains unchanged. They run against both synchronized rules files in the isolated CI workflow.
