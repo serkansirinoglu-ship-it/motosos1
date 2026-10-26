@@ -73,6 +73,11 @@ async function main() {
       await setDoc(doc(db, "helpRequests", "legacy-helper-email", "messages", "legacy-seed"), {
         id: "legacy-seed", from: "owner", fromName: "Owner", text: "legacy helper message", ts: Date.now(),
       });
+      await setDoc(doc(db, "helpRequests", "legacy-no-public-marker"), {
+        id: "legacy-no-public-marker", ownerId: "owner", title: "Legacy without marker",
+        description: "valid legacy schema but not explicitly public", active: true, helpers: [],
+        resolvedBy: null, resolvedAt: null, createdAt: new Date(),
+      });
       await setDoc(doc(db, "helpRequests", "legacy-extra-private-field"), {
         id: "legacy-extra-private-field", ownerId: "owner", title: "Unexpected private field",
         description: "legacy schema fixture", active: true, helpers: [], resolvedBy: null,
@@ -243,6 +248,11 @@ async function main() {
     await assertSucceeds(getDoc(doc(helper, "helpRequests", "legacy-helper-email", "messages", "legacy-seed")));
     await assertFails(getDoc(doc(outsider, "helpRequests", "legacy-helper-email", "messages", "legacy-seed")));
     console.log("PASS: legacy help chat is readable by matching email helper only, not unrelated riders");
+    await assertFails(getDoc(doc(outsider, "helpRequests", "legacy-no-public-marker")));
+    await assertSucceeds(getDoc(doc(owner, "helpRequests", "legacy-no-public-marker")));
+    console.log("PASS: legacy help requests without explicit public marker remain private");
+    await assertSucceeds(getDoc(doc(outsider, "helpRequests", "valid-help")));
+    console.log("PASS: explicitly public, valid help requests are readable by other riders");
     await assertFails(getDoc(doc(outsider, "helpRequests", "legacy-extra-private-field")));
     await assertSucceeds(getDoc(doc(owner, "helpRequests", "legacy-extra-private-field")));
     console.log("PASS: active legacy help requests with unexpected private fields are not public");
