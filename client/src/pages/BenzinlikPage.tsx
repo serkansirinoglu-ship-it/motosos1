@@ -96,8 +96,8 @@ export default function BenzinlikPage() {
           ) : (
             <Card className="bg-card-gradient border-border p-8 flex flex-col items-center justify-center text-center rounded-xl">
               <AlertCircle className="w-10 h-10 text-muted-foreground/40 mb-2" />
-              <p className="text-sm font-bold text-foreground">Bu şehirde kayıtlı istasyon bulunmuyor.</p>
-              <p className="text-xs text-muted-foreground mt-1">Harita sekmesinden Google Maps akaryakıt noktalarına erişebilirsiniz.</p>
+              <p className="text-sm font-bold text-foreground">Henüz doğrulanmış istasyon kaydı bağlı değil.</p>
+              <p className="text-xs text-muted-foreground mt-1">Bu listede doğrulanmamış istasyon bilgisi gösterilmiyor.</p>
             </Card>
           )}
         </div>
