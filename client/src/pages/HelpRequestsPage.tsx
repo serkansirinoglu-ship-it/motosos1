@@ -34,30 +34,30 @@ export default function HelpRequestsPage() {
   }
 
   return (
-	<div className="min-h-screen bg-asphalt-light px-4 pt-6 page-surface-light">
-	  <div className="flex items-center justify-between mb-4">
-		<h1 className="font-display text-2xl font-bold text-foreground">Yardım Talepleri</h1>
-		<div className="flex gap-2">
-		  <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Kısa başlık" maxLength={120} className="px-3 py-2 rounded-md bg-card-gradient border border-border text-sm" />
-		  <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Açıklama (opsiyonel)" maxLength={2000} className="px-3 py-2 rounded-md bg-card-gradient border border-border text-sm" />
-		  <Button onClick={handleCreate} disabled={!title.trim()}>Yeni Talep</Button>
-		</div>
-	  </div>
+    <div className="min-h-screen bg-asphalt-light px-4 pt-6 page-surface-light">
+      <div className="mb-4 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="font-display text-2xl font-bold text-foreground">Yardım Talepleri</h1>
+        <div className="grid w-full grid-cols-1 gap-2 sm:w-auto sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Kısa başlık" maxLength={120} className="w-full min-w-0 px-3 py-2 rounded-md bg-card-gradient border border-border text-sm" />
+          <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Açıklama (opsiyonel)" maxLength={2000} className="w-full min-w-0 px-3 py-2 rounded-md bg-card-gradient border border-border text-sm" />
+          <Button className="w-full sm:w-auto" onClick={handleCreate} disabled={!title.trim()}>Yeni Talep</Button>
+        </div>
+      </div>
 
-	  <div className="space-y-3">
-		{helpRequests.map((r) => (
-		  <Link key={r.id} href={`/chat/${r.id}`}>
-			<Card className="p-4 bg-card-gradient border-border flex items-center justify-between">
-			  <div>
-				<p className="font-semibold text-foreground">{r.title}</p>
-				{r.localOnly && <p className="mt-1 text-[10px] font-semibold text-amber-500">Yalnızca bu cihazda kayıtlı; sunucuya kaydedilemedi.</p>}
-				<p className="text-xs text-muted-foreground">{r.description}</p>
-			  </div>
-			  <div className="text-xs text-muted-foreground">{new Date(r.createdAt).toLocaleString()}</div>
-			</Card>
-		  </Link>
-		))}
-	  </div>
-	</div>
+      <div className="space-y-3">
+        {helpRequests.map((r) => (
+          <Link key={r.id} href={`/chat/${r.id}`}>
+            <Card className="p-4 bg-card-gradient border-border flex items-center justify-between">
+              <div className="min-w-0">
+                <p className="font-semibold text-foreground">{r.title}</p>
+                {r.localOnly && <p className="mt-1 text-[10px] font-semibold text-amber-500">Yalnızca bu cihazda kayıtlı; sunucuya kaydedilemedi.</p>}
+                <p className="text-xs text-muted-foreground">{r.description}</p>
+              </div>
+              <div className="shrink-0 text-xs text-muted-foreground">{new Date(r.createdAt).toLocaleString()}</div>
+            </Card>
+          </Link>
+        ))}
+      </div>
+    </div>
   );
 }
