@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
  */
 export default function EventsPage() {
   return (
-    <div className="min-h-screen bg-asphalt page-surface-light">
+    <div className="min-h-screen bg-asphalt-light page-surface-light">
       <header className="sticky top-0 z-40 bg-card/90 backdrop-blur-xl border-b border-border">
         <div className="px-4 h-14 flex items-center justify-between">
           <h1 className="font-display text-lg font-bold text-white uppercase tracking-wider">
