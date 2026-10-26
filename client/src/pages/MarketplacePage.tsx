@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Search, ShoppingBag, Plus, Tag, ShieldAlert, Phone, MessageSquare, Flag, X, AlertCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -30,6 +30,8 @@ export default function MarketplacePage() {
 
   const { user, authReady } = useAuth();
   const scopeKey = user?.uid || "anonymous";
+  const currentScopeRef = useRef({ scopeKey, authReady });
+  currentScopeRef.current = { scopeKey, authReady };
   const [cacheForScope, setCacheForScope] = useState("");
   const [, setLocation] = useLocation();
 
@@ -51,18 +53,32 @@ export default function MarketplacePage() {
     setListings([]);
     setSelectedListing(null);
     setCacheForScope(scopeKey);
+    let disposed = false;
     let unsubscribe = () => {};
+    const isCurrentScope = () => {
+      const active = currentScopeRef.current;
+      return !disposed && active.authReady && active.scopeKey === scopeKey;
+    };
     try {
-      unsubscribe = marketplaceService.subscribeRemoteListings(setListings, (error) => {
-        console.error("Marketplace subscription failed", error);
+      unsubscribe = marketplaceService.subscribeRemoteListings((items) => {
+        if (!isCurrentScope()) return;
+        setListings(items);
+      }, (error) => {
+        if (!isCurrentScope()) return;
+        console.error("marketplace subscription failed", error);
         setListings([]);
         toast.error("İlanlar sunucudan alınamadı. Bağlantıyı veya erişim izinlerini kontrol edin.");
       });
     } catch (error) {
-      console.error("Marketplace unavailable", error);
-      toast.error(error instanceof Error ? error.message : "Pazar yeri sunucuya bağlanamadı.");
+      if (isCurrentScope()) {
+        console.error("Marketplace unavailable", error);
+        toast.error(error instanceof Error ? error.message : "Pazar yeri sunucuya bağlanamadı.");
+      }
     }
-    return () => unsubscribe();
+    return () => {
+      disposed = true;
+      unsubscribe();
+    };
   }, [authReady, scopeKey]);
 
   const visibleListings = cacheForScope === scopeKey ? listings.filter((item) =>
