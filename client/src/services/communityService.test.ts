@@ -15,6 +15,12 @@ describe("CommunityService input validation", () => {
     for (const post of communityService.getPosts()) communityService.deletePost(post.id);
   });
 
+  it("clears all local posts when the account scope changes", () => {
+    expect(communityService.createPost(validPost)).not.toBeNull();
+    communityService.clearLocalSession();
+    expect(communityService.getPosts()).toEqual([]);
+  });
+
   it("accepts a valid post and trims its content", () => {
     const post = communityService.createPost({ ...validPost, content: "  Güvenli sürüş.  " });
     expect(post?.content).toBe("Güvenli sürüş.");
