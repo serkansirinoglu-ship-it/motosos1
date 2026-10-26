@@ -421,3 +421,8 @@ Reviewed HelpRequestsPage against the checked-in rules: Firestore help-request c
 ## Local-only request cache rehydration — 2026-10-26
 
 A follow-up persistence review found that local-only request IDs were held only in a React ref and were not reconstructed from localStorage after a reload. The ref is now initialized from the cached request records marked localOnly, so a later realtime snapshot does not erase those requests solely because the page was refreshed. This remains browser-local persistence, not Firestore persistence. Requires Safe CI on the latest head.
+
+
+## Chat membership checks before actions — 2026-10-26
+
+Compared ChatPage actions with the existing Firestore authorization rules. The UI previously allowed unauthenticated message attempts and let non-members click send/resolve even though the rules only permit the request owner or accepted helpers. Message sending now requires authentication and verifies owner/helper membership client-side; accepting one's own request or accepting twice is blocked in the UI, and resolution requires accepted-helper membership. Firestore rules remain the authority and were not relaxed; these checks improve feedback and avoid expected-denial writes, but are not a replacement for server-side authorization. Safe CI is required on the final head.
