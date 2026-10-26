@@ -24,7 +24,7 @@ export default function CekiciPage() {
   }, [selectedCity]);
 
   return (
-    <div className="min-h-screen bg-asphalt pb-8 page-surface-light">
+    <div className="min-h-screen bg-asphalt-light pb-8 page-surface-light">
       <Header />
 
       <div className="px-4 pt-4 max-w-lg mx-auto">
