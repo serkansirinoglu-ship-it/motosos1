@@ -34,7 +34,7 @@ export default function HelpRequestsPage() {
   }
 
   return (
-	<div className="min-h-screen bg-asphalt px-4 pt-6 page-surface-light">
+	<div className="min-h-screen bg-asphalt-light px-4 pt-6 page-surface-light">
 	  <div className="flex items-center justify-between mb-4">
 		<h1 className="font-display text-2xl font-bold text-white">Yardım Talepleri</h1>
 		<div className="flex gap-2">
