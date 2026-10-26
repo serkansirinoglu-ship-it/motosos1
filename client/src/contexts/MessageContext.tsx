@@ -277,6 +277,17 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
   function sendMessage(requestId: string, text: string, from: string | null = null, fromName = "Motorcu"): Message | null {
     // Never persist or submit a message unless its sender matches the resolved Firebase account.
     if (!authReady || !uid || from !== uid) return null;
+
+    // Enforce conversation membership at the context boundary too, so callers
+    // cannot create misleading local-only messages in another rider's request.
+    const request = helpRequests.find((item) => item.id === requestId);
+    if (!request || !request.active) return null;
+    const helpers = request.helpers || [];
+    const authenticatedEmail = typeof user?.email === "string" ? user.email : null;
+    const isOwner = request.ownerId === uid || (!!authenticatedEmail && request.user === authenticatedEmail);
+    const isHelper = helpers.includes(uid) || (!!authenticatedEmail && helpers.includes(authenticatedEmail));
+    if (!isOwner && !isHelper) return null;
+
     if (validateHelpMessageInput({ requestId, text, from, fromName, authenticatedUid: uid })) return null;
     const msg: Message = {
       id: nanoid(),
