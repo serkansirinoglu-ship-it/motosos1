@@ -154,3 +154,6 @@ The strict Firestore rules now constrain the public community-post and marketpla
 - Both `firestore.rules` and `firestore.prod.rules` are kept byte-for-byte identical. The application currently uses local in-memory community and marketplace services rather than a Firestore-backed persistence layer for those screens; these rules are defensive server-side gates for any authorized future integration and do not claim that those screens persist remotely.
 
 These changes were validated by the strict emulator suite against both rule files, plus TypeScript, unit tests, production build, static security analysis, and the protected-homepage CI guard. No deployment or production data change was performed.
+## Public presence reads reject malformed legacy documents — 2026-10-26
+
+Firestore document reads cannot redact selected fields. The public presence read rule therefore checks that a record contains only `uid` and `lastSeen`; malformed legacy records with additional fields are denied rather than exposed. The emulator suite seeds such a legacy-shaped record and asserts that anonymous reads fail while a valid minimal presence record remains readable. This is a defensive document-level gate, not a field-redaction mechanism. Both rules files must remain byte-for-byte identical, and no production rules were published.
