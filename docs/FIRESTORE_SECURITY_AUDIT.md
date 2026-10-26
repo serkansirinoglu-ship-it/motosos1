@@ -426,3 +426,8 @@ A follow-up persistence review found that local-only request IDs were held only 
 ## Chat membership checks before actions — 2026-10-26
 
 Compared ChatPage actions with the existing Firestore authorization rules. The UI previously allowed unauthenticated message attempts and let non-members click send/resolve even though the rules only permit the request owner or accepted helpers. Message sending now requires authentication and verifies owner/helper membership client-side; accepting one's own request or accepting twice is blocked in the UI, and resolution requires accepted-helper membership. Firestore rules remain the authority and were not relaxed; these checks improve feedback and avoid expected-denial writes, but are not a replacement for server-side authorization. Safe CI is required on the final head.
+
+
+## Helper points and badge disclosure — 2026-10-26
+
+Reviewed resolution feedback against persistence behavior: request resolution is confirmed by Firestore, but helper counts and badge calculation currently use local browser state and are not synchronized to the Firestore profile because the existing profile rules do not permit clients to write points/helpCount/badges. Updated the success toast to distinguish confirmed server-side resolution from local-only statistics and explicitly disclose that profile point/badge synchronization is not connected. No rules were loosened to make the UI claim work; a trusted server-side crediting path remains future work.
