@@ -21,6 +21,13 @@ describe("validateHelpMessageInput", () => {
     expect(validateHelpMessageInput({ ...valid, from })).toBe("invalid_sender");
   });
 
+  it("requires the message sender to match the authenticated UID when provided", () => {
+    expect(validateHelpMessageInput({ ...valid, authenticatedUid: "rider-uid" })).toBeNull();
+    expect(validateHelpMessageInput({ ...valid, from: "spoofed-uid", authenticatedUid: "rider-uid" })).toBe("sender_mismatch");
+    expect(validateHelpMessageInput({ ...valid, authenticatedUid: null })).toBe("sender_mismatch");
+    expect(validateHelpMessageInput({ ...valid, authenticatedUid: "   " })).toBe("sender_mismatch");
+  });
+
   it("rejects missing/overlong request IDs and overlong display names", () => {
     expect(validateHelpMessageInput({ ...valid, requestId: "" })).toBe("invalid_request_id");
     expect(validateHelpMessageInput({ ...valid, requestId: "x".repeat(129) })).toBe("invalid_request_id");
