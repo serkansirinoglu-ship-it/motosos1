@@ -6,7 +6,6 @@ type MembershipContextType = {
   isMember: (city: string) => boolean;
   joinCity: (city: string) => void;
   leaveCity: (city: string) => void;
-  getMemberCount: (city: string) => number;
 };
 
 const STORAGE_KEY = "motosos_memberships_v1"; // maps email -> string[]
@@ -48,16 +47,9 @@ export function MembershipProvider({ children }: { children: React.ReactNode }) 
 	setStore((s) => ({ ...s, [userKey]: (s[userKey] || []).filter((c) => c !== city) }));
   }
 
-  function getMemberCount(city: string) {
-	let count = 0;
-	for (const k of Object.keys(store)) {
-	  if ((store[k] || []).includes(city)) count++;
-	}
-	return count;
-  }
 
   return (
-	<MembershipContext.Provider value={{ joinedCities, isMember, joinCity, leaveCity, getMemberCount }}>
+	<MembershipContext.Provider value={{ joinedCities, isMember, joinCity, leaveCity }}>
 	  {children}
 	</MembershipContext.Provider>
   );
