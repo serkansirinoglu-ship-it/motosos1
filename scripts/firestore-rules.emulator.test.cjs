@@ -76,6 +76,8 @@ async function main() {
       await setDoc(doc(db, "presence", "owner"), { uid: "owner", lastSeen: new Date() });
       // Simulate a legacy document that would expose an extra field if public reads were unconditional.
       await setDoc(doc(db, "presence", "malformed-legacy"), { uid: "owner", lastSeen: new Date(), email: "private@example.test" });
+      await setDoc(doc(db, "presence", "wrong-uid"), { uid: "outsider", lastSeen: new Date() });
+      await setDoc(doc(db, "presence", "invalid-timestamp"), { uid: "invalid-timestamp", lastSeen: "yesterday" });
     });
 
     const outsider = env.authenticatedContext("outsider", { email: "outsider@example.test" }).firestore();
@@ -312,7 +314,9 @@ async function main() {
     await assertFails(deleteDoc(doc(outsider, "presence", "owner")));
     await assertSucceeds(getDoc(doc(anonymous, "presence", "owner")));
     await assertFails(getDoc(doc(anonymous, "presence", "malformed-legacy")));
-    console.log("PASS: valid minimal presence remains public while malformed legacy documents are denied");
+    await assertFails(getDoc(doc(anonymous, "presence", "wrong-uid")));
+    await assertFails(getDoc(doc(anonymous, "presence", "invalid-timestamp")));
+    console.log("PASS: public presence reads reject extra fields, mismatched UIDs, and non-timestamp heartbeats");
     console.log("PASS: presence is publicly readable but only its owner can update it");
     console.log("PASS: presence rejects stale heartbeat timestamps, extra identity fields, and cross-user deletion");
 
