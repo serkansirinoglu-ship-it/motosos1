@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validateSOSRequestInput, validateSOSStatusUpdatePatch, validateUserProfilePatch, validateUserProfileCreation } from "./sosInputValidation";
+import { validateSOSRequestInput, validateSOSStatusUpdatePatch, validateUserProfilePatch, validateUserProfileCreation, validateProductInput, validateProductPatch, validateBannerInput, validateBannerPatch, validateAdminDocumentId } from "./sosInputValidation";
 
 const validInput = {
   requesterId: "authenticated-rider",
@@ -158,5 +158,47 @@ describe("validateUserProfileCreation", () => {
     expect(validateUserProfileCreation(identity.uid, identity.email, { uid: "attacker" }, identity.authenticatedUid, identity.authenticatedEmail)).toBe("invalid_extra");
     expect(validateUserProfileCreation(identity.uid, identity.email, { displayName: "x".repeat(81) }, identity.authenticatedUid, identity.authenticatedEmail)).toBe("invalid_display_name");
     expect(validateUserProfileCreation(identity.uid, identity.email, null, identity.authenticatedUid, identity.authenticatedEmail)).toBe("invalid_extra");
+  });
+});
+
+
+describe("admin product and banner input validation", () => {
+  it("accepts bounded product and banner payloads", () => {
+    expect(validateProductInput({ name: "Helmet", price: 100, stock: 2, image: "", description: "Safe gear" })).toBe(true);
+    expect(validateBannerInput({ title: "Campaign", active: true, image: "", link: "https://example.test" })).toBe(true);
+  });
+
+  it.each([
+    null, [], { name: "Helmet", price: Number.NaN, stock: 1 },
+    { name: "Helmet", price: -1, stock: 1 }, { name: "Helmet", price: 1, stock: -1 },
+    { name: "Helmet", price: 1, stock: 1.5 }, { name: " ", price: 1, stock: 1 },
+    { name: "x".repeat(121), price: 1, stock: 1 }, { name: "Helmet", price: 1, stock: 1, isAdmin: true },
+    { name: "Helmet", price: 1, stock: 1, description: "x".repeat(2001) },
+  ])("rejects invalid product payloads: %s", (value) => {
+    expect(validateProductInput(value)).toBe(false);
+  });
+
+  it.each([
+    null, [], { title: "Campaign" }, { title: " ", active: true },
+    { title: "x".repeat(121), active: true }, { title: "Campaign", active: "true" },
+    { title: "Campaign", active: true, createdAt: new Date() },
+    { title: "Campaign", active: true, link: "x".repeat(2049) },
+  ])("rejects invalid banner payloads: %s", (value) => {
+    expect(validateBannerInput(value)).toBe(false);
+  });
+
+  it("rejects invalid IDs and protected or empty patches", () => {
+    expect(validateProductPatch("../other", { name: "Helmet" })).toBe(false);
+    expect(validateProductPatch("product-1", {})).toBe(false);
+    expect(validateProductPatch("product-1", { id: "other" })).toBe(false);
+    expect(validateBannerPatch("banner/other", { title: "Campaign" })).toBe(false);
+    expect(validateBannerPatch("banner-1", { createdAt: new Date() })).toBe(false);
+    expect(validateBannerPatch("banner-1", { active: false })).toBe(true);
+  });
+
+  it("validates document IDs before delete operations", () => {
+    expect(validateAdminDocumentId("product-1")).toBe(true);
+    expect(validateAdminDocumentId("")).toBe(false);
+    expect(validateAdminDocumentId("nested/id")).toBe(false);
   });
 });

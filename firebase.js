@@ -1,7 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut, onAuthStateChanged } from "firebase/auth";
 import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, getDocs, doc, setDoc, getDoc, updateDoc, deleteDoc, where, Timestamp, writeBatch } from "firebase/firestore";
-import { validateSOSRequestInput, validateSOSStatusUpdatePatch, validateUserProfilePatch, validateUserProfileCreation } from "./client/src/services/sosInputValidation";
+import { validateSOSRequestInput, validateSOSStatusUpdatePatch, validateUserProfilePatch, validateUserProfileCreation, validateProductInput, validateProductPatch, validateBannerInput, validateBannerPatch, validateAdminDocumentId } from "./client/src/services/sosInputValidation";
 import { validateHelpMessageInput, validateHelpRequestInput, validateHelpRequestUpdatePatch } from "./client/src/services/helpMessageValidation";
 
 // Read config from Vite environment variables
@@ -460,18 +460,28 @@ export function subscribeProductsRealtime(onUpdate) {
 }
 
 export async function createProductRealtime(data) {
-  if (!db) {
-    console.info("createProductRealtime: Firestore not configured, skipping");
+  if (!db || !validateProductInput(data)) return null;
+  const payload = {
+    name: data.name.trim(),
+    price: data.price,
+    stock: data.stock,
+    ...(data.image !== undefined ? { image: data.image } : {}),
+    ...(data.description !== undefined ? { description: data.description } : {}),
+    createdAt: serverTimestamp(),
+  };
+  try {
+    return await addDoc(collection(db, "products"), payload);
+  } catch (e) {
+    console.error("createProductRealtime error", e);
     return null;
   }
-  return addDoc(collection(db, "products"), { ...data, createdAt: serverTimestamp() });
 }
 
 export async function updateProductRealtime(id, patch) {
-  if (!db) return null;
+  if (!db || !validateProductPatch(id, patch)) return null;
   try {
     const dref = doc(db, "products", id);
-    return updateDoc(dref, patch);
+    return await updateDoc(dref, patch);
   } catch (e) {
     console.error("updateProductRealtime error", e);
     return null;
@@ -479,10 +489,10 @@ export async function updateProductRealtime(id, patch) {
 }
 
 export async function deleteProductRealtime(id) {
-  if (!db) return null;
+  if (!db || !validateAdminDocumentId(id)) return null;
   try {
     const dref = doc(db, "products", id);
-    return deleteDoc(dref);
+    return await deleteDoc(dref);
   } catch (e) {
     console.error("deleteProductRealtime error", e);
     return null;
@@ -504,15 +514,27 @@ export function subscribeBannersRealtime(onUpdate) {
 }
 
 export async function createBannerRealtime(data) {
-  if (!db) return null;
-  return addDoc(collection(db, "banners"), { ...data, createdAt: serverTimestamp() });
+  if (!db || !validateBannerInput(data)) return null;
+  const payload = {
+    title: data.title.trim(),
+    active: data.active,
+    ...(data.image !== undefined ? { image: data.image } : {}),
+    ...(data.link !== undefined ? { link: data.link } : {}),
+    createdAt: serverTimestamp(),
+  };
+  try {
+    return await addDoc(collection(db, "banners"), payload);
+  } catch (e) {
+    console.error("createBannerRealtime error", e);
+    return null;
+  }
 }
 
 export async function updateBannerRealtime(id, patch) {
-  if (!db) return null;
+  if (!db || !validateBannerPatch(id, patch)) return null;
   try {
     const dref = doc(db, "banners", id);
-    return updateDoc(dref, patch);
+    return await updateDoc(dref, patch);
   } catch (e) {
     console.error("updateBannerRealtime error", e);
     return null;
@@ -520,10 +542,10 @@ export async function updateBannerRealtime(id, patch) {
 }
 
 export async function deleteBannerRealtime(id) {
-  if (!db) return null;
+  if (!db || !validateAdminDocumentId(id)) return null;
   try {
     const dref = doc(db, "banners", id);
-    return deleteDoc(dref);
+    return await deleteDoc(dref);
   } catch (e) {
     console.error("deleteBannerRealtime error", e);
     return null;

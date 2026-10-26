@@ -130,3 +130,63 @@ export function validateUserProfileCreation(
   if ("bio" in candidate && (typeof candidate.bio !== "string" || candidate.bio.length > 500)) return "invalid_bio";
   return null;
 }
+
+
+const PRODUCT_FIELDS = ["name", "price", "stock", "image", "description"] as const;
+const BANNER_FIELDS = ["title", "image", "link", "active"] as const;
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function hasOnlyFields(value: Record<string, unknown>, allowed: readonly string[]): boolean {
+  const keys = Object.keys(value);
+  return keys.length > 0 && keys.every((key) => (allowed as readonly string[]).includes(key));
+}
+
+function validOptionalText(value: unknown, maxLength: number): boolean {
+  return value === undefined || (typeof value === "string" && value.length <= maxLength);
+}
+
+function validProductFields(value: Record<string, unknown>, requireAll: boolean): boolean {
+  if (!hasOnlyFields(value, PRODUCT_FIELDS)) return false;
+  if (requireAll && (!("name" in value) || !("price" in value) || !("stock" in value))) return false;
+  if ("name" in value && (typeof value.name !== "string" || !value.name.trim() || value.name.length > 120)) return false;
+  if ("price" in value && (typeof value.price !== "number" || !Number.isFinite(value.price) || value.price < 0)) return false;
+  if ("stock" in value && (typeof value.stock !== "number" || !Number.isInteger(value.stock) || value.stock < 0)) return false;
+  if ("image" in value && !validOptionalText(value.image, 2048)) return false;
+  if ("description" in value && !validOptionalText(value.description, 2000)) return false;
+  return true;
+}
+
+function validBannerFields(value: Record<string, unknown>, requireAll: boolean): boolean {
+  if (!hasOnlyFields(value, BANNER_FIELDS)) return false;
+  if (requireAll && (!("title" in value) || !("active" in value))) return false;
+  if ("title" in value && (typeof value.title !== "string" || !value.title.trim() || value.title.length > 120)) return false;
+  if ("image" in value && !validOptionalText(value.image, 2048)) return false;
+  if ("link" in value && !validOptionalText(value.link, 2048)) return false;
+  if ("active" in value && typeof value.active !== "boolean") return false;
+  return true;
+}
+
+export function validateProductInput(value: unknown): boolean {
+  return isPlainRecord(value) && validProductFields(value, true);
+}
+
+export function validateProductPatch(id: unknown, patch: unknown): boolean {
+  return typeof id === "string" && id.length > 0 && id.length <= 128 && !id.includes("/") &&
+    isPlainRecord(patch) && validProductFields(patch, false);
+}
+
+export function validateBannerInput(value: unknown): boolean {
+  return isPlainRecord(value) && validBannerFields(value, true);
+}
+
+export function validateBannerPatch(id: unknown, patch: unknown): boolean {
+  return typeof id === "string" && id.length > 0 && id.length <= 128 && !id.includes("/") &&
+    isPlainRecord(patch) && validBannerFields(patch, false);
+}
+
+export function validateAdminDocumentId(id: unknown): boolean {
+  return typeof id === "string" && id.length > 0 && id.length <= 128 && !id.includes("/");
+}
