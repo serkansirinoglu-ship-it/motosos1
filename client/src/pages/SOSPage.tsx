@@ -274,7 +274,7 @@ export default function SOSPage() {
             {statusInfo.label}
           </div>
 
-          <h1 className="font-display text-2xl font-extrabold text-white uppercase tracking-wide text-center">
+          <h1 className="font-display text-2xl font-extrabold text-foreground uppercase tracking-wide text-center">
             Yardım Çağrınız Aktif
           </h1>
           {!sosId && (
@@ -367,7 +367,7 @@ export default function SOSPage() {
 
       <div className="px-4 pt-4 max-w-lg mx-auto flex flex-col items-center">
         <div className="text-center max-w-sm">
-          <h1 className="font-display text-3xl font-extrabold text-white uppercase tracking-wider">
+          <h1 className="font-display text-3xl font-extrabold text-foreground uppercase tracking-wider">
             Acil Yardım
           </h1>
           <p className="text-muted-foreground mt-1.5 text-xs sm:text-sm leading-relaxed">
