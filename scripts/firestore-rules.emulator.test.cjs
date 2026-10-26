@@ -340,6 +340,9 @@ async function main() {
       ...validNewProfile, privacyLocation: "yes",
     }));
     await assertFails(setDoc(doc(outsider, "users", "outsider"), {
+      ...validNewProfile, privacyLocation: true,
+    }));
+    await assertFails(setDoc(doc(outsider, "users", "outsider"), {
       ...validNewProfile, contacts: Array.from({ length: 11 }, (_, i) => ({ name: `Contact ${i}`, phone: "123" })),
     }));
     await assertSucceeds(setDoc(doc(outsider, "users", "outsider"), validNewProfile));
