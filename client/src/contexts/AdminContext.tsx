@@ -21,12 +21,12 @@ type Banner = {
 type AdminContextType = {
   products: Product[];
   banners: Banner[];
-  addProduct: (p: Omit<Product, "id">) => Product;
-  updateProduct: (id: string, patch: Partial<Product>) => Product | null;
-  removeProduct: (id: string) => void;
-  addBanner: (b: Omit<Banner, "id">) => Banner;
-  updateBanner: (id: string, patch: Partial<Banner>) => Banner | null;
-  removeBanner: (id: string) => void;
+  addProduct: (p: Omit<Product, "id">) => Promise<Product | null>;
+  updateProduct: (id: string, patch: Partial<Product>) => Promise<Product | null>;
+  removeProduct: (id: string) => Promise<boolean>;
+  addBanner: (b: Omit<Banner, "id">) => Promise<Banner | null>;
+  updateBanner: (id: string, patch: Partial<Banner>) => Promise<Banner | null>;
+  removeBanner: (id: string) => Promise<boolean>;
 };
 
 const AdminContext = createContext<AdminContextType | undefined>(undefined);
@@ -57,7 +57,12 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
   });
 
   useEffect(() => {
-	localStorage.setItem(STORAGE_KEY, JSON.stringify({ products, banners }));
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ products, banners }));
+    } catch (error) {
+      // Storage can be unavailable in private browsing or quota-exhausted contexts.
+      console.warn("Admin cache could not be saved locally", error);
+    }
   }, [products, banners]);
 
   // subscribe to realtime products/banners if Firestore configured
@@ -88,71 +93,84 @@ export function AdminProvider({ children }: { children: React.ReactNode }) {
 	};
   }, []);
 
-  function addProduct(p: Omit<Product, "id">) {
-	try {
-	  const res = createProductRealtime(p);
-	  // Firestore snapshot will update local state; return a local placeholder
-	  const prod: Product = { id: generateId("prod"), ...p };
-	  setProducts((s) => [prod, ...s]);
-	  return prod;
-	} catch (e) {
-	  const prod: Product = { id: generateId("prod"), ...p };
-	  setProducts((s) => [prod, ...s]);
-	  return prod;
-	}
+  async function addProduct(p: Omit<Product, "id">): Promise<Product | null> {
+    try {
+      const ref = await createProductRealtime(p);
+      if (!ref || typeof ref.id !== "string" || !ref.id) return null;
+      const product: Product = { id: ref.id, ...p };
+      setProducts((current) => [product, ...current.filter((item) => item.id !== ref.id)]);
+      return product;
+    } catch (error) {
+      console.error("Product creation was not confirmed by the server", error);
+      return null;
+    }
   }
 
-  function updateProduct(id: string, patch: Partial<Product>) {
-	try {
-	  updateProductRealtime(id, patch);
-	} catch (e) {
-	  // ignore
-	}
-	let updated: Product | null = null;
-	setProducts((s) => s.map((it) => (it.id === id ? (updated = { ...it, ...patch }) : it)));
-	return updated;
+  async function updateProduct(id: string, patch: Partial<Product>): Promise<Product | null> {
+    const current = products.find((item) => item.id === id);
+    if (!current) return null;
+    try {
+      const result = await updateProductRealtime(id, patch);
+      if (result === null) return null;
+      const updated: Product = { ...current, ...patch, id };
+      setProducts((items) => items.map((item) => item.id === id ? updated : item));
+      return updated;
+    } catch (error) {
+      console.error("Product update was not confirmed by the server", error);
+      return null;
+    }
   }
 
-  function removeProduct(id: string) {
-	try {
-	  deleteProductRealtime(id);
-	} catch (e) {
-	  // ignore
-	}
-	setProducts((s) => s.filter((it) => it.id !== id));
+  async function removeProduct(id: string): Promise<boolean> {
+    try {
+      const result = await deleteProductRealtime(id);
+      if (result === null) return false;
+      setProducts((items) => items.filter((item) => item.id !== id));
+      return true;
+    } catch (error) {
+      console.error("Product deletion was not confirmed by the server", error);
+      return false;
+    }
   }
 
-  function addBanner(b: Omit<Banner, "id">) {
-	try {
-	  createBannerRealtime(b);
-	  const ban: Banner = { id: generateId("ban"), ...b };
-	  setBanners((s) => [ban, ...s]);
-	  return ban;
-	} catch (e) {
-	  const ban: Banner = { id: generateId("ban"), ...b };
-	  setBanners((s) => [ban, ...s]);
-	  return ban;
-	}
+  async function addBanner(b: Omit<Banner, "id">): Promise<Banner | null> {
+    try {
+      const ref = await createBannerRealtime(b);
+      if (!ref || typeof ref.id !== "string" || !ref.id) return null;
+      const banner: Banner = { id: ref.id, ...b };
+      setBanners((current) => [banner, ...current.filter((item) => item.id !== ref.id)]);
+      return banner;
+    } catch (error) {
+      console.error("Banner creation was not confirmed by the server", error);
+      return null;
+    }
   }
 
-  function updateBanner(id: string, patch: Partial<Banner>) {
-	try {
-	  updateBannerRealtime(id, patch);
-	} catch (e) {
-	  // ignore
-	}
-	let updated: Banner | null = null;
-	setBanners((s) => s.map((it) => (it.id === id ? (updated = { ...it, ...patch }) : it)));
-	return updated;
+  async function updateBanner(id: string, patch: Partial<Banner>): Promise<Banner | null> {
+    const current = banners.find((item) => item.id === id);
+    if (!current) return null;
+    try {
+      const result = await updateBannerRealtime(id, patch);
+      if (result === null) return null;
+      const updated: Banner = { ...current, ...patch, id };
+      setBanners((items) => items.map((item) => item.id === id ? updated : item));
+      return updated;
+    } catch (error) {
+      console.error("Banner update was not confirmed by the server", error);
+      return null;
+    }
   }
 
-  function removeBanner(id: string) {
-	try {
-	  deleteBannerRealtime(id);
-	} catch (e) {
-	  // ignore
-	}
-	setBanners((s) => s.filter((it) => it.id !== id));
+  async function removeBanner(id: string): Promise<boolean> {
+    try {
+      const result = await deleteBannerRealtime(id);
+      if (result === null) return false;
+      setBanners((items) => items.filter((item) => item.id !== id));
+      return true;
+    } catch (error) {
+      console.error("Banner deletion was not confirmed by the server", error);
+      return false;
+    }
   }
 
   const value: AdminContextType = {
