@@ -234,3 +234,8 @@ Latest commit `83d1bcfbc9b5a8fefc63a9b4255f213f6ddf3a4c` passed both available S
 ## Help-request coordinate boundary regression tests — 2026-10-26
 
 Extended the non-production Firestore Emulator suite to verify that help-request creation rejects latitude above 90, longitude below -180, and nonnumeric coordinate values, in addition to the existing incomplete-coordinate-pair tests. The tests exercise the existing rules; no production rules or data were changed. The new commit must pass the branch's CI before these checks are considered verified.
+
+
+## Help-request helper-list integrity regression — 2026-10-26
+
+Added an emulator regression asserting that a rider cannot accept a help request while appending another rider's UID to the helper list. The valid acceptance path remains tested immediately afterward. This is test-only hardening against unauthorized helper enrollment; no rules or production data were changed. CI for the new commit is the required verification gate.
