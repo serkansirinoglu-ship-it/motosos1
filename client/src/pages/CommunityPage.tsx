@@ -26,13 +26,26 @@ export default function CommunityPage() {
   const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(null);
   const [commentText, setCommentText] = useState("");
 
-  const { user } = useAuth();
+  const { user, authReady } = useAuth();
+  const scopeKey = user?.uid || "anonymous";
+  const [cacheForScope, setCacheForScope] = useState("");
 
   useEffect(() => {
+    if (!authReady) return;
+    communityService.clearLocalSession();
+    setPosts([]);
+    setCacheForScope(scopeKey);
+  }, [authReady, scopeKey]);
+
+  useEffect(() => {
+    if (!authReady || cacheForScope !== scopeKey) return;
     setPosts(communityService.getPosts(selectedCity));
-  }, [selectedCity]);
+  }, [authReady, cacheForScope, scopeKey, selectedCity]);
+
+  const visiblePosts = cacheForScope === scopeKey ? posts : [];
 
   const handleCreatePost = () => {
+    if (!authReady || cacheForScope !== scopeKey) return;
     if (!user) {
       (window as any).__openAuthModal?.();
       toast.error("Gönderi oluşturmak için giriş yapın.");
@@ -72,6 +85,7 @@ export default function CommunityPage() {
   };
 
   const handleToggleLike = (postId: string) => {
+    if (!authReady || cacheForScope !== scopeKey) return;
     if (!user) {
       (window as any).__openAuthModal?.();
       return;
@@ -81,6 +95,7 @@ export default function CommunityPage() {
   };
 
   const handleDeletePost = (postId: string) => {
+    if (!authReady || cacheForScope !== scopeKey) return;
     const target = communityService.getPosts().find((post) => post.id === postId);
     if (!user || !target || target.authorEmail !== user.email) {
       toast.error("Yalnızca kendi gönderinizi silebilirsiniz.");
@@ -92,6 +107,7 @@ export default function CommunityPage() {
   };
 
   const handleAddComment = (postId: string) => {
+    if (!authReady || cacheForScope !== scopeKey) return;
     if (!user) {
       (window as any).__openAuthModal?.();
       toast.error("Yorum yapmak için giriş yapın.");
@@ -193,7 +209,7 @@ export default function CommunityPage() {
       {activeTab === "feed" && (
         <div className="px-4 pt-3 space-y-4 max-w-lg mx-auto">
           {posts.length > 0 ? (
-            posts.map((post) => {
+            visiblePosts.map((post) => {
               const isLiked = user?.email ? post.likes.includes(user.email) : false;
               const isOwner = user?.email === post.authorEmail;
 
