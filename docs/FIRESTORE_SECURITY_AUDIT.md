@@ -132,6 +132,13 @@ Non-admin access to SOS private details is restricted to the designated `private
 ## SOS private-details ownership regression
 
 The emulator suite also verifies that a different authenticated rider cannot create `privateDetails/owner` under an SOS request they do not own. This checks the atomic parent/subdocument ownership binding, not just read restrictions.
+
+## Cross-user public-content authorization regressions — 2026-10-26
+
+The non-production Firestore Emulator matrix now explicitly asserts that an unrelated signed-in user cannot edit or delete an existing community post, and cannot edit or delete an event owned by another user. It also asserts that a post owner cannot inject a comment by rewriting the parent document's `comments` array. These tests run for both byte-identical rules files through the existing Safe CI workflow.
+
+The current application community and marketplace screens use local in-memory services, and the Events page intentionally shows an empty state until real backend event data exists. These tests validate server-side rules for any Firestore-backed use; they do not claim that those screens currently persist data in Firestore. Likes/comments should remain outside owner-editable post fields; a future Firestore integration should use a separately authorized, atomic interaction model rather than opening parent-document array mutation.
+
 ## Public content mutation hardening — 2026-10-26
 
 The strict Firestore rules now constrain the public community-post and marketplace-listing schemas and owner-editable fields:
