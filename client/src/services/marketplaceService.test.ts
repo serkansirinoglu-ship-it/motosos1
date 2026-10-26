@@ -22,11 +22,33 @@ describe("MarketplaceService local listing lifecycle", () => {
       sellerName: "Test satıcı",
     };
     const created = marketplaceService.createListing(input);
+    expect(created).not.toBeNull();
+    if (!created) throw new Error("Valid listing was rejected");
     createdIds.push(created.id);
 
     expect(marketplaceService.getById(created.id)).toEqual(created);
     expect(marketplaceService.getListings("Kask", "Test", "İzmir")).toContainEqual(created);
     expect(marketplaceService.deleteListing(created.id)).toBe(true);
     expect(marketplaceService.getById(created.id)).toBeUndefined();
+  });
+
+  it("rejects invalid data at the service boundary", () => {
+    const base: Omit<ListingItem, "id" | "createdAt"> = {
+      title: "Test kask",
+      category: "Kask",
+      price: 1200,
+      city: "İzmir",
+      description: "Test ilanı",
+      sellerName: "Test satıcı",
+    };
+
+    expect(marketplaceService.createListing({ ...base, price: 0 })).toBeNull();
+    expect(marketplaceService.createListing({ ...base, price: Number.NaN })).toBeNull();
+    expect(marketplaceService.createListing({ ...base, title: "   " })).toBeNull();
+    expect(marketplaceService.createListing({ ...base, title: "x".repeat(161) })).toBeNull();
+    expect(marketplaceService.createListing({ ...base, description: "x".repeat(5001) })).toBeNull();
+    expect(marketplaceService.createListing({ ...base, image: "javascript:alert(1)" })).toBeNull();
+    expect(marketplaceService.createListing({ ...base, image: "data:image/svg+xml,test" })).toBeNull();
+    expect(marketplaceService.createListing({ ...base, image: "https://example.test/image.png" })).not.toBeNull();
   });
 });
