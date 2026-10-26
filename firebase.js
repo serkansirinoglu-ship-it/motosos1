@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, getDocs, limit, doc, setDoc, getDoc, updateDoc, deleteDoc, where } from "firebase/firestore";
+import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, getDocs, limit, doc, setDoc, getDoc, updateDoc, deleteDoc, where, Timestamp } from "firebase/firestore";
 
 // Read config from Vite environment variables
 const firebaseConfig = {
@@ -31,6 +31,56 @@ if (hasFirebaseConfig) {
 }
 
 export { auth, db };
+
+// Online member presence (authenticated members only).
+// Presence records contain no profile details; stale sessions expire after 2 minutes.
+export function subscribeOnlineMembers(uid, onCount) {
+  if (!db || !uid) return () => {};
+
+  let stopped = false;
+  let stopSnapshot = () => {};
+  let refreshTimer;
+  const presenceRef = doc(db, "presence", uid);
+  const heartbeat = async () => {
+    try {
+      await setDoc(presenceRef, { uid, lastSeen: serverTimestamp() }, { merge: true });
+    } catch (error) {
+      console.warn("Online presence heartbeat unavailable", error);
+    }
+  };
+  const refreshCount = () => {
+    stopSnapshot();
+    const cutoff = Timestamp.fromMillis(Date.now() - 2 * 60 * 1000);
+    const activeQuery = query(collection(db, "presence"), where("lastSeen", ">=", cutoff));
+    stopSnapshot = onSnapshot(activeQuery, (snapshot) => {
+      if (stopped) return;
+      const now = Date.now();
+      const activeCount = snapshot.docs.filter((item) => {
+        const lastSeen = item.data().lastSeen;
+        return lastSeen && typeof lastSeen.toMillis === "function" &&
+          now - lastSeen.toMillis() <= 2 * 60 * 1000;
+      }).length;
+      onCount(activeCount);
+    }, (error) => {
+      console.warn("Online presence count unavailable", error);
+    });
+  };
+
+  void heartbeat();
+  refreshCount();
+  refreshTimer = setInterval(() => {
+    void heartbeat();
+    refreshCount();
+  }, 45 * 1000);
+
+  return () => {
+    stopped = true;
+    clearInterval(refreshTimer);
+    stopSnapshot();
+    void deleteDoc(presenceRef).catch(() => {});
+  };
+}
+
 
 // Authentication helpers
 // Use these wrappers from your React components instead of importing firebase/auth directly.
