@@ -19,6 +19,10 @@ The initial emulator characterization confirmed permissive cross-user access and
 
 8. **Help request identity privacy:** new public `helpRequests` store `ownerId` as a Firebase UID instead of owner email; the `helpers` list and message sender identity also use UIDs. Chat display names are stored separately from authorization identity. Rules retain compatibility for existing legacy documents containing email in `user` or `helpers`; those historical records remain an explicit migration risk because Firestore rules cannot hide individual fields in a readable document. No existing production records were migrated or modified.
 
+## Additional schema checks added on 2026-10-26
+
+- Event and marketplace listing creation now require `createdAt == request.time`, preventing clients from omitting or backdating the creation timestamp. Emulator tests cover valid server timestamps, missing timestamps, and forged historical timestamps for both collections. Both rules files must remain byte-identical and the full non-production CI must pass before this change is considered verified.
+
 ## Remaining release gates
 
 Rules are enforced server-side, so the client query/state transitions were updated alongside the rules. The strict test suite passes against the dedicated demo Firestore Emulator for both rule files on the latest audited commit. This validates the checked-in branch only; it does not mean the rules are deployed. Production publishing remains a separate release decision and is not part of this work.
