@@ -229,3 +229,8 @@ The optional MotoGuard engagement section is implemented in `client/src/componen
 The section contains a self-contained safe-driving question and navigation cards to existing community, events, map, and profile routes. It does not claim that event creation, persistent quiz scores, points, streaks, or rewards are implemented. The Events page currently presents an empty state when no real event data is available; do not populate it with fabricated events.
 
 Latest commit `83d1bcfbc9b5a8fefc63a9b4255f213f6ddf3a4c` passed both available Safe CI runs. Verified checks include TypeScript, unit tests, build-only (no deployment), static Firestore rules audit, rules-file parity, and Firestore Emulator authorization tests against both synchronized rule files. PR #3 remains open and unmerged. No production deployment, Firestore rules publication, or production data access occurred.
+
+
+## Help-request coordinate boundary regression tests — 2026-10-26
+
+Extended the non-production Firestore Emulator suite to verify that help-request creation rejects latitude above 90, longitude below -180, and nonnumeric coordinate values, in addition to the existing incomplete-coordinate-pair tests. The tests exercise the existing rules; no production rules or data were changed. The new commit must pass the branch's CI before these checks are considered verified.
