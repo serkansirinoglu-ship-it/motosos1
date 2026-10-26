@@ -215,3 +215,8 @@ Presence records expose a rider UID and heartbeat timestamp. Reads now require a
 ## Private-by-default location setting on profile creation — 2026-10-26
 
 New profile creation may omit `privacyLocation`, but if it is supplied the value must be `false`. This matches the current profile-creation helper, which initializes location sharing as disabled, and avoids allowing a client to opt into location sharing implicitly during account setup. Users can explicitly change the Boolean setting later through the profile update path. Emulator coverage rejects both malformed values and an initial `true` value. Both rule files remain synchronized; no production rules were published.
+
+
+## Help-request coordinate-pair validation — 2026-10-26
+
+Help-request creation now accepts either no location or both latitude and longitude. A request containing only one coordinate is rejected, as are nonnumeric or out-of-range coordinate values. The same validation is mirrored byte-for-byte in `firestore.rules` and `firestore.prod.rules`. Emulator regression tests cover both latitude-only and longitude-only submissions against both rule files. This is a non-production rules change only; no rules were published and no production records were accessed or changed.
