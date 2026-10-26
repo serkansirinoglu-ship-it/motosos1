@@ -19,6 +19,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
 	const unsub = onAuthStateChangedListener((u: any) => {
 	  setUser(u);
+      setAuthReady(true);
 	});
 	return () => unsub();
   }, []);
