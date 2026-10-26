@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, getDocs, limit, doc, setDoc, getDoc, updateDoc, deleteDoc, where, Timestamp, writeBatch } from "firebase/firestore";
+import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, getDocs, doc, setDoc, getDoc, updateDoc, deleteDoc, where, Timestamp, writeBatch } from "firebase/firestore";
 
 // Read config from Vite environment variables
 const firebaseConfig = {
