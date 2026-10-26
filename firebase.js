@@ -265,6 +265,37 @@ export async function getActiveSOSRequests() {
   }
 }
 
+/**
+ * Subscribe to public active SOS documents for live map discovery.
+ * Only fields stored on the public parent document are emitted; private
+ * owner details remain in the privateDetails subcollection.
+ */
+export function subscribeActiveSOSRequests(onUpdate, onError) {
+  if (!db) {
+    console.info("subscribeActiveSOSRequests: Firestore not configured");
+    return () => {};
+  }
+  try {
+    const q = query(
+      collection(db, "sosRequests"),
+      where("status", "==", "active"),
+      orderBy("createdAt", "desc")
+    );
+    return onSnapshot(
+      q,
+      (snap) => onUpdate(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+      (error) => {
+        console.error("subscribeActiveSOSRequests error", error);
+        if (typeof onError === "function") onError(error);
+      }
+    );
+  } catch (error) {
+    console.error("subscribeActiveSOSRequests setup error", error);
+    if (typeof onError === "function") onError(error);
+    return () => {};
+  }
+}
+
 // Realtime helpers (Firestore)
 export function subscribeHelpRequestsRealtime(onUpdate) {
   if (!db) {
