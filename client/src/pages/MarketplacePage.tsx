@@ -104,7 +104,7 @@ export default function MarketplacePage() {
   };
 
   return (
-    <div className="min-h-screen bg-asphalt pb-8">
+    <div className="min-h-screen bg-asphalt-light pb-8">
       <Header />
 
       {/* Title & Action */}
