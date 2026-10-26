@@ -210,3 +210,8 @@ New profile creation now applies the same field type and size boundaries used fo
 ## Presence privacy — authenticated reads only — 2026-10-26
 
 Presence records expose a rider UID and heartbeat timestamp. Reads now require authentication as well as the existing exact-field, document-UID, and timestamp checks. The client presence helper is designed for signed-in users, so anonymous read access was unnecessary. Emulator regressions verify that anonymous reads fail, signed-in reads of valid records succeed, and malformed legacy records remain unreadable. Both rules files are synchronized; this change has not been published to production.
+
+
+## Private-by-default location setting on profile creation — 2026-10-26
+
+New profile creation may omit `privacyLocation`, but if it is supplied the value must be `false`. This matches the current profile-creation helper, which initializes location sharing as disabled, and avoids allowing a client to opt into location sharing implicitly during account setup. Users can explicitly change the Boolean setting later through the profile update path. Emulator coverage rejects both malformed values and an initial `true` value. Both rule files remain synchronized; no production rules were published.
