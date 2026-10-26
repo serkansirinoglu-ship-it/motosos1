@@ -205,3 +205,8 @@ Profile-owner updates now validate the types and maximum lengths of changed disp
 ## Profile creation input validation — 2026-10-26
 
 New profile creation now applies the same field type and size boundaries used for profile edits: display name (80 characters), city and motorcycle (100 each), photo URL (2048), bio (500), boolean location privacy, and contacts list capped at 10 entries. Optional fields remain optional for compatibility, but when supplied must satisfy the checks. Emulator tests cover invalid field types, oversized bio, invalid privacy flag, excessive contacts, and a valid new profile. Both rules files are kept byte-for-byte synchronized; no production rules were published and no production data was accessed.
+
+
+## Presence privacy — authenticated reads only — 2026-10-26
+
+Presence records expose a rider UID and heartbeat timestamp. Reads now require authentication as well as the existing exact-field, document-UID, and timestamp checks. The client presence helper is designed for signed-in users, so anonymous read access was unnecessary. Emulator regressions verify that anonymous reads fail, signed-in reads of valid records succeed, and malformed legacy records remain unreadable. Both rules files are synchronized; this change has not been published to production.
