@@ -65,6 +65,9 @@ export default function ProfilePage() {
           const created = await createUserProfile(uid, user?.email || "");
           if (cancelled) return;
           setProfile(created);
+          if (!created) {
+            toast.error("Profil bulunamadı veya kaydedilemedi. Bağlantınızı kontrol edip tekrar deneyin.");
+          }
         }
       } catch (error) {
         if (!cancelled) {
