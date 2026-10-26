@@ -32,8 +32,8 @@ type MessageContextType = {
   createHelpRequest: (r: Omit<HelpRequest, "id" | "createdAt" | "active">) => HelpRequest;
   sendMessage: (requestId: string, text: string, from?: string | null, fromName?: string) => Message;
   subscribeToMessages: (requestId: string, onUpdate: (arr: Message[]) => void) => (() => void);
-  acceptHelp: (requestId: string, helperUid: string) => void;
-  resolveHelp: (requestId: string, helperUid: string, helperEmail?: string | null) => void;
+  acceptHelp: (requestId: string, helperUid: string) => Promise<boolean>;
+  resolveHelp: (requestId: string, helperUid: string, helperEmail?: string | null) => Promise<boolean>;
   getTopHelpers: (limit?: number) => {email:string,count:number}[];
   getHelpCount: (email?: string) => number;
 };
@@ -161,44 +161,53 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  // accept helping a request
-  function acceptHelp(requestId: string, helperUid: string) {
-	// update local
-	setHelpRequests((s) => s.map(hr => hr.id === requestId ? { ...hr, helpers: Array.from(new Set([...(hr.helpers||[]), helperUid])) } : hr));
+  // Only report success after Firestore confirms the update.
+  async function acceptHelp(requestId: string, helperUid: string): Promise<boolean> {
+    const request = helpRequests.find((item) => item.id === requestId);
+    if (!request || !request.active || !helperUid) return false;
+    const helpers = Array.from(new Set([...(request.helpers || []), helperUid]));
     try {
-      const helpers = Array.from(
-        new Set([...(helpRequests.find((item) => item.id === requestId)?.helpers || []), helperUid])
+      const pending = updateHelpRequestRealtime(requestId, { helpers });
+      if (!pending) return false;
+      await pending;
+      setHelpRequests((current) =>
+        current.map((item) => item.id === requestId ? { ...item, helpers } : item)
       );
-      void Promise.resolve(updateHelpRequestRealtime(requestId, { helpers })).catch((error) => {
-        console.warn("Realtime helper acceptance failed; local state retained", error);
-      });
+      return true;
     } catch (error) {
-      console.warn("Realtime helper acceptance unavailable; local state retained", error);
+      console.warn("Realtime helper acceptance failed; server did not confirm the update", error);
+      return false;
     }
   }
 
-  // resolve help: credit helper and mark resolved
-  function resolveHelp(requestId: string, helperUid: string, helperEmail?: string | null) {
-	setHelpRequests((s) => s.map(hr => hr.id === requestId ? { ...hr, resolvedBy: helperUid, resolvedAt: Date.now(), active: false } : hr));
-    const statsKey = helperEmail || helperUid;
-	incrementHelpCount(statsKey);
+  // Credit the helper and update local state only after Firestore confirms resolution.
+  async function resolveHelp(requestId: string, helperUid: string, helperEmail?: string | null): Promise<boolean> {
+    const request = helpRequests.find((item) => item.id === requestId);
+    if (!request || !request.active || !helperUid) return false;
+    const resolvedAt = Date.now();
     try {
-      void Promise.resolve(
-        updateHelpRequestRealtime(requestId, {
-          resolvedBy: helperUid,
-          resolvedAt: Date.now(),
-          active: false,
-        })
-      ).catch((error) => {
-        console.warn("Realtime help resolution failed; local state retained", error);
+      const pending = updateHelpRequestRealtime(requestId, {
+        resolvedBy: helperUid,
+        resolvedAt,
+        active: false,
       });
+      if (!pending) return false;
+      await pending;
+      setHelpRequests((current) =>
+        current.map((item) => item.id === requestId
+          ? { ...item, resolvedBy: helperUid, resolvedAt, active: false }
+          : item)
+      );
+      const statsKey = helperEmail || helperUid;
+      incrementHelpCount(statsKey);
+      const newCount = (helpCounts[statsKey] || 0) + 1;
+      if (newCount >= 1) addBadgeToProfile(statsKey, "Koruyucu Kardeş");
+      if (newCount >= 5) addBadgeToProfile(statsKey, "Yol Meleği");
+      return true;
     } catch (error) {
-      console.warn("Realtime help resolution unavailable; local state retained", error);
+      console.warn("Realtime help resolution failed; server did not confirm the update", error);
+      return false;
     }
-	  // after increment, check thresholds and award badges
-	const newCount = (helpCounts[statsKey] || 0) + 1;
-	if (newCount >= 1) addBadgeToProfile(statsKey, 'Koruyucu Kardeş');
-	if (newCount >= 5) addBadgeToProfile(statsKey, 'Yol Meleği');
   }
 
   // add badge to user's profile based on thresholds
