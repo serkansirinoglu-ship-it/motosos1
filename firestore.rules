@@ -305,6 +305,7 @@ service cloud.firestore {
       allow read: if true;
       allow create: if isSignedIn()
         && request.resource.data.organizerId == request.auth.uid
+        && request.resource.data.createdAt == request.time
         && request.resource.data.keys().hasOnly([
           'organizerId', 'title', 'description', 'city', 'location',
           'startsAt', 'endsAt', 'image', 'createdAt'
@@ -342,6 +343,7 @@ service cloud.firestore {
           'sellerId', 'sellerName', 'sellerEmail', 'sellerPhone', 'createdAt', 'featured'
         ])
         && request.resource.data.sellerId == request.auth.uid
+        && request.resource.data.createdAt == request.time
         && request.resource.data.title is string
         && request.resource.data.title.size() > 0
         && request.resource.data.title.size() <= 160
