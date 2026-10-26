@@ -315,3 +315,17 @@ The current source hashes checked on the branch are:
 Source review confirms that `client/src/services/sosService.ts` and `client/src/services/marketplaceService.ts` maintain in-memory arrays, not durable Firestore-backed records. The marketplace page currently reports a listing as published after adding it to that in-memory service; this is not evidence of server persistence. The SOS page has Firestore helper calls, but also creates local SOS state, so end-to-end persistence and live multi-user behavior must be validated separately. Help requests/messages have Firestore realtime helper calls and localStorage-backed state; their full behavior still requires authenticated end-to-end checks against a non-production environment.
 
 Therefore, passing rules Emulator tests validates the checked-in authorization rules and tested scenarios only. It does not establish that SOS, chat, map, marketplace, or community workflows are fully integrated, persistent, or production-ready. No production deployment, rules publication, or production-data access or mutation was performed. PR #3 remains open and unmerged.
+
+
+## Map/SOS discovery integration gap — verified 2026-10-26
+
+Source review of `client/src/pages/MapPage.tsx` shows the map initializes its SOS list from `sosService.getActiveRequests()` only. That service is an in-memory array in `client/src/services/sosService.ts`. Although `firebase.js` exposes `getActiveSOSRequests()`, the map page does not call it or subscribe to Firestore SOS updates. Consequently, the map's local SOS cards are not evidence of cross-user, persisted SOS discovery; calls created in another session may not appear in this map. This is a confirmed client integration gap, not a Firestore rules bypass.
+
+Related UX behavior reviewed in `client/src/pages/SOSPage.tsx` is appropriately cautious in its toast text: it distinguishes a local-only SOS from a confirmed Firestore save and does not claim that automatic nearby-rider notifications were sent. End-to-end multi-account tests for remote SOS discovery, claim lifecycle, and exact-location access remain outstanding.
+
+Additional client-side review confirms:
+- `client/src/pages/MarketplacePage.tsx` calls the in-memory `marketplaceService.createListing()` and then reports the listing published; it does not call a Firestore listing creation helper.
+- `client/src/contexts/MessageContext.tsx` intentionally retains local optimistic fallback after Firestore write failures. This can make local-only help requests/messages appear in the current browser without server persistence; production UI should distinguish unsynced local data from confirmed remote writes.
+- `client/src/pages/ChatPage.tsx` shows accept/resolve success toasts immediately after invoking local-first context methods, before the asynchronous Firestore update is confirmed. That is a reliability/UX mismatch; the UI message is not proof that a server-side state transition succeeded.
+
+These findings are documented for follow-up; no broad client workflow rewrite was made in this security-gate pass because it would require dedicated non-production integration tests and explicit error/loading-state coverage. No production deployment, rules publication, or production-data access/mutation occurred.
