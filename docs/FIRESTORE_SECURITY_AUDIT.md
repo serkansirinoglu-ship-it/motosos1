@@ -485,3 +485,8 @@ Added service-layer validation for community posts and comments so callers canno
 ## Marketplace price parity — 2026-10-26
 
 The Firestore listing create/update rules now require a strictly positive price, matching the client-side marketplace validation. The previous rule accepted zero-price listings even though the form rejects them. Emulator regression coverage now rejects both zero and negative prices on create/update. The two rules files remain byte-identical. This is a source/test change only: no production rules were published and no production records were accessed or changed. The final branch head must pass Safe CI before this finding is considered verified.
+
+
+## Marketplace service-boundary validation — 2026-10-26
+
+Marketplace input validation now runs inside marketplaceService.createListing, not only in the page form. The service rejects invalid/non-positive/non-finite prices, unsupported categories, empty or overlong title/description/city/seller fields, overlong phone/image fields, and image URLs outside HTTP/HTTPS. The page handles rejection without clearing the user's draft or showing a success toast. Unit tests cover invalid data and accepted HTTP(S) image URLs. This is client-side/session-local validation and does not replace server-side Firestore rules. No homepage changes or production operations were made; Safe CI on the final head remains required.
