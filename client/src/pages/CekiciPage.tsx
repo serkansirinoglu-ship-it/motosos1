@@ -119,8 +119,8 @@ export default function CekiciPage() {
           ) : (
             <Card className="bg-card-gradient border-border p-8 flex flex-col items-center justify-center text-center rounded-xl">
               <AlertCircle className="w-10 h-10 text-muted-foreground/40 mb-2" />
-              <p className="text-sm font-bold text-foreground">Bu şehirde henüz kayıtlı çekici bulunmuyor.</p>
-              <p className="text-xs text-muted-foreground mt-1">7/24 MotoGuard genel destek hattını kullanabilirsiniz.</p>
+              <p className="text-sm font-bold text-foreground">Henüz doğrulanmış çekici kaydı bağlı değil.</p>
+              <p className="text-xs text-muted-foreground mt-1">Acil durumda yerel acil yardım hizmetlerine başvurun; burada doğrulanmış bir çekici listesi henüz yok.</p>
             </Card>
           )}
         </div>
