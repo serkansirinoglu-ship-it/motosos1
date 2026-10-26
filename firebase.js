@@ -2,6 +2,7 @@ import { initializeApp } from "firebase/app";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut, onAuthStateChanged } from "firebase/auth";
 import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, getDocs, doc, setDoc, getDoc, updateDoc, deleteDoc, where, Timestamp, writeBatch } from "firebase/firestore";
 import { validateSOSRequestInput, validateSOSStatusUpdatePatch, validateUserProfilePatch } from "./client/src/services/sosInputValidation";
+import { validateHelpMessageInput, validateHelpRequestInput } from "./client/src/services/helpMessageValidation";
 
 // Read config from Vite environment variables
 const firebaseConfig = {
@@ -350,17 +351,35 @@ export async function createHelpRequestRealtime(data) {
     return null;
   }
 
-  // Keep the request ID used by the client and nested message path aligned with
-  // the Firestore document ID. Fall back to an auto-ID for older callers.
-  const { id, user: _legacyEmailField, ...payload } = data || {};
-  const documentData = { ...payload, createdAt: serverTimestamp(), active: true, publicVisible: true };
+  // Reject unauthenticated or mismatched owners before any network write.
+  const authenticatedUid = auth?.currentUser?.uid;
+  if (validateHelpRequestInput(data, authenticatedUid)) return null;
+
+  const id = data.id;
+  const documentData = {
+    title: data.title.trim(),
+    description: data.description,
+    ownerId: authenticatedUid,
+    createdAt: serverTimestamp(),
+    active: true,
+    helpers: [],
+    resolvedBy: null,
+    resolvedAt: null,
+    publicVisible: true,
+  };
+  if (data.lat !== undefined && data.lat !== null) {
+    documentData.lat = data.lat;
+    documentData.lng = data.lng;
+  }
+
+  // Preserve the caller's ID so the nested messages path stays aligned.
   if (id) {
-    const requestRef = doc(db, "helpRequests", id);
-    await setDoc(requestRef, documentData);
+    await setDoc(doc(db, "helpRequests", id), documentData);
     return { id };
   }
 
-  return addDoc(collection(db, "helpRequests"), documentData);
+  const created = await addDoc(collection(db, "helpRequests"), documentData);
+  return { id: created.id };
 }
 
 export function subscribeMessagesRealtime(requestId, onUpdate) {
@@ -386,8 +405,22 @@ export async function sendMessageRealtime(requestId, msg) {
     console.info("sendMessageRealtime: Firestore not configured, skipping realtime write");
     return null;
   }
-  const { id, ...payload } = msg || {};
-  return addDoc(collection(db, "helpRequests", requestId, "messages"), { ...payload, ts: serverTimestamp() });
+
+  // Never trust a caller-supplied sender UID or arbitrary message fields.
+  const authenticatedUid = auth?.currentUser?.uid;
+  if (!authenticatedUid || !msg || validateHelpMessageInput({
+    requestId,
+    text: msg.text,
+    from: authenticatedUid,
+    fromName: msg.fromName,
+  })) return null;
+
+  return addDoc(collection(db, "helpRequests", requestId, "messages"), {
+    from: authenticatedUid,
+    fromName: typeof msg.fromName === "string" ? msg.fromName.trim() : "",
+    text: msg.text.trim(),
+    ts: serverTimestamp(),
+  });
 }
 
 export function updateHelpRequestRealtime(id, patch) {

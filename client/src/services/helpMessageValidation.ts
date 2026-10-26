@@ -25,3 +25,53 @@ export function validateHelpMessageInput(input: HelpMessageInput): HelpMessageIn
   }
   return null;
 }
+
+
+export type HelpRequestInputError =
+  | "invalid_request_id"
+  | "invalid_owner"
+  | "invalid_title"
+  | "invalid_description"
+  | "invalid_coordinates";
+
+export interface HelpRequestInput {
+  id?: unknown;
+  ownerId?: unknown;
+  title?: unknown;
+  description?: unknown;
+  lat?: unknown;
+  lng?: unknown;
+}
+
+/** Validate help-request writes against the authenticated owner and Firestore's public schema. */
+export function validateHelpRequestInput(
+  input: HelpRequestInput | null | undefined,
+  authenticatedUid: unknown,
+): HelpRequestInputError | null {
+  if (typeof authenticatedUid !== "string" || !authenticatedUid.trim() || authenticatedUid.length > 128) {
+    return "invalid_owner";
+  }
+  if (!input || typeof input !== "object" || input.ownerId !== authenticatedUid) {
+    return "invalid_owner";
+  }
+  if (input.id !== undefined && (
+    typeof input.id !== "string" || !input.id.trim() || input.id.length > 128 || input.id.includes("/")
+  )) {
+    return "invalid_request_id";
+  }
+  if (typeof input.title !== "string" || !input.title.trim() || input.title.trim().length > 120) {
+    return "invalid_title";
+  }
+  if (typeof input.description !== "string" || input.description.length > 2000) {
+    return "invalid_description";
+  }
+  const hasLat = input.lat !== undefined && input.lat !== null;
+  const hasLng = input.lng !== undefined && input.lng !== null;
+  if (hasLat !== hasLng || (hasLat && (
+    typeof input.lat !== "number" || !Number.isFinite(input.lat) || input.lat < -90 || input.lat > 90 ||
+    typeof input.lng !== "number" || !Number.isFinite(input.lng) || input.lng < -180 || input.lng > 180
+  ))) {
+    return "invalid_coordinates";
+  }
+  return null;
+}
