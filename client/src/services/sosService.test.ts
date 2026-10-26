@@ -54,6 +54,27 @@ describe("SOSService in-memory request lifecycle", () => {
     expect(updated?.helpersCount).toBe(1);
   });
 
+  it("rejects invalid status regressions and helper-less acceptance", () => {
+    const created = sosService.createRequest(request);
+
+    expect(sosService.updateStatus(created.id, "yanit_geliyor")).toBe(false);
+    expect(sosService.updateStatus(created.id, "yardim_bulundu")).toBe(false);
+    expect(sosService.updateStatus(created.id, "bekleniyor")).toBe(false);
+
+    expect(sosService.updateStatus(created.id, "yanit_geliyor", "helper-one")).toBe(true);
+    expect(sosService.updateStatus(created.id, "bekleniyor")).toBe(false);
+    expect(sosService.updateStatus(created.id, "yanit_geliyor")).toBe(false);
+
+    expect(sosService.updateStatus(created.id, "yardim_bulundu")).toBe(true);
+    expect(sosService.updateStatus(created.id, "yanit_geliyor")).toBe(false);
+    expect(sosService.updateStatus(created.id, "bekleniyor")).toBe(false);
+
+    const updated = sosService.getAllRequests().find((item) => item.id === created.id);
+    expect(updated?.status).toBe("yardim_bulundu");
+    expect(updated?.acceptedBy).toBe("helper-one");
+    expect(updated?.helpersCount).toBe(1);
+  });
+
   it("records completion time and removes completed requests from active requests", () => {
     const created = sosService.createRequest(request);
     expect(sosService.updateStatus(created.id, "tamamlandi")).toBe(true);
