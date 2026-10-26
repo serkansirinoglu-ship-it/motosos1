@@ -370,3 +370,8 @@ Extended the non-production Firestore emulator suite to assert that an SOS reque
 ## SOS duplicate-request query portability — 2026-10-26
 
 Updated the active-SOS duplicate guard in `createSOSRequest` to query by the authenticated requester ID and filter active status in memory. The previous two-field query (`requesterId` + `status`) could depend on a composite index that is not declared in this repository. This preserves the duplicate-active-request behavior while avoiding that undeclared index dependency. It does not change Firestore rules, access scope, document schema, or production configuration. Validation for this commit is pending Safe CI; no production data or deployment was used.
+
+
+## SOS cancel/resolve failure-state correction — 2026-10-26
+
+Updated `client/src/pages/SOSPage.tsx` so remote SOS cancellation and resolution must be confirmed by Firestore before the local request is marked terminal and the active SOS screen is dismissed. If the remote update fails, the screen keeps the call active and offers a retry path through the existing controls, avoiding a false local completion that could hide an active server-side SOS. Local-only calls still complete locally with explicit disclosure that server persistence is unconfirmed. This is a client reliability correction; no Firestore rules or production systems were changed. Safe CI validation is pending.
