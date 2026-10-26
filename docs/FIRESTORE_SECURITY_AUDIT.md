@@ -161,3 +161,8 @@ Firestore document reads cannot redact selected fields. The public presence read
 ## Presence read schema validation — 2026-10-26
 
 The public `presence/{uid}` read rule now requires exactly the `uid` and `lastSeen` fields, requires the stored UID to match the document ID, and requires `lastSeen` to be a Firestore timestamp. Emulator fixtures verify that anonymous reads still work for valid minimal records and are denied for legacy records with extra identity fields, mismatched UIDs, or malformed heartbeat timestamps. Both rules files remain byte-identical; no production rules were published.
+
+
+## Marketplace seller-email privacy gate — 2026-10-26
+
+Public marketplace listing documents must not contain `sellerEmail`: new listing writes reject that field, and anonymous/public reads of legacy documents containing it are denied. The listing owner and admins retain access to legacy records so they can be reviewed without exposing the email to everyone. Emulator regression tests cover both legacy reads and new writes for both identical rules files. This is a rules-level safeguard only; no production records were inspected or migrated. Because Firestore rules are not field filters, any future Firestore listing query must account for legacy email-bearing documents (for example, after a separately approved migration) rather than assuming the rules can redact `sellerEmail`.
