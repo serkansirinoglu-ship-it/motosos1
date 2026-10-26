@@ -170,7 +170,7 @@ service cloud.firestore {
       allow create: if isSignedIn()
         && request.resource.data.keys().hasOnly([
           'title', 'description', 'ownerId', 'lat', 'lng', 'createdAt',
-          'active', 'helpers', 'resolvedBy', 'resolvedAt'
+          'active', 'helpers', 'resolvedBy', 'resolvedAt', 'publicVisible'
         ])
         && request.resource.data.ownerId == request.auth.uid
         && request.resource.data.title is string
@@ -179,6 +179,7 @@ service cloud.firestore {
         && request.resource.data.description is string
         && request.resource.data.description.size() <= 2000
         && request.resource.data.active == true
+        && request.resource.data.publicVisible == true
         && request.resource.data.helpers is list
         && request.resource.data.helpers.size() == 0
         && request.resource.data.resolvedBy == null
