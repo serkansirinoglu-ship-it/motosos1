@@ -18,7 +18,11 @@ export function planLegacyHelpMigration(records, emailToUid) {
   const mapping = new Map();
   for (const [email, uid] of Object.entries(emailToUid)) {
     const key = normalizeEmail(email);
-    if (!EMAIL_RE.test(key) || typeof uid !== "string" || !SAFE_UID_RE.test(uid.trim())) continue;
+    if (!EMAIL_RE.test(key)) continue;
+    if (typeof uid !== "string" || !SAFE_UID_RE.test(uid.trim())) {
+      mapping.set(key, null);
+      continue;
+    }
     const normalizedUid = uid.trim();
     if (mapping.has(key) && mapping.get(key) !== normalizedUid) mapping.set(key, null);
     else if (!mapping.has(key)) mapping.set(key, normalizedUid);
