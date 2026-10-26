@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { MapPin, Wrench, Fuel, Bike, Truck, Navigation, AlertCircle, ShoppingBag, ShieldAlert, Phone, ExternalLink, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import Header from "@/components/Header";
@@ -17,6 +17,7 @@ export default function MapPage() {
   const [businesses, setBusinesses] = useState<BusinessProfile[]>([]);
   const [activeSOS, setActiveSOS] = useState<SOSRequestItem[]>([]);
   const [acceptingSOSId, setAcceptingSOSId] = useState<string | null>(null);
+  const acceptingSOSRef = useRef(false);
   const { user } = useAuth();
 
   const handleAcceptSOS = async (request: SOSRequestItem) => {
@@ -34,6 +35,12 @@ export default function MapPage() {
       return;
     }
 
+    if (acceptingSOSRef.current) {
+      toast.info("Başka bir SOS çağrısı için sunucu onayı bekleniyor.");
+      return;
+    }
+
+    acceptingSOSRef.current = true;
     setAcceptingSOSId(request.id);
     try {
       const confirmed = await acceptSOSRequest(request.id);
@@ -47,6 +54,7 @@ export default function MapPage() {
       console.error("SOS acceptance failed", error);
       toast.error("SOS çağrısı üstlenilemedi. Bağlantınızı kontrol edin.");
     } finally {
+      acceptingSOSRef.current = false;
       setAcceptingSOSId(null);
     }
   };
