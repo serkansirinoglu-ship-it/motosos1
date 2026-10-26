@@ -75,3 +75,39 @@ export function validateHelpRequestInput(
   }
   return null;
 }
+
+
+export type HelpRequestUpdatePatchError = "invalid_request_id" | "unauthenticated" | "invalid_patch";
+
+export function validateHelpRequestUpdatePatch(
+  requestId: unknown,
+  patch: unknown,
+  authenticatedUid: unknown,
+): HelpRequestUpdatePatchError | null {
+  if (typeof requestId !== "string" || !requestId.trim() || requestId.length > 128 || requestId.includes("/")) {
+    return "invalid_request_id";
+  }
+  if (typeof authenticatedUid !== "string" || !authenticatedUid.trim() || authenticatedUid.length > 128) {
+    return "unauthenticated";
+  }
+  if (!patch || typeof patch !== "object" || Array.isArray(patch)) return "invalid_patch";
+  const candidate = patch as Record<string, unknown>;
+  const keys = Object.keys(candidate);
+  if (keys.length === 1 && keys[0] === "helpers") {
+    const helpers = candidate.helpers;
+    if (!Array.isArray(helpers) || helpers.length > 100 ||
+      !helpers.every((uid) => typeof uid === "string" && uid.trim().length > 0 && uid.length <= 128) ||
+      new Set(helpers).size !== helpers.length ||
+      !helpers.includes(authenticatedUid)) return "invalid_patch";
+    return null;
+  }
+  if (
+    keys.length === 3 &&
+    keys.every((key) => ["resolvedBy", "resolvedAt", "active"].includes(key)) &&
+    candidate.resolvedBy === authenticatedUid &&
+    typeof candidate.resolvedAt === "number" &&
+    Number.isFinite(candidate.resolvedAt) &&
+    candidate.active === false
+  ) return null;
+  return "invalid_patch";
+}

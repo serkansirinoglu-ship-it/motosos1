@@ -2,7 +2,7 @@ import { initializeApp } from "firebase/app";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut, onAuthStateChanged } from "firebase/auth";
 import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, getDocs, doc, setDoc, getDoc, updateDoc, deleteDoc, where, Timestamp, writeBatch } from "firebase/firestore";
 import { validateSOSRequestInput, validateSOSStatusUpdatePatch, validateUserProfilePatch } from "./client/src/services/sosInputValidation";
-import { validateHelpMessageInput, validateHelpRequestInput } from "./client/src/services/helpMessageValidation";
+import { validateHelpMessageInput, validateHelpRequestInput, validateHelpRequestUpdatePatch } from "./client/src/services/helpMessageValidation";
 
 // Read config from Vite environment variables
 const firebaseConfig = {
@@ -425,11 +425,13 @@ export async function sendMessageRealtime(requestId, msg) {
 
 export function updateHelpRequestRealtime(id, patch) {
   if (!db) return null;
+  const authenticatedUid = auth?.currentUser?.uid;
+  if (validateHelpRequestUpdatePatch(id, patch, authenticatedUid)) return null;
   try {
     const dref = doc(db, "helpRequests", id);
     const safePatch = { ...patch, updatedAt: serverTimestamp() };
-    // Server timestamps are required by the Firestore authorization rules.
-    if (patch?.active === false && patch?.resolvedBy) {
+    // Firestore rules require server-generated resolution timestamps.
+    if (patch.active === false && patch.resolvedBy === authenticatedUid) {
       safePatch.resolvedAt = serverTimestamp();
     }
     return updateDoc(dref, safePatch);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validateHelpMessageInput, validateHelpRequestInput } from "./helpMessageValidation";
+import { validateHelpMessageInput, validateHelpRequestInput, validateHelpRequestUpdatePatch } from "./helpMessageValidation";
 
 const valid = { requestId: "request-1", text: "  Yardım edebilirim  ", from: "rider-uid", fromName: "Sürücü" };
 
@@ -59,5 +59,26 @@ describe("validateHelpRequestInput", () => {
     expect(validateHelpRequestInput({ ...validRequest, lat: 38.4, lng: undefined }, "rider-uid")).toBe("invalid_coordinates");
     expect(validateHelpRequestInput({ ...validRequest, lat: 91 }, "rider-uid")).toBe("invalid_coordinates");
     expect(validateHelpRequestInput({ ...validRequest, lng: Number.NaN }, "rider-uid")).toBe("invalid_coordinates");
+  });
+});
+
+
+describe("validateHelpRequestUpdatePatch", () => {
+  it("accepts helper claims only when the authenticated UID is included", () => {
+    expect(validateHelpRequestUpdatePatch("request-1", { helpers: ["existing", "rider-uid"] }, "rider-uid")).toBeNull();
+    expect(validateHelpRequestUpdatePatch("request-1", { helpers: ["existing", "another-user"] }, "rider-uid")).toBe("invalid_patch");
+  });
+
+  it("accepts a resolution only when it is attributed to the authenticated helper", () => {
+    expect(validateHelpRequestUpdatePatch("request-1", { resolvedBy: "rider-uid", resolvedAt: 123, active: false }, "rider-uid")).toBeNull();
+    expect(validateHelpRequestUpdatePatch("request-1", { resolvedBy: "another-user", resolvedAt: 123, active: false }, "rider-uid")).toBe("invalid_patch");
+  });
+
+  it("rejects extra fields, invalid IDs, and malformed helper lists", () => {
+    expect(validateHelpRequestUpdatePatch("bad/id", { helpers: ["rider-uid"] }, "rider-uid")).toBe("invalid_request_id");
+    expect(validateHelpRequestUpdatePatch("request-1", { helpers: ["rider-uid"], ownerId: "attacker" }, "rider-uid")).toBe("invalid_patch");
+    expect(validateHelpRequestUpdatePatch("request-1", { helpers: ["rider-uid", "rider-uid"] }, "rider-uid")).toBe("invalid_patch");
+    expect(validateHelpRequestUpdatePatch("request-1", { active: false }, "rider-uid")).toBe("invalid_patch");
+    expect(validateHelpRequestUpdatePatch("request-1", { helpers: ["rider-uid"] }, null)).toBe("unauthenticated");
   });
 });
