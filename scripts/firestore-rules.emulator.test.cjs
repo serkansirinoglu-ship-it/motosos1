@@ -70,6 +70,9 @@ async function main() {
         description: "legacy helper fixture", active: true, helpers: ["helper@example.test"],
         resolvedBy: null, resolvedAt: null, createdAt: new Date(),
       });
+      await setDoc(doc(db, "helpRequests", "legacy-helper-email", "messages", "legacy-seed"), {
+        id: "legacy-seed", from: "owner", fromName: "Owner", text: "legacy helper message", ts: Date.now(),
+      });
       await setDoc(doc(db, "helpRequests", "legacy-extra-private-field"), {
         id: "legacy-extra-private-field", ownerId: "owner", title: "Unexpected private field",
         description: "legacy schema fixture", active: true, helpers: [], resolvedBy: null,
@@ -237,6 +240,9 @@ async function main() {
     await assertSucceeds(getDoc(doc(helper, "helpRequests", "legacy-helper-email")));
     await assertFails(getDoc(doc(outsider, "helpRequests", "legacy-helper-email")));
     console.log("PASS: legacy helper-email access is limited to the matching helper identity");
+    await assertSucceeds(getDoc(doc(helper, "helpRequests", "legacy-helper-email", "messages", "legacy-seed")));
+    await assertFails(getDoc(doc(outsider, "helpRequests", "legacy-helper-email", "messages", "legacy-seed")));
+    console.log("PASS: legacy help chat is readable by matching email helper only, not unrelated riders");
     await assertFails(getDoc(doc(outsider, "helpRequests", "legacy-extra-private-field")));
     await assertSucceeds(getDoc(doc(owner, "helpRequests", "legacy-extra-private-field")));
     console.log("PASS: active legacy help requests with unexpected private fields are not public");
