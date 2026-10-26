@@ -431,8 +431,12 @@ function ToggleRow({
         <span className="font-semibold text-foreground">{label}</span>
       </div>
       <button
+        type="button"
+        role="switch"
+        aria-checked={enabled}
+        aria-label={`${label}: ${enabled ? "açık" : "kapalı"}`}
         onClick={onToggle}
-        className={`w-10 h-5 rounded-full transition-colors relative ${
+        className={`w-10 h-5 rounded-full transition-colors relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
           enabled ? "bg-primary" : "bg-muted"
         }`}
       >
