@@ -71,6 +71,7 @@ async function main() {
       await setDoc(doc(db, "products", "public-product"), { name: "Public catalog fixture" });
       await setDoc(doc(db, "banners", "public-banner"), { title: "Public banner fixture" });
       await setDoc(doc(db, "communityPosts", "public-post"), { authorId: "owner", authorName: "Owner", city: "İzmir", content: "Public post fixture", likes: [], comments: [], createdAt: new Date() });
+      await setDoc(doc(db, "communityPosts", "legacy-email-post"), { authorId: "owner", authorName: "Owner", authorEmail: "legacy@example.test", city: "İzmir", content: "Legacy email-bearing post", likes: [], comments: [], createdAt: new Date() });
       await setDoc(doc(db, "events", "public-event"), { organizerId: "owner", title: "Public event fixture" });
       await setDoc(doc(db, "listings", "public-listing"), { sellerId: "owner", sellerName: "Owner", title: "Public listing fixture", category: "Kask", price: 1000, city: "İzmir", description: "Valid listing fixture", createdAt: new Date(), featured: false });
       await setDoc(doc(db, "listings", "legacy-email-listing"), { sellerId: "owner", sellerName: "Owner", sellerEmail: "legacy@example.test", title: "Legacy listing with email", category: "Kask", price: 500, city: "İzmir", description: "Legacy fixture", createdAt: new Date(), featured: false });
@@ -296,6 +297,9 @@ async function main() {
     await assertSucceeds(getDoc(doc(anonymous, "products", "public-product")));
     await assertSucceeds(getDoc(doc(anonymous, "banners", "public-banner")));
     await assertSucceeds(getDoc(doc(anonymous, "communityPosts", "public-post")));
+    await assertFails(getDoc(doc(anonymous, "communityPosts", "legacy-email-post")));
+    await assertSucceeds(getDoc(doc(owner, "communityPosts", "legacy-email-post")));
+    console.log("PASS: legacy community posts with email fields are not publicly readable");
     await assertSucceeds(getDoc(doc(anonymous, "events", "public-event")));
     await assertSucceeds(getDoc(doc(anonymous, "listings", "public-listing")));
     await assertFails(getDoc(doc(anonymous, "listings", "legacy-email-listing")));
