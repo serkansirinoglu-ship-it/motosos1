@@ -33,7 +33,7 @@ export default function CekiciPage() {
             <Truck className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="font-display text-2xl font-extrabold text-white uppercase tracking-wider">
+            <h1 className="font-display text-2xl font-extrabold text-foreground uppercase tracking-wider">
               7/24 Çekici Desteği
             </h1>
             <p className="text-xs text-muted-foreground">Motosiklet taşımaya özel aparata sahip oto kurtarma ekibi</p>

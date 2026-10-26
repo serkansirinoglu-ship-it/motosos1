@@ -33,7 +33,7 @@ export default function BenzinlikPage() {
             <Fuel className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="font-display text-2xl font-extrabold text-white uppercase tracking-wider">
+            <h1 className="font-display text-2xl font-extrabold text-foreground uppercase tracking-wider">
               Benzin İstasyonları
             </h1>
             <p className="text-xs text-muted-foreground">Yakınındaki akaryakıt istasyonları ve hava-su noktaları</p>

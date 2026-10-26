@@ -33,7 +33,7 @@ export default function UstaPage() {
             <Wrench className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="font-display text-2xl font-extrabold text-white uppercase tracking-wider">
+            <h1 className="font-display text-2xl font-extrabold text-foreground uppercase tracking-wider">
               Usta & Servis Rehberi
             </h1>
             <p className="text-xs text-muted-foreground">Güvenilir motosiklet tamircileri ve yetkili servisler</p>

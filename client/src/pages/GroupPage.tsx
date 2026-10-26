@@ -33,7 +33,7 @@ export default function GroupPage() {
   return (
     <div className="min-h-screen bg-asphalt-light p-4 page-surface-light">
       <div className="flex items-center justify-between mb-4 gap-3">
-        <h1 className="font-display text-2xl text-white">{city} Grubu</h1>
+        <h1 className="font-display text-2xl text-foreground">{city} Grubu</h1>
         {member ? (
           <button onClick={handleLeave} className="px-3 py-1 rounded border border-border text-muted-foreground">Katılımı bırak</button>
         ) : (

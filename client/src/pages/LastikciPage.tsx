@@ -33,7 +33,7 @@ export default function LastikciPage() {
             <Bike className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="font-display text-2xl font-extrabold text-white uppercase tracking-wider">
+            <h1 className="font-display text-2xl font-extrabold text-foreground uppercase tracking-wider">
               Lastikçi & Balans
             </h1>
             <p className="text-xs text-muted-foreground">Motosiklet lastik tamiri, değişimi ve hava takviyesi</p>

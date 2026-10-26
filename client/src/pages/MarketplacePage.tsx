@@ -111,7 +111,7 @@ export default function MarketplacePage() {
       {/* Title & Action */}
       <div className="px-4 pt-4 max-w-lg mx-auto flex items-center justify-between">
         <div>
-          <h1 className="font-display text-2xl font-extrabold text-white uppercase tracking-wider">
+          <h1 className="font-display text-2xl font-extrabold text-foreground uppercase tracking-wider">
             İkinci El Pazar
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">Motosiklet ve ekipman alım/satım dayanışması</p>
