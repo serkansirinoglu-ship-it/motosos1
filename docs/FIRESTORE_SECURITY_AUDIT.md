@@ -495,3 +495,12 @@ Marketplace input validation now runs inside marketplaceService.createListing, n
 ## Help-chat client boundary validation — 2026-10-26
 
 The help-chat context now validates message request ID, authenticated sender identity presence, non-empty message text, and the 2,000-character server rule limit before attempting local or Firestore delivery. It trims message text/display name, rejects invalid messages without creating a local fallback, and the chat UI keeps the draft visible when rejected. The input also has a 2,000-character maximum. Unit tests cover blank/non-text bodies, the length boundary, sender identity and request ID validation. This is defense-in-depth; Firestore rules remain authoritative for access control. No production data or rules were published, and client/src/pages/Home.tsx remains untouched.
+
+
+## Account-scoped browser cache isolation — 2026-10-26
+
+- Added shared local-cache helpers and tests for per-account storage namespaces.
+- The auth context now exposes when Firebase has resolved the current session. Help requests/messages, help statistics, and locally stored profile badges use a cache key scoped to the Firebase UID (or a separate anonymous namespace); legacy unscoped keys are not loaded.
+- Help cache hydration waits for auth resolution, realtime help-request subscriptions are refreshed when the account scope changes, and the context hides prior in-memory help/message state while the new account cache hydrates.
+- Added tests for distinct UID namespaces, isolated round-trips, malformed cache data, and unavailable browser storage.
+- This reduces localStorage cross-account exposure; it does not replace Firestore authorization or establish full end-to-end account-switch correctness. Full browser/E2E validation remains a release blocker. No production data, Firestore rules, or Home.tsx were changed.
