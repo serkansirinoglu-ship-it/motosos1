@@ -48,20 +48,30 @@ export default function MarketplacePage() {
 
   useEffect(() => {
     if (!authReady) return;
-    marketplaceService.clearLocalSession();
     setListings([]);
     setSelectedListing(null);
     setCacheForScope(scopeKey);
+    let unsubscribe = () => {};
+    try {
+      unsubscribe = marketplaceService.subscribeRemoteListings(setListings, (error) => {
+        console.error("Marketplace subscription failed", error);
+        setListings([]);
+        toast.error("İlanlar sunucudan alınamadı. Bağlantıyı veya erişim izinlerini kontrol edin.");
+      });
+    } catch (error) {
+      console.error("Marketplace unavailable", error);
+      toast.error(error instanceof Error ? error.message : "Pazar yeri sunucuya bağlanamadı.");
+    }
+    return () => unsubscribe();
   }, [authReady, scopeKey]);
 
-  useEffect(() => {
-    if (!authReady || cacheForScope !== scopeKey) return;
-    setListings(marketplaceService.getListings(selectedCategory, searchQuery, selectedCity));
-  }, [authReady, cacheForScope, scopeKey, selectedCategory, searchQuery, selectedCity]);
+  const visibleListings = cacheForScope === scopeKey ? listings.filter((item) =>
+    (selectedCategory === "Tümü" || item.category === selectedCategory) &&
+    (selectedCity === "Tümü" || item.city.toLocaleLowerCase("tr-TR") === selectedCity.toLocaleLowerCase("tr-TR")) &&
+    (!searchQuery.trim() || item.title.toLocaleLowerCase("tr-TR").includes(searchQuery.toLocaleLowerCase("tr-TR")) || item.description.toLocaleLowerCase("tr-TR").includes(searchQuery.toLocaleLowerCase("tr-TR")))
+  ) : [];
 
-  const visibleListings = cacheForScope === scopeKey ? listings : [];
-
-  const handleCreateListing = () => {
+  const handleCreateListing = async () => {
     if (!authReady || cacheForScope !== scopeKey) return;
     const numericPrice = Number(price);
     if (!title.trim() || !price || !description.trim()) {
@@ -77,30 +87,21 @@ export default function MarketplacePage() {
       return;
     }
 
-    const created = marketplaceService.createListing({
-      title: title.trim(),
-      category,
-      price: numericPrice,
-      city,
-      description: description.trim(),
-      image: image.trim() || undefined,
-      sellerName: user?.displayName || "Motorcu İlan Sahibi",
-      sellerPhone: phone.trim() || undefined,
-    });
-
-    if (!created) {
-      toast.error("İlan bilgileri geçersiz. Görsel bağlantısı HTTP/HTTPS olmalı; alan uzunluklarını ve fiyatı kontrol edin.");
-      return;
+    if (!user) { (window as any).__openAuthModal?.(); toast.error("İlan vermek için giriş yapın."); return; }
+    try {
+      await marketplaceService.createRemoteListing({
+        sellerId: user.uid,
+        title: title.trim(), category, price: numericPrice, city, description: description.trim(),
+        image: image.trim() || undefined,
+        sellerName: user.displayName || user.email?.split("@")[0] || "Motorcu İlan Sahibi",
+        sellerPhone: phone.trim() || undefined,
+      });
+      toast.success("İlan sunucuya kaydedildi ve pazar yerine yayınlandı.");
+      setTitle(""); setPrice(""); setDescription(""); setImage(""); setPhone(""); setIsNewListingOpen(false);
+    } catch (error) {
+      console.error("Marketplace listing creation failed", error);
+      toast.error(error instanceof Error ? error.message : "İlan sunucuya kaydedilemedi.");
     }
-
-    toast.success("İlan bu oturumda yerel olarak oluşturuldu; kalıcı olarak yayınlanmadı.");
-    setTitle("");
-    setPrice("");
-    setDescription("");
-    setImage("");
-    setPhone("");
-    setIsNewListingOpen(false);
-    setListings(marketplaceService.getListings(selectedCategory, searchQuery, selectedCity));
   };
 
   return (
@@ -114,7 +115,7 @@ export default function MarketplacePage() {
             İkinci El Pazar
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">Motosiklet ve ekipman alım/satım dayanışması</p>
-          <p className="text-[11px] text-amber-300 mt-1">Bilgi: İlanlar şu anda yalnızca bu oturumda tutulur; diğer kullanıcılara yayınlanmaz ve sayfa yenilendiğinde kaybolabilir.</p>
+          <p className="text-[11px] text-amber-300 mt-1">İlanlar Firebase üzerinden canlı okunur ve sunucuya kaydedilir. İşlemler başarısız olursa uygulama hata bildirir; sahte kayıt oluşturmaz.</p>
         </div>
 
         <button
@@ -172,7 +173,7 @@ export default function MarketplacePage() {
 
       {/* Listings Grid */}
       <div className="px-4 pt-3 max-w-lg mx-auto">
-        {listings.length > 0 ? (
+        {visibleListings.length > 0 ? (
           <div className="grid grid-cols-2 gap-3">
             {visibleListings.map((item) => (
               <Card
@@ -382,6 +383,21 @@ export default function MarketplacePage() {
                 </a>
               )}
 
+              {user?.uid === selectedListing.sellerId && (
+                <button
+                  onClick={async () => {
+                    try {
+                      await marketplaceService.deleteRemoteListing(selectedListing.id, user.uid);
+                      setSelectedListing(null);
+                      toast.success("İlan sunucudan silindi.");
+                    } catch (error) {
+                      console.error("Marketplace listing deletion failed", error);
+                      toast.error("İlan silinemedi. Bağlantıyı veya erişim iznini kontrol edin.");
+                    }
+                  }}
+                  className="w-full border border-destructive/40 text-destructive hover:bg-destructive/10 font-semibold text-xs py-2.5 rounded-xl"
+                >İlanımı Sil</button>
+              )}
               <button
                 onClick={() => setReportTargetId(selectedListing.id)}
                 className="w-full border border-destructive/40 text-destructive hover:bg-destructive/10 font-semibold text-xs py-2.5 rounded-xl flex items-center justify-center gap-1.5"

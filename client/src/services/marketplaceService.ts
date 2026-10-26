@@ -1,3 +1,11 @@
+import { getApps } from "firebase/app";
+import { getAuth, type Auth } from "firebase/auth";
+import { collection, deleteDoc, doc, getFirestore, onSnapshot, orderBy, query, serverTimestamp, setDoc, type Firestore } from "firebase/firestore";
+
+const marketplaceApp = getApps()[0];
+const marketplaceAuth: Auth | null = marketplaceApp ? getAuth(marketplaceApp) : null;
+const marketplaceDb: Firestore | null = marketplaceApp ? getFirestore(marketplaceApp) : null;
+
 /**
  * MarketplaceService — Handles Motorcycle Marketplace listings, categories,
  * searching, and listing moderation.
@@ -16,6 +24,7 @@ export type ListingCategory =
 
 export interface ListingItem {
   id: string;
+  sellerId?: string;
   title: string;
   category: ListingCategory;
   price: number;
@@ -38,9 +47,63 @@ function isHttpUrl(value: string): boolean {
 }
 
 class MarketplaceService {
-  // Do not present hard-coded sample offers as real marketplace listings.
-  // Listings remain session-local until a verified persistent backend is integrated.
+  // Server snapshots are the source of truth; never fabricate marketplace records.
   private listings: ListingItem[] = [];
+
+  public subscribeRemoteListings(onListings: (listings: ListingItem[]) => void, onError: (error: unknown) => void): () => void {
+    if (!marketplaceDb) throw new Error("Firebase yapılandırılmamış; pazar yeri sunucuya bağlanamadı.");
+    const listingsQuery = query(collection(marketplaceDb, "listings"), orderBy("createdAt", "desc"));
+    return onSnapshot(listingsQuery, (snapshot) => {
+      const remoteListings = snapshot.docs.map((item) => {
+        const data = item.data();
+        const timestamp = data.createdAt;
+        const createdAt = timestamp && typeof timestamp.toDate === "function" ? timestamp.toDate().toISOString() : "";
+        return {
+          id: item.id,
+          sellerId: String(data.sellerId || ""),
+          title: String(data.title || ""),
+          category: data.category as ListingCategory,
+          price: typeof data.price === "number" ? data.price : 0,
+          city: String(data.city || ""),
+          description: String(data.description || ""),
+          image: typeof data.image === "string" ? data.image : undefined,
+          sellerName: String(data.sellerName || "İlan Sahibi"),
+          sellerPhone: typeof data.sellerPhone === "string" ? data.sellerPhone : undefined,
+          createdAt,
+          featured: data.featured === true,
+        } satisfies ListingItem;
+      });
+      this.listings = remoteListings;
+      onListings(remoteListings);
+    }, onError);
+  }
+
+  public async createRemoteListing(input: Omit<ListingItem, "id" | "createdAt" | "sellerId" | "featured"> & { sellerId: string }): Promise<string> {
+    if (!marketplaceDb || !marketplaceAuth?.currentUser?.uid) throw new Error("İlan vermek için Firebase oturumu gerekli.");
+    if (marketplaceAuth.currentUser.uid !== input.sellerId) throw new Error("Satıcı kimliği doğrulanamadı.");
+    const title = input.title.trim();
+    const description = input.description.trim();
+    const city = input.city.trim();
+    const sellerName = input.sellerName.trim();
+    const image = input.image?.trim();
+    const sellerPhone = input.sellerPhone?.trim();
+    const allowedCategories: ListingCategory[] = ["Motosiklet", "Kask", "Mont", "Pantolon", "Eldiven", "Lastik", "Parça", "Aksesuar", "Diğer"];
+    if (!title || title.length > 160 || !description || description.length > 5000 || !city || city.length > 100 || !sellerName || sellerName.length > 80 || !allowedCategories.includes(input.category) || !Number.isFinite(input.price) || input.price <= 0 || (image && (image.length > 2048 || !isHttpUrl(image))) || (sellerPhone && sellerPhone.length > 40)) {
+      throw new Error("İlan bilgileri geçersiz. Alanları, fiyatı ve bağlantıları kontrol edin.");
+    }
+    const listingRef = doc(collection(marketplaceDb, "listings"));
+    const payload: Record<string, unknown> = { id: listingRef.id, title, category: input.category, price: input.price, city, description, sellerId: input.sellerId, sellerName, createdAt: serverTimestamp(), featured: false };
+    if (image) payload.image = image;
+    if (sellerPhone) payload.sellerPhone = sellerPhone;
+    await setDoc(listingRef, payload);
+    return listingRef.id;
+  }
+
+  public async deleteRemoteListing(listingId: string, sellerId: string): Promise<void> {
+    if (!marketplaceDb || !marketplaceAuth?.currentUser?.uid) throw new Error("İlan silmek için giriş yapın.");
+    if (!listingId || marketplaceAuth.currentUser.uid !== sellerId) throw new Error("Yalnızca kendi ilanınızı silebilirsiniz.");
+    await deleteDoc(doc(marketplaceDb, "listings", listingId));
+  }
 
   public getListings(category?: string, query?: string, city?: string): ListingItem[] {
     let list = [...this.listings];
