@@ -207,7 +207,7 @@ export default function SOSPage() {
     const statusInfo = STATUS_LABELS[status];
 
     return (
-      <div className="min-h-screen bg-asphalt pb-8">
+      <div className="min-h-screen bg-asphalt-light pb-8">
         <Header />
         <div className="px-4 pt-4 max-w-lg mx-auto flex flex-col items-center">
           {/* Status Indicator */}
@@ -313,7 +313,7 @@ export default function SOSPage() {
   }
 
   return (
-    <div className="min-h-screen bg-asphalt pb-8">
+    <div className="min-h-screen bg-asphalt-light pb-8">
       <Header />
 
       <div className="px-4 pt-4 max-w-lg mx-auto flex flex-col items-center">
