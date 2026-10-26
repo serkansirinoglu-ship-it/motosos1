@@ -214,6 +214,7 @@ export default function ChatPage() {
             <div className="flex gap-2">
               <input
                 value={text}
+                maxLength={2000}
                 onChange={(e) => setText(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSend()}
                 placeholder="Mesajınızı yazın..."
