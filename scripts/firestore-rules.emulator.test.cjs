@@ -320,6 +320,11 @@ async function main() {
     await assertFails(updateDoc(doc(owner, "communityPosts", "public-post"), { authorId: "outsider" }));
     await assertFails(updateDoc(doc(owner, "communityPosts", "public-post"), { likes: ["outsider@example.test"] }));
     await assertFails(updateDoc(doc(owner, "communityPosts", "public-post"), { createdAt: serverTimestamp() }));
+    // A different authenticated rider must not edit or delete another author's post.
+    await assertFails(updateDoc(doc(outsider, "communityPosts", "public-post"), { content: "Unauthorized edit" }));
+    await assertFails(require("firebase/firestore").deleteDoc(doc(outsider, "communityPosts", "public-post")));
+    // Likes/comments arrays are not an authorized client-side mutation surface.
+    await assertFails(updateDoc(doc(owner, "communityPosts", "public-post"), { comments: [{ from: "owner", text: "injected" }] }));
     await assertFails(setDoc(doc(owner, "communityPosts", "invalid-post"), {
       authorId: "owner", content: "x".repeat(5001), city: "İzmir", likes: [], comments: [],
     }));
@@ -339,6 +344,8 @@ async function main() {
     await assertFails(updateDoc(doc(owner, "events", "public-event"), { organizerId: "outsider" }));
     await assertFails(updateDoc(doc(owner, "events", "public-event"), { createdAt: serverTimestamp() }));
     await assertFails(updateDoc(doc(owner, "events", "public-event"), { isAdmin: true }));
+    await assertFails(updateDoc(doc(outsider, "events", "public-event"), { title: "Unauthorized event edit" }));
+    await assertFails(require("firebase/firestore").deleteDoc(doc(outsider, "events", "public-event")));
     await assertFails(setDoc(doc(owner, "events", "extra-field-event"), {
       organizerId: "owner", title: "Event", isAdmin: true,
     }));
