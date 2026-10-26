@@ -50,7 +50,11 @@ export default function ChatPage() {
     );
   }
 
-  const msgs = localMsgs.length ? localMsgs : messages[chatId] || [];
+  const msgs = Array.from(
+    new Map(
+      [...(messages[chatId] || []), ...localMsgs].map((message) => [message.id, message]),
+    ).values(),
+  ).sort((a, b) => (a.ts || 0) - (b.ts || 0));
   const req = helpRequests.find((r) => r.id === chatId);
   const userUid = user?.uid || null;
 
