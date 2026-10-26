@@ -60,7 +60,23 @@ export default function ChatPage() {
 
   const handleSend = () => {
     if (!text.trim() || !chatId) return;
-    sendMessage(chatId, text.trim(), user?.uid || null, user?.displayName || user?.email?.split("@")[0] || "Motorcu");
+    if (!userUid) {
+      toast.error("Mesaj göndermek için önce oturum açmalısınız.");
+      (window as any).__openAuthModal?.();
+      return;
+    }
+    if (!req) {
+      toast.error("Yardım talebi yüklenemedi veya bu sohbete erişiminiz yok.");
+      return;
+    }
+    const helperIds = req.helpers || [];
+    const isOwner = req.ownerId === userUid || (!!user?.email && req.user === user.email);
+    const isHelper = helperIds.includes(userUid) || (!!user?.email && helperIds.includes(user.email));
+    if (!isOwner && !isHelper) {
+      toast.error("Mesaj göndermek için talep sahibi veya kabul edilmiş yardımcı olmalısınız.");
+      return;
+    }
+    sendMessage(chatId, text.trim(), userUid, user?.displayName || user?.email?.split("@")[0] || "Motorcu");
     setText("");
   };
 
@@ -68,6 +84,15 @@ export default function ChatPage() {
     if (!chatId || actionPendingRef.current) return;
     if (!userUid) {
       (window as any).__openAuthModal?.();
+      return;
+    }
+    if (req && (req.ownerId === userUid || (!!user?.email && req.user === user.email))) {
+      toast.error("Kendi yardım talebinizi kabul edemezsiniz.");
+      return;
+    }
+    const helperIds = req?.helpers || [];
+    if (helperIds.includes(userUid) || (!!user?.email && helperIds.includes(user.email))) {
+      toast.error("Bu yardım talebini zaten kabul etmişsiniz.");
       return;
     }
     actionPendingRef.current = true;
@@ -92,6 +117,11 @@ export default function ChatPage() {
     if (!chatId || actionPendingRef.current) return;
     if (!userUid) {
       (window as any).__openAuthModal?.();
+      return;
+    }
+    const helperIds = req?.helpers || [];
+    if (!helperIds.includes(userUid) && !(user?.email && helperIds.includes(user.email))) {
+      toast.error("Yardımı tamamlandı olarak işaretlemek için önce talebi kabul etmiş olmalısınız.");
       return;
     }
     actionPendingRef.current = true;
