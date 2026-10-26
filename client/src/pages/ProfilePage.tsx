@@ -68,10 +68,9 @@ export default function ProfilePage() {
       motorcycle: motorcycle.trim(),
       photoURL: photoURL.trim(),
       bio: bio.trim(),
-      contacts: contacts.filter((c) => c.name || c.phone),
+      contacts: contacts.filter((c) => c.name.trim() || c.phone.trim()),
       privacyLocation: locationEnabled,
       notificationsEnabled: notifEnabled,
-      contacts: contacts.filter((c) => c.name.trim() || c.phone.trim()),
     });
 
     if (ok) {
