@@ -1,5 +1,10 @@
-import { collection, deleteDoc, doc, onSnapshot, orderBy, query, serverTimestamp, setDoc } from "firebase/firestore";
-import { auth, db } from "../../../firebase";
+import { getApps } from "firebase/app";
+import { getAuth, type Auth } from "firebase/auth";
+import { collection, deleteDoc, doc, getFirestore, onSnapshot, orderBy, query, serverTimestamp, setDoc, type Firestore } from "firebase/firestore";
+
+const firebaseApp = getApps()[0];
+const communityAuth: Auth | null = firebaseApp ? getAuth(firebaseApp) : null;
+const communityDb: Firestore | null = firebaseApp ? getFirestore(firebaseApp) : null;
 
 /**
  * CommunityService — Manages social posts, comments, likes, city feeds, and post moderation.
@@ -38,8 +43,8 @@ class CommunityService {
 
   /** Subscribe to server-backed community posts. No local fallback is presented as remote data. */
   public subscribeRemotePosts(onPosts: (posts: CommunityPost[]) => void, onError: (error: unknown) => void): () => void {
-    if (!db) throw new Error("Firebase yapılandırılmamış; topluluk akışı sunucuya bağlanamadı.");
-    const postsQuery = query(collection(db, "communityPosts"), orderBy("createdAt", "desc"));
+    if (!communityDb) throw new Error("Firebase yapılandırılmamış; topluluk akışı sunucuya bağlanamadı.");
+    const postsQuery = query(collection(communityDb, "communityPosts"), orderBy("createdAt", "desc"));
     return onSnapshot(postsQuery, (snapshot) => {
       const remotePosts = snapshot.docs.map((item) => {
         const data = item.data();
@@ -65,8 +70,8 @@ class CommunityService {
 
   /** Create a post only when Firebase Auth and Firestore are both available. */
   public async createRemotePost(input: { authorName: string; authorId: string; city: string; content: string; image?: string; tag?: string }): Promise<string> {
-    if (!db || !auth?.currentUser?.uid) throw new Error("Gönderi için Firebase oturumu gerekli.");
-    if (auth.currentUser.uid !== input.authorId) throw new Error("Oturum kimliği doğrulanamadı.");
+    if (!communityDb || !communityAuth?.currentUser?.uid) throw new Error("Gönderi için Firebase oturumu gerekli.");
+    if (communityAuth.currentUser.uid !== input.authorId) throw new Error("Oturum kimliği doğrulanamadı.");
     const content = input.content.trim();
     const authorName = input.authorName.trim();
     const city = input.city.trim();
@@ -74,7 +79,7 @@ class CommunityService {
     if (!content || content.length > 5000 || !authorName || authorName.length > 80 || !city || city.length > 100 || (input.tag && input.tag.length > 80) || (image && !isAllowedCommunityImageUrl(image))) {
       throw new Error("Gönderi doğrulanamadı. Metin, şehir veya görsel adresini kontrol edin.");
     }
-    const postRef = doc(collection(db, "communityPosts"));
+    const postRef = doc(collection(communityDb, "communityPosts"));
     const payload: Record<string, unknown> = { id: postRef.id, authorId: input.authorId, authorName, city, content, likes: [], comments: [], createdAt: serverTimestamp() };
     if (image) payload.image = image;
     if (input.tag) payload.tag = input.tag;
@@ -86,7 +91,7 @@ class CommunityService {
   public async deleteRemotePost(postId: string, authorId: string): Promise<void> {
     if (!db || !auth?.currentUser?.uid) throw new Error("Gönderi silmek için giriş yapın.");
     if (!postId || auth.currentUser.uid !== authorId) throw new Error("Yalnızca kendi gönderinizi silebilirsiniz.");
-    await deleteDoc(doc(db, "communityPosts", postId));
+    await deleteDoc(doc(communityDb, "communityPosts", postId));
   }
 
   public getPosts(city?: string, tag?: string): CommunityPost[] {
@@ -108,7 +113,7 @@ class CommunityService {
       content.length > 5000 ||
       !post.authorName.trim() ||
       post.authorName.length > 80 ||
-      !post.authorEmail.trim() ||
+      !post.authorEmail?.trim() ||
       !post.city.trim() ||
       post.city.length > 100 ||
       (post.tag !== undefined && post.tag.length > 80) ||
