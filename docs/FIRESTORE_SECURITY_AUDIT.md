@@ -200,3 +200,8 @@ The non-production Firestore Emulator suite now explicitly verifies that an auth
 ## Profile update input validation — 2026-10-26
 
 Profile-owner updates now validate the types and maximum lengths of changed display name, city, motorcycle, photo URL, and bio fields; the location privacy toggle must be boolean, and contacts must remain a list capped at 10 entries. This prevents malformed or oversized values from being stored through the client rules path while preserving the existing editable fields. Emulator regressions cover wrong display-name type, oversized bio, non-boolean privacy toggle, and excessive contacts. Both checked-in rules files are synchronized. No production rules were published and no production data was accessed.
+
+
+## Profile creation input validation — 2026-10-26
+
+New profile creation now applies the same field type and size boundaries used for profile edits: display name (80 characters), city and motorcycle (100 each), photo URL (2048), bio (500), boolean location privacy, and contacts list capped at 10 entries. Optional fields remain optional for compatibility, but when supplied must satisfy the checks. Emulator tests cover invalid field types, oversized bio, invalid privacy flag, excessive contacts, and a valid new profile. Both rules files are kept byte-for-byte synchronized; no production rules were published and no production data was accessed.
