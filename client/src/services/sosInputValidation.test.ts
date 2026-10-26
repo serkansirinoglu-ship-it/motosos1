@@ -103,6 +103,28 @@ describe("validateUserProfilePatch", () => {
     expect(validateUserProfilePatch({ privacyLocation: false })).toBeNull();
   });
 
+  it("accepts empty photo URLs and absolute HTTP(S) profile photo URLs", () => {
+    expect(validateUserProfilePatch({ photoURL: "" })).toBeNull();
+    expect(validateUserProfilePatch({ photoURL: "https://example.test/photo.jpg" })).toBeNull();
+    expect(validateUserProfilePatch({ photoURL: "http://example.test/photo.jpg" })).toBeNull();
+  });
+
+  it.each([
+    "javascript:alert(1)",
+    "data:image/svg+xml,<svg/>",
+    "file:///etc/passwd",
+    "//example.test/photo.jpg",
+    "not a URL",
+    "https://",
+  ])("rejects a non-HTTP(S) or malformed profile photo URL: %s", (photoURL) => {
+    expect(validateUserProfilePatch({ photoURL })).toBe("invalid_photo_url");
+  });
+
+  it("accepts a bio at the UI limit and rejects a bio over 280 characters", () => {
+    expect(validateUserProfilePatch({ bio: "x".repeat(280) })).toBeNull();
+    expect(validateUserProfilePatch({ bio: "x".repeat(281) })).toBe("invalid_bio");
+  });
+
   it.each([
     null,
     undefined,
