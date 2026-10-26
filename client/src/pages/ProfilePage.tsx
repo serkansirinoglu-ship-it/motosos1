@@ -34,30 +34,54 @@ export default function ProfilePage() {
   const [locationEnabled, setLocationEnabled] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+    const uid = user?.uid;
+
     async function load() {
-      if (!user?.uid) {
+      if (!uid) {
+        setProfile(null);
         setLoading(false);
         return;
       }
+
       setLoading(true);
-      const p = await getUserProfile(user.uid);
-      if (p) {
-        setProfile(p);
-        setDisplayName(p.displayName || user.displayName || "");
-        setCity(p.city || "İstanbul");
-        setMotorcycle(p.motorcycle || "");
-        setPhotoURL(p.photoURL || "");
-        setBio(p.bio || "");
-        if (p.contacts && p.contacts.length) setContacts(p.contacts);
-        setLocationEnabled(p.privacyLocation === true);
-      } else {
-        const created = await createUserProfile(user.uid, user.email || "");
-        setProfile(created);
+      try {
+        const p = await getUserProfile(uid);
+        if (cancelled) return;
+
+        if (p) {
+          setProfile(p);
+          setDisplayName(p.displayName || user?.displayName || "");
+          setCity(p.city || "İstanbul");
+          setMotorcycle(p.motorcycle || "");
+          setPhotoURL(p.photoURL || "");
+          setBio(p.bio || "");
+          setContacts(p.contacts && p.contacts.length ? p.contacts : [
+            { name: "", phone: "" },
+            { name: "", phone: "" },
+          ]);
+          setLocationEnabled(p.privacyLocation === true);
+        } else {
+          const created = await createUserProfile(uid, user?.email || "");
+          if (cancelled) return;
+          setProfile(created);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.error("Profile load failed", error);
+          setProfile(null);
+          toast.error("Profil yüklenemedi. Bağlantınızı kontrol edip tekrar deneyin.");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-      setLoading(false);
     }
-    load();
-  }, [user]);
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.uid, user?.email, user?.displayName]);
 
   const handleSaveProfile = async () => {
     if (!user?.uid) return;
