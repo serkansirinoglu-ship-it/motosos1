@@ -508,3 +508,10 @@ The help-chat context now validates message request ID, authenticated sender ide
 - Group chat's browser-local posts are now scoped to the resolved Firebase UID (or a separate anonymous namespace), and prior-account posts are hidden while the next cache hydrates. The UI explicitly states that group posts are device/account-local and are not broadcast. This is a local privacy boundary only; group posts are still not a persistent multi-user backend feature.
 
 - The in-memory community and marketplace services now expose explicit session-clear operations. Their pages clear these local-only records on authenticated UID changes and suppress old lists/details while the new scope initializes; regression tests cover service clearing. This prevents stale local posts/listings (including seller contact details) from remaining visible after switching accounts in the same app instance. It does not add durable backend persistence; community and marketplace remain release blockers.
+
+
+## Non-home page palette adjustment — 2026-10-26
+
+- Added an opt-in lighter graphite/navy slate surface palette to non-home app pages to improve readability while preserving the orange brand accent.
+- Applied the palette only to non-home page surfaces (group, events, help requests, chat, service directories, SOS, map, admin, profile, community, and marketplace). The global `bg-asphalt` utility and the Home page source were not changed.
+- The protected Home.tsx blob SHA remains `a45976c8085709adce1a6186e4a72865d440c654`. This is a visual-only change; no production deployment was performed.
