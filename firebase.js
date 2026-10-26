@@ -294,7 +294,7 @@ export async function getActiveSOSRequests() {
     );
     const snap = await getDocs(q);
     return snap.docs
-      .map((d) => ({ id: d.id, ...d.data() }))
+      .map((d) => ({ ...d.data(), id: d.id }))
       .sort((a, b) => {
         const time = (value) => value?.toMillis?.() ?? (typeof value === "string" ? Date.parse(value) : 0);
         return time(b.createdAt) - time(a.createdAt);
@@ -326,7 +326,7 @@ export function subscribeActiveSOSRequests(onUpdate, onError) {
       q,
       (snap) => onUpdate(
         snap.docs
-          .map((d) => ({ id: d.id, ...d.data() }))
+          .map((d) => ({ ...d.data(), id: d.id }))
           .sort((a, b) => {
             const time = (value) => value?.toMillis?.() ?? (typeof value === "string" ? Date.parse(value) : 0);
             return time(b.createdAt) - time(a.createdAt);
