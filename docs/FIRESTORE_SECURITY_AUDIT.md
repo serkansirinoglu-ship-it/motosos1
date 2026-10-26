@@ -264,3 +264,8 @@ Follow-up hardening adds `publicVisible: true` only to newly created help reques
 
 
 The emulator suite now explicitly checks both sides of the discovery boundary: a valid request created with `publicVisible: true` is readable by another signed-in rider, while a legacy request with an otherwise public-shaped schema but no marker remains readable only by its owner. This guards against accidentally treating legacy records as public by default.
+
+
+## CI follow-up: visibility marker must be enforced by the read rule
+
+The first explicit-marker iteration updated the create schema and client query, but the public-read predicate still used the prior field whitelist. The emulator test caught this because a newly created public request was denied. Corrected the read predicate to require `publicVisible == true` and allow the marker in the exact public schema; mirrored the same rules into both rule files. This is a test-driven correction, not a production deployment.
