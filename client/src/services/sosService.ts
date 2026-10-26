@@ -71,6 +71,7 @@ class SOSService {
   public updateStatus(id: string, newStatus: SOSStatus, acceptedBy?: string): boolean {
     const req = this.activeRequests.find((r) => r.id === id);
     if (!req) return false;
+    if (req.status === 'tamamlandi' || req.status === 'iptal_edildi') return false;
     req.status = newStatus;
     if (acceptedBy) {
       req.acceptedBy = acceptedBy;
