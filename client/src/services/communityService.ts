@@ -89,8 +89,8 @@ class CommunityService {
 
   /** Firestore rules are the final authority for owner-only deletion. */
   public async deleteRemotePost(postId: string, authorId: string): Promise<void> {
-    if (!db || !auth?.currentUser?.uid) throw new Error("Gönderi silmek için giriş yapın.");
-    if (!postId || auth.currentUser.uid !== authorId) throw new Error("Yalnızca kendi gönderinizi silebilirsiniz.");
+    if (!communityDb || !communityAuth?.currentUser?.uid) throw new Error("Gönderi silmek için giriş yapın.");
+    if (!postId || communityAuth.currentUser.uid !== authorId) throw new Error("Yalnızca kendi gönderinizi silebilirsiniz.");
     await deleteDoc(doc(communityDb, "communityPosts", postId));
   }
 

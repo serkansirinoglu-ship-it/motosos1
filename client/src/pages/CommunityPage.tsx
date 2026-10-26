@@ -274,7 +274,7 @@ export default function CommunityPage() {
                           maxLength={1000}
                           value={commentText}
                           onChange={(e) => setCommentText(e.target.value)}
-                          onKeyDown={(e) => e.key === "Enter" && handleAddComment(post.id)}
+                          onKeyDown={(e) => e.key === "Enter" && handleAddComment()}
                           placeholder="Yorumunuzu yazın..."
                           className="flex-1 bg-card border border-border rounded-xl px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary"
                         />
