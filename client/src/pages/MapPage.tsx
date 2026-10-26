@@ -140,6 +140,14 @@ export default function MapPage() {
     <div className="min-h-screen bg-asphalt pb-8">
       <Header />
 
+      <div className="px-4 pt-3 max-w-lg mx-auto">
+        <Card className="bg-amber-500/10 border-amber-500/30 p-3 rounded-xl">
+          <p className="text-[11px] text-amber-200 leading-relaxed">
+            İşletme rehberi henüz doğrulanmış bir veri kaynağına bağlı değil; sahte adres, telefon veya puan gösterilmiyor. Yerel test SOS kayıtları yalnızca bu cihazda görünür.
+          </p>
+        </Card>
+      </div>
+
       {/* Map Embed & Locate Header */}
       <div className="relative h-72 bg-card-gradient border-b border-border overflow-hidden">
         {position ? (
@@ -222,6 +230,9 @@ export default function MapPage() {
                   <span className="text-[10px] font-bold text-red-400 uppercase tracking-wider block">ACİL YARDIM ÇAĞRISI</span>
                   <p className="font-bold text-white text-sm uppercase">{sos.category} Talebi</p>
                   <p className="text-[11px] text-muted-foreground">{sos.requesterName || "Motorcu Kardeş"}</p>
+                  {sos.id.startsWith("sos-") && (
+                    <span className="mt-1 inline-block text-[9px] font-bold text-amber-400">Yalnızca bu cihazda kayıtlı</span>
+                  )}
                 </div>
               </div>
               <a
