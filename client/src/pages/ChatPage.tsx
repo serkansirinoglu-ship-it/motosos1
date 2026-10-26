@@ -12,9 +12,12 @@ export default function ChatPage() {
   const [match, params] = useRoute("/chat/:id");
   const id = params?.id as string | undefined;
   const { messages, sendMessage, helpRequests, subscribeToMessages, acceptHelp, resolveHelp } = useMessages();
-  const { user } = useAuth();
+  const { user, authReady } = useAuth();
+  const userUid = user?.uid || null;
+  const currentIdentityRef = useRef({ uid: userUid, authReady });
+  currentIdentityRef.current = { uid: userUid, authReady };
   const [text, setText] = useState("");
-  const [localMsgs, setLocalMsgs] = useState<any[]>([]);
+  const [localMsgs, setLocalMsgs] = useState<{ uid: string | null; items: any[] }>({ uid: null, items: [] });
   const [actionPending, setActionPending] = useState<"accept" | "resolve" | null>(null);
   const actionPendingRef = useRef(false);
   const listRef = useRef<HTMLDivElement | null>(null);
@@ -22,17 +25,26 @@ export default function ChatPage() {
   const chatId = id || "";
 
   useEffect(() => {
-    if (!chatId) return;
-    if (subscribeToMessages) {
-      const unsub = subscribeToMessages(chatId, (arr: any[]) => setLocalMsgs(arr));
-      return () => unsub && unsub();
-    }
-  }, [chatId, subscribeToMessages]);
+    // Tag the page-local message list with its account so an account switch
+    // cannot render the previous rider's messages while the new cache loads.
+    setLocalMsgs({ uid: userUid, items: [] });
+    if (!authReady || !userUid || !chatId || !subscribeToMessages) return;
+
+    const subscriptionUid = userUid;
+    const unsub = subscribeToMessages(chatId, (arr: any[]) => {
+      const activeIdentity = currentIdentityRef.current;
+      if (!activeIdentity.authReady || activeIdentity.uid !== subscriptionUid) return;
+      setLocalMsgs({ uid: subscriptionUid, items: arr });
+    });
+    return () => unsub && unsub();
+  }, [authReady, chatId, subscribeToMessages, userUid]);
+
+  const visibleLocalMsgs = authReady && localMsgs.uid === userUid ? localMsgs.items : [];
 
   useEffect(() => {
     const el = listRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [localMsgs.length, messages[chatId]?.length]);
+  }, [visibleLocalMsgs.length, messages[chatId]?.length]);
 
   if (!id || !chatId) {
     return (
@@ -52,11 +64,10 @@ export default function ChatPage() {
 
   const msgs = Array.from(
     new Map(
-      [...(messages[chatId] || []), ...localMsgs].map((message) => [message.id, message]),
+      [...(messages[chatId] || []), ...visibleLocalMsgs].map((message) => [message.id, message]),
     ).values(),
   ).sort((a, b) => (a.ts || 0) - (b.ts || 0));
   const req = helpRequests.find((r) => r.id === chatId);
-  const userUid = user?.uid || null;
 
   const handleSend = () => {
     if (!text.trim() || !chatId) return;
