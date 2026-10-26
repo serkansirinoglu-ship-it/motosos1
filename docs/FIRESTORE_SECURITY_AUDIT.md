@@ -281,3 +281,16 @@ Both CI runs for this exact commit completed successfully:
 The successful jobs include TypeScript, unit tests, build without deployment, Firestore static audit and strict gate, rules-file synchronization, and emulator authorization tests against both checked-in rules files. The migration-assessment tests also cover redaction of raw email values from blocked and ambiguous results.
 
 This status applies only to the isolated branch and exact commit above. It does not certify production data cleanliness or production deployment. `client/src/pages/Home.tsx` remains unchanged, `firestore.rules` and `firestore.prod.rules` remain byte-identical, PR #3 remains open and unmerged, and no production Firestore rules or records were changed.
+
+
+## Latest verification snapshot — migration assessment hardening — 2026-10-26
+
+The offline legacy help-request migration assessment now blocks Firestore document IDs containing `/`, equal to `.` or `..`, matching the reserved `__...__` form, or exceeding the length limit. Regression tests cover these invalid IDs and confirm a valid ID remains accepted. This is assessment-only validation; it does not connect to Firebase or write/migrate records.
+
+Current audited commit: `61b5da7058d13ead7001ea53ab202da528cc7faa`.
+
+Both CI runs for this exact commit completed successfully:
+- [Push CI](https://github.com/serkansirinoglu-ship-it/motosos1/actions/runs/40294131305)
+- [Pull-request CI](https://github.com/serkansirinoglu-ship-it/motosos1/actions/runs/40294137597)
+
+The successful CI jobs run type checking, unit tests, production build without deployment, static Firestore audit and strict gate, rule-file synchronization, and emulator authorization tests against both rule files. The isolated branch remains non-production: `client/src/pages/Home.tsx` is unchanged, `firestore.rules` and `firestore.prod.rules` are byte-identical, PR #3 remains open and unmerged, and no production rules or records were changed. This does not certify that historical production records are clean or that deployment is approved.
