@@ -111,7 +111,7 @@ export default function ProfilePage() {
   const handleDeleteAccount = () => {
     // Do not imply that deletion was requested or completed: no verified server-side
     // account/data deletion workflow is currently wired to this control.
-    toast.error("Hesabınız silinmedi. Kalıcı hesap silme şu anda otomatik olarak kullanılamıyor.");
+    toast.info("Kalıcı hesap silme şu anda kullanılamıyor; hesabınız silinmedi.");
     setIsDeleteOpen(false);
   };
 
