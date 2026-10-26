@@ -333,9 +333,11 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
 	}
   }
 
+  // Hide the previous account's in-memory state immediately while a new account cache hydrates.
+  const cacheReadyForCurrentUser = authReady && cacheForKey === storageKey;
   const value: MessageContextType = {
-	helpRequests,
-	messages,
+	helpRequests: cacheReadyForCurrentUser ? helpRequests : [],
+	messages: cacheReadyForCurrentUser ? messages : {},
 	createHelpRequest,
 	sendMessage,
 	  subscribeToMessages,
