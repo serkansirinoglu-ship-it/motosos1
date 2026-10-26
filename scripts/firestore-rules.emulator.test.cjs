@@ -311,6 +311,10 @@ async function main() {
     }));
     console.log("PASS: user cannot create a profile with forged points");
 
+    await assertFails(getDoc(doc(outsider, "users", "owner")));
+    await assertSucceeds(getDoc(doc(owner, "users", "owner")));
+    console.log("PASS: profile reads are restricted to the owner or admin");
+
     await assertFails(getDoc(doc(anonymous, "internalPrivate", "secret")));
     await assertFails(getDoc(doc(anonymous, "users", "owner")));
     console.log("PASS: default-deny prevents anonymous reads of private/unmatched documents");
