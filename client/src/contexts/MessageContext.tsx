@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useRef, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { subscribeHelpRequestsRealtime, createHelpRequestRealtime, subscribeMessagesRealtime, sendMessageRealtime, updateHelpRequestRealtime } from '../../../firebase';
 import { nanoid } from "nanoid";
 import { validateHelpMessageInput } from "@/services/helpMessageValidation";
@@ -62,6 +62,9 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
   const [helpRequests, setHelpRequests] = useState<HelpRequest[]>([]);
   const localOnlyHelpRequestIds = useRef(new Set<string>());
   const [messages, setMessages] = useState<Record<string, Message[]>>({});
+  // Keep the latest message cache available without recreating realtime subscriptions.
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
   // Preserve explicitly local-only messages across realtime snapshots and reloads.
   const localOnlyMessagesByRequest = useRef<Map<string, Message[]>>(
     new Map(
@@ -302,19 +305,19 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  // Allow components to subscribe to realtime messages for a specific request
-  function subscribeToMessages(requestId: string, onUpdate: (arr: Message[]) => void) {
-    // Deliver the cached conversation immediately, including local-only messages, even without Firebase.
-    onUpdate([...(messages[requestId] || [])].sort((a, b) => a.ts - b.ts));
-	try {
-	  return subscribeMessagesRealtime(requestId, (arr: any[]) => {
-		const normalized = arr.map((d) => ({ ...d, ts: d.ts && d.ts.toMillis ? d.ts.toMillis() : d.ts })) as Message[];
+  // Keep this callback stable so consumers do not churn Firestore listeners on provider renders.
+  const subscribeToMessages = useCallback((requestId: string, onUpdate: (arr: Message[]) => void) => {
+    // Deliver the latest cached conversation immediately, including local-only messages.
+    onUpdate([...(messagesRef.current[requestId] || [])].sort((a, b) => a.ts - b.ts));
+    try {
+      return subscribeMessagesRealtime(requestId, (arr: any[]) => {
+        const normalized = arr.map((d) => ({ ...d, ts: d.ts && d.ts.toMillis ? d.ts.toMillis() : d.ts })) as Message[];
         const remoteIds = new Set(normalized.map((item) => item.id));
         const localOnly = (localOnlyMessagesByRequest.current.get(requestId) || [])
           .filter((item) => !remoteIds.has(item.id));
         localOnlyMessagesByRequest.current.set(requestId, localOnly);
         const merged = [...normalized, ...localOnly].sort((a, b) => a.ts - b.ts);
-        // Avoid needless provider rerenders that would churn the realtime subscription.
+        // Avoid needless provider rerenders when the realtime snapshot is unchanged.
         setMessages((current) => {
           const previous = current[requestId] || [];
           const unchanged = previous.length === merged.length && previous.every((item, index) => {
@@ -325,14 +328,13 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
           });
           return unchanged ? current : { ...current, [requestId]: merged };
         });
-		onUpdate(merged);
-	  });
-	} catch (e) {
-	  // fallback: no-op unsubscribe
-	  return () => {};
-	}
-  }
-
+        onUpdate(merged);
+      });
+    } catch (error) {
+      console.warn("Message subscription unavailable", error);
+      return () => {};
+    }
+  }, []);
   // Hide the previous account's in-memory state immediately while a new account cache hydrates.
   const cacheReadyForCurrentUser = authReady && cacheForKey === storageKey;
   const value: MessageContextType = {
