@@ -47,9 +47,6 @@ const MessageContext = createContext<MessageContextType | undefined>(undefined);
 const STORAGE_KEY = "motosos_help_requests_v1";
 
 export function MessageProvider({ children }: { children: React.ReactNode }) {
-  // Track requests that could not be persisted so realtime snapshots do not erase local-only fallback entries.
-  const localOnlyHelpRequestIds = useRef(new Set<string>());
-
   const [helpRequests, setHelpRequests] = useState<HelpRequest[]>(() => {
 	try {
 	  const raw = localStorage.getItem(STORAGE_KEY);
@@ -58,6 +55,11 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
 	  return [];
 	}
   });
+
+  // Restore local-only request IDs from the same cache that hydrates the request list.
+  const localOnlyHelpRequestIds = useRef(new Set<string>(
+    helpRequests.filter((item) => item.localOnly).map((item) => item.id),
+  ));
 
   const [messages, setMessages] = useState<Record<string, Message[]>>(() => {
 	try {
