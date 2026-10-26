@@ -63,26 +63,38 @@ export default function AdminPanel() {
   }, [adminAccess]);
 
   const handleResolveReport = (id: string, action: "resolved" | "dismissed") => {
-    moderationService.resolveReport(id, action);
+    if (!moderationService.resolveReport(id, action)) {
+      toast.error("Şikâyet bu oturumun listesinde bulunamadı; işlem yapılmadı.");
+      return;
+    }
     toast.info(`Şikâyet bu oturumda ${action === "resolved" ? "çözüldü" : "reddedildi"} olarak işaretlendi; kalıcı moderasyon kaydı oluşturulmadı.`);
     setReports(moderationService.getReports());
   };
 
   const handleDeletePost = (id: string) => {
-    communityService.deletePost(id);
+    if (!communityService.deletePost(id)) {
+      toast.error("Gönderi bu oturumun listesinde bulunamadı; işlem yapılmadı.");
+      return;
+    }
     toast.info("Gönderi yalnızca bu oturumun yerel verisinden kaldırıldı; sunucudaki içerik silinmedi.");
     setPosts(communityService.getPosts());
   };
 
   const handleDeleteListing = (id: string) => {
-    marketplaceService.deleteListing(id);
+    if (!marketplaceService.deleteListing(id)) {
+      toast.error("İlan bu oturumun listesinde bulunamadı; işlem yapılmadı.");
+      return;
+    }
     toast.info("İlan yalnızca bu oturumun yerel verisinden kaldırıldı; sunucudaki ilan silinmedi.");
     setListings(marketplaceService.getListings());
   };
 
   const handleToggleTier = (bizId: string, currentTier: BusinessProfile["tier"]) => {
     const nextTier: BusinessProfile["tier"] = currentTier === "sponsored" ? "standard" : "sponsored";
-    businessService.updateTier(bizId, nextTier);
+    if (!businessService.updateTier(bizId, nextTier)) {
+      toast.error("İşletme bu oturumun listesinde bulunamadı; işlem yapılmadı.");
+      return;
+    }
     toast.info(`İşletme tier'ı bu oturumda '${nextTier}' olarak değiştirildi; kalıcı sunucu kaydı güncellenmedi.`);
     setBusinesses(businessService.getBusinesses());
   };
@@ -112,7 +124,10 @@ export default function AdminPanel() {
   };
 
   const handleRemoveBanner = (id: string) => {
-    adService.removeBanner(id);
+    if (!adService.removeBanner(id)) {
+      toast.error("Banner bu oturumun listesinde bulunamadı; işlem yapılmadı.");
+      return;
+    }
     toast.info("Banner bu oturumun yerel listesinden kaldırıldı; sunucu kaydı değiştirilmedi.");
     setBanners(adService.getBanners());
   };
