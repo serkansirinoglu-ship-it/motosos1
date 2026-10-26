@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { useAuth } from "./AuthContext";
-import { scopedStorageKey } from "@/services/scopedLocalCache";
+import { migrateLegacyScopedArray, scopedStorageKey } from "@/services/scopedLocalCache";
 
 type MembershipContextType = {
   joinedCities: string[];
@@ -41,20 +41,8 @@ export function MembershipProvider({ children }: { children: React.ReactNode }) 
       if (existing !== null) {
         nextCities = cleanCities(JSON.parse(existing));
       } else {
-        // One-time migration of this signed-in user's legacy entry; preserve other local entries.
-        const legacyRaw = localStorage.getItem(LEGACY_STORAGE_KEY);
-        if (legacyRaw !== null) {
-          const legacy = JSON.parse(legacyRaw) as Record<string, unknown>;
-          if (legacy && typeof legacy === "object" && !Array.isArray(legacy)) {
-            if (email && Object.prototype.hasOwnProperty.call(legacy, email)) {
-              nextCities = cleanCities(legacy[email]);
-              localStorage.setItem(storageKey, JSON.stringify(nextCities));
-              delete legacy[email];
-              if (Object.keys(legacy).length > 0) localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(legacy));
-              else localStorage.removeItem(LEGACY_STORAGE_KEY);
-            }
-          }
-        }
+        const migrated = migrateLegacyScopedArray(localStorage, LEGACY_STORAGE_KEY, storageKey, email);
+        if (migrated !== null) nextCities = cleanCities(migrated);
       }
     } catch {
       nextCities = [];
