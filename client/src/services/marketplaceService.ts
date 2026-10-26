@@ -23,7 +23,6 @@ export interface ListingItem {
   description: string;
   image?: string;
   sellerName: string;
-  sellerEmail: string;
   sellerPhone?: string;
   createdAt: string;
   featured?: boolean;
@@ -39,7 +38,6 @@ const INITIAL_LISTINGS: ListingItem[] = [
     description: 'Sadece 3 ay hafta sonu sürüldü. Pinlock takılı, taşıma kılıfı ve kutusuyla teslim verilecektir.',
     image: 'https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&w=600&q=80',
     sellerName: 'Kaan Demir',
-    sellerEmail: 'kaan@motoguard.tr',
     sellerPhone: '0533 111 22 33',
     createdAt: '2026-08-10',
     featured: true,
@@ -53,7 +51,6 @@ const INITIAL_LISTINGS: ListingItem[] = [
     description: 'CE korumalı, kışlık termal içliği mevcut. L beden, temiz kullanıldı.',
     image: 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=600&q=80',
     sellerName: 'Deniz Aksu',
-    sellerEmail: 'deniz@motoguard.tr',
     createdAt: '2026-08-11',
     featured: false,
   },
@@ -66,7 +63,6 @@ const INITIAL_LISTINGS: ListingItem[] = [
     description: '2025/44. hafta üretimi. Hiç takılmadı, ambalajında.',
     image: 'https://images.unsplash.com/photo-1578844251758-2f71da64c96f?auto=format&fit=crop&w=600&q=80',
     sellerName: 'Murat Kara',
-    sellerEmail: 'murat@motoguard.tr',
     createdAt: '2026-08-09',
     featured: false,
   },
