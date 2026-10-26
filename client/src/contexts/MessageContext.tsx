@@ -2,6 +2,8 @@ import React, { createContext, useContext, useEffect, useRef, useState } from "r
 import { subscribeHelpRequestsRealtime, createHelpRequestRealtime, subscribeMessagesRealtime, sendMessageRealtime, updateHelpRequestRealtime } from '../../../firebase';
 import { nanoid } from "nanoid";
 import { validateHelpMessageInput } from "@/services/helpMessageValidation";
+import { useAuth } from "./AuthContext";
+import { readScopedJson, scopedStorageKey, writeScopedJson } from "@/services/scopedLocalCache";
 
 type Message = {
   id: string;
@@ -46,31 +48,20 @@ type MessageContextType = {
 const MessageContext = createContext<MessageContextType | undefined>(undefined);
 
 const STORAGE_KEY = "motosos_help_requests_v1";
+const STATS_STORAGE_KEY = "motosos_user_stats_v1";
+const PROFILES_STORAGE_KEY = "motosos_user_profiles_v1";
+type HelpCache = { helpRequests: HelpRequest[]; messages: Record<string, Message[]> };
 
 export function MessageProvider({ children }: { children: React.ReactNode }) {
-  const [helpRequests, setHelpRequests] = useState<HelpRequest[]>(() => {
-	try {
-	  const raw = localStorage.getItem(STORAGE_KEY);
-	  return raw ? JSON.parse(raw).helpRequests || [] : [];
-	} catch (e) {
-	  return [];
-	}
-  });
-
-  // Restore local-only request IDs from the same cache that hydrates the request list.
-  const localOnlyHelpRequestIds = useRef(new Set<string>(
-    helpRequests.filter((item) => item.localOnly).map((item) => item.id),
-  ));
-
-  const [messages, setMessages] = useState<Record<string, Message[]>>(() => {
-	try {
-	  const raw = localStorage.getItem(STORAGE_KEY);
-	  return raw ? JSON.parse(raw).messages || {} : {};
-	} catch (e) {
-	  return {};
-	}
-  });
-
+  const { user, authReady } = useAuth();
+  const uid = typeof user?.uid === "string" ? user.uid : null;
+  const storageKey = scopedStorageKey(STORAGE_KEY, uid);
+  const statsStorageKey = scopedStorageKey(STATS_STORAGE_KEY, uid);
+  const profilesStorageKey = scopedStorageKey(PROFILES_STORAGE_KEY, uid);
+  const [cacheForKey, setCacheForKey] = useState<string | null>(null);
+  const [helpRequests, setHelpRequests] = useState<HelpRequest[]>([]);
+  const localOnlyHelpRequestIds = useRef(new Set<string>());
+  const [messages, setMessages] = useState<Record<string, Message[]>>({});
   // Preserve explicitly local-only messages across realtime snapshots and reloads.
   const localOnlyMessagesByRequest = useRef<Map<string, Message[]>>(
     new Map(
@@ -80,26 +71,40 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
     ),
   );
 
+  // Do not hydrate or persist private browser caches until Firebase has resolved the account.
+  // Each UID gets a separate namespace; legacy unscoped cache keys are intentionally not read.
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ helpRequests, messages }));
-    } catch (error) {
-      // Browser storage may be unavailable or full. Keep the in-memory state usable.
-      console.warn("Could not persist local help requests/messages in browser storage", error);
-    }
-  }, [helpRequests, messages]);
+    if (!authReady) return;
+    const storage = typeof localStorage === "undefined" ? null : localStorage;
+    const cached = readScopedJson<HelpCache>(storage, storageKey, { helpRequests: [], messages: {} });
+    const nextRequests = Array.isArray(cached.helpRequests) ? cached.helpRequests : [];
+    const nextMessages = cached.messages && typeof cached.messages === "object" ? cached.messages : {};
+    setHelpRequests(nextRequests);
+    setMessages(nextMessages);
+    localOnlyHelpRequestIds.current = new Set(nextRequests.filter((item) => item.localOnly).map((item) => item.id));
+    localOnlyMessagesByRequest.current = new Map(
+      Object.entries(nextMessages)
+        .map(([requestId, items]) => [requestId, items.filter((item) => item.localOnly)] as [string, Message[]])
+        .filter(([, items]) => items.length > 0),
+    );
+    setHelpCounts(readScopedJson<Record<string, number>>(storage, statsStorageKey, {}));
+    setCacheForKey(storageKey);
+  }, [authReady, storageKey, statsStorageKey]);
+
+  useEffect(() => {
+    if (!authReady || cacheForKey !== storageKey) return;
+    const storage = typeof localStorage === "undefined" ? null : localStorage;
+    writeScopedJson(storage, storageKey, { helpRequests, messages });
+  }, [authReady, cacheForKey, storageKey, helpRequests, messages]);
 
   // helpCounts per user
-  const [helpCounts, setHelpCounts] = useState<Record<string, number>>(() => {
-	try {
-	  const raw = localStorage.getItem("motosos_user_stats_v1");
-	  return raw ? JSON.parse(raw) : {};
-	} catch (e) { return {}; }
-  });
+  const [helpCounts, setHelpCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
-	try { localStorage.setItem("motosos_user_stats_v1", JSON.stringify(helpCounts)); } catch(e){}
-  }, [helpCounts]);
+    if (!authReady || cacheForKey !== storageKey) return;
+    const storage = typeof localStorage === "undefined" ? null : localStorage;
+    writeScopedJson(storage, statsStorageKey, helpCounts);
+  }, [authReady, cacheForKey, storageKey, statsStorageKey, helpCounts]);
 
   function incrementHelpCount(email?: string) {
 	if (!email) return;
@@ -117,6 +122,7 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
 
   // Realtime subscription to helpRequests (Firestore). If available, it will keep local state in sync.
   useEffect(() => {
+    if (!authReady) return;
 	let unsub = null;
 	try {
 	  unsub = subscribeHelpRequestsRealtime((arr: any[]) => {
@@ -141,7 +147,7 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
 	return () => {
 	  if (unsub) unsub();
 	};
-  }, []);
+  }, [authReady, storageKey]);
 
   function createHelpRequest(r: Omit<HelpRequest, "id" | "createdAt" | "active">) {
     const id = nanoid();
@@ -245,13 +251,13 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
   function addBadgeToProfile(email: string, badge: string){
 	if(!email) return;
 	try{
-	  const raw = localStorage.getItem('motosos_user_profiles_v1');
+	  const raw = localStorage.getItem(profilesStorageKey);
 	  const obj = raw ? JSON.parse(raw) : {};
 	  const prof = obj[email] || { contacts: [], badges: [] };
 	  prof.badges = prof.badges || [];
 	  if(!prof.badges.includes(badge)) prof.badges.push(badge);
 	  obj[email] = prof;
-	  localStorage.setItem('motosos_user_profiles_v1', JSON.stringify(obj));
+	  localStorage.setItem(profilesStorageKey, JSON.stringify(obj));
 	}catch(e){console.error(e)}
   }
 
