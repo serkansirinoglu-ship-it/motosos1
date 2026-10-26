@@ -102,6 +102,10 @@ class MarketplaceService {
     return newListing;
   }
 
+  public clearLocalSession(): void {
+    this.listings = [];
+  }
+
   public deleteListing(id: string): boolean {
     const initLen = this.listings.length;
     this.listings = this.listings.filter((l) => l.id !== id);
