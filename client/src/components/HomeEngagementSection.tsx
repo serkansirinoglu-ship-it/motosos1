@@ -3,20 +3,61 @@ import { Link } from "wouter";
 import { Award, Bike, CalendarDays, ChevronRight, Compass, MessageCircle, ShieldCheck, Sparkles, Trophy } from "lucide-react";
 import { Card } from "@/components/ui/card";
 
-const dailyQuestion = {
-  question: "Islak zeminde fren yaparken en güvenli yaklaşım hangisidir?",
-  answers: [
-    "Ani ve sert fren yapmak",
-    "Frenleri kontrollü ve kademeli kullanmak",
-    "Viraj içinde hızlanmak",
-  ],
-  correctIndex: 1,
-  explanation: "Islak zeminde tutuş azalır. Hızı önceden düşürmek ve frenleri kontrollü kullanmak güvenliği artırır.",
-};
+const dailyQuestions = [
+  {
+    question: "Islak zeminde fren yaparken en güvenli yaklaşım hangisidir?",
+    answers: ["Ani ve sert fren yapmak", "Frenleri kontrollü ve kademeli kullanmak", "Viraj içinde hızlanmak"],
+    correctIndex: 1,
+    explanation: "Islak zeminde tutuş azalır. Hızı önceden düşürmek ve frenleri kontrollü kullanmak güvenliği artırır.",
+  },
+  {
+    question: "Viraja yaklaşırken en güvenli hazırlık hangisidir?",
+    answers: ["Hızı virajın içinde sert frenle düşürmek", "Viraja girmeden uygun hıza düşmek", "Görüş alanı kapalıysa hızlanmak"],
+    correctIndex: 1,
+    explanation: "Viraj öncesinde uygun hıza düşmek ve görüş mesafesine göre sürmek kontrolü artırır.",
+  },
+  {
+    question: "Sürüş sırasında telefon bildirimi geldiğinde ne yapmalısın?",
+    answers: ["Ekrana kısa süre bakmak", "Sürerken mesaj yazmak", "Güvenli bir yerde durup kontrol etmek"],
+    correctIndex: 2,
+    explanation: "Dikkatin yoldan ayrılması riski artırır. Telefonu kontrol etmek için güvenli bir yerde dur.",
+  },
+  {
+    question: "Takip mesafesi neden özellikle önemlidir?",
+    answers: ["Öndeki aracın ani frenine tepki verebilmek için", "Daha hızlı sollama yapabilmek için", "Yakıt tüketimini her koşulda azaltmak için"],
+    correctIndex: 0,
+    explanation: "Yeterli takip mesafesi tehlikeyi fark etmek ve güvenli tepki vermek için zaman kazandırır.",
+  },
+  {
+    question: "Uzun sürüş öncesi en doğru hazırlık hangisidir?",
+    answers: ["Lastik ve frenleri kontrol etmek, dinlenmiş olmak", "Sadece yakıt seviyesine bakmak", "Yorgunluğu kahveyle tamamen gidermek"],
+    correctIndex: 0,
+    explanation: "Lastik, fren ve aydınlatma kontrolleriyle birlikte dinlenmiş olmak güvenli sürüşün temelidir.",
+  },
+];
 
 export default function HomeEngagementSection() {
-  const [answer, setAnswer] = useState<number | null>(null);
-  const [showResult, setShowResult] = useState(false);
+  const now = new Date();
+  const dayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const dayNumber = Math.floor(new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() / 86400000);
+  const dailyQuestion = dailyQuestions[((dayNumber % dailyQuestions.length) + dailyQuestions.length) % dailyQuestions.length];
+  const storageKey = `motoguard_daily_safety_quiz_${dayKey}`;
+  const [answer, setAnswer] = useState<number | null>(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      const value = saved ? JSON.parse(saved).answer : null;
+      return Number.isInteger(value) && value >= 0 && value < dailyQuestion.answers.length ? value : null;
+    } catch {
+      return null;
+    }
+  });
+  const [showResult, setShowResult] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem(storageKey) || "null")?.completed === true;
+    } catch {
+      return false;
+    }
+  });
 
   return (
     <section className="px-4 mt-8 mb-8 max-w-lg mx-auto space-y-5">
@@ -68,7 +109,10 @@ export default function HomeEngagementSection() {
               <button
                 type="button"
                 disabled={answer === null}
-                onClick={() => setShowResult(true)}
+                onClick={() => {
+                  setShowResult(true);
+                  try { localStorage.setItem(storageKey, JSON.stringify({ answer, completed: true })); } catch { /* The quiz remains usable when storage is unavailable. */ }
+                }}
                 className="mt-3 w-full rounded-xl bg-primary px-4 py-2.5 text-xs font-extrabold text-white disabled:opacity-40"
               >
                 Cevabı kontrol et
@@ -77,7 +121,7 @@ export default function HomeEngagementSection() {
               <div className="mt-3 rounded-xl border border-border bg-background/50 p-3">
                 <p className="text-xs font-bold text-white">{answer === dailyQuestion.correctIndex ? "Doğru cevap!" : "Bir sonraki sefere daha dikkatli."}</p>
                 <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{dailyQuestion.explanation}</p>
-                <button type="button" onClick={() => { setAnswer(null); setShowResult(false); }} className="mt-2 text-xs font-bold text-primary">Tekrar dene</button>
+                <p className="mt-2 text-[11px] font-semibold text-primary">Yarın yeni bir güvenli sürüş sorusu seni bekliyor.</p>
               </div>
             )}
           </div>
