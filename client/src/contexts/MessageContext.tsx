@@ -166,6 +166,8 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
       helpers: [],
       resolvedBy: null,
       resolvedAt: null,
+      // Treat the optimistic request as unconfirmed until Firestore acknowledges it.
+      localOnly: true,
     };
     if (validateHelpRequestInput(hr, uid)) return null;
 
@@ -180,7 +182,13 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
     try {
       const pending = createHelpRequestRealtime(hr);
       void Promise.resolve(pending).then((result) => {
-        if (result) return;
+        if (result) {
+          localOnlyHelpRequestIds.current.delete(hr.id);
+          setHelpRequests((current) => current.map((item) =>
+            item.id === hr.id ? { ...item, localOnly: false } : item
+          ));
+          return;
+        }
         console.warn("Realtime help request unavailable; keeping a local copy");
         localOnlyHelpRequestIds.current.add(hr.id);
         setHelpRequests((current) => current.map((item) =>
@@ -211,7 +219,7 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
     // Only the resolved Firebase account may claim help; never trust a caller-supplied UID.
     if (!authReady || !uid || helperUid !== uid) return false;
     const request = helpRequests.find((item) => item.id === requestId);
-    if (!request || !request.active) return false;
+    if (!request || !request.active || request.localOnly) return false;
     const currentHelpers = request.helpers || [];
     const authenticatedEmail = typeof user?.email === "string" ? user.email : null;
     const isOwner = request.ownerId === uid || (!!authenticatedEmail && request.user === authenticatedEmail);
@@ -238,7 +246,7 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
     // Only the resolved Firebase account may resolve a request or receive credit.
     if (!authReady || !uid || helperUid !== uid) return false;
     const request = helpRequests.find((item) => item.id === requestId);
-    if (!request || !request.active) return false;
+    if (!request || !request.active || request.localOnly) return false;
     const currentHelpers = request.helpers || [];
     const authenticatedEmail = typeof user?.email === "string" ? user.email : null;
     const isOwner = request.ownerId === uid || (!!authenticatedEmail && request.user === authenticatedEmail);
@@ -293,7 +301,7 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
     // Enforce conversation membership at the context boundary too, so callers
     // cannot create misleading local-only messages in another rider's request.
     const request = helpRequests.find((item) => item.id === requestId);
-    if (!request || !request.active) return null;
+    if (!request || !request.active || request.localOnly) return null;
     const helpers = request.helpers || [];
     const authenticatedEmail = typeof user?.email === "string" ? user.email : null;
     const isOwner = request.ownerId === uid || (!!authenticatedEmail && request.user === authenticatedEmail);
