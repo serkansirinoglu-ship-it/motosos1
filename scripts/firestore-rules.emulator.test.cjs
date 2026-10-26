@@ -112,6 +112,16 @@ async function main() {
     await assertSucceeds(updateDoc(doc(helper, "sosRequests", "active-sos"), {
       acceptedBy: "helper", updatedAt: serverTimestamp(),
     }));
+    // Claiming an SOS is a one-time transition: a second rider cannot replace
+    // the accepted helper or alter the public location after the claim.
+    await assertFails(updateDoc(doc(outsider, "sosRequests", "active-sos"), {
+      acceptedBy: "outsider", updatedAt: serverTimestamp(),
+    }));
+    await assertFails(updateDoc(doc(helper, "sosRequests", "active-sos"), {
+      latitude: 40.5, updatedAt: serverTimestamp(),
+    }));
+    await assertFails(deleteDoc(doc(owner, "sosRequests", "active-sos")));
+    await assertFails(deleteDoc(doc(outsider, "sosRequests", "active-sos")));
     await assertSucceeds(getDoc(doc(helper, "sosRequests", "active-sos", "privateDetails", "owner")));
     await assertFails(getDoc(doc(helper, "sosRequests", "active-sos", "privateDetails", "unexpected")));
     console.log("PASS: accepted helper can read only the designated SOS owner-details document");
