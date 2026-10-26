@@ -74,3 +74,28 @@ describe("planLegacyHelpMigration", () => {
     expect(result.items.some((item) => item.reasonCodes.includes("invalid_document_data"))).toBe(true);
   });
 });
+
+  it("never includes raw email addresses in blocked assessment output", () => {
+    const privateOwner = "sensitive-owner@example.test";
+    const privateHelper = "sensitive-helper@example.test";
+    const result = planLegacyHelpMigration([
+      { id: "blocked-owner", data: { user: privateOwner, helpers: [privateHelper] } },
+    ], {});
+    expect(result.summary.blocked).toBe(1);
+    expect(JSON.stringify(result)).not.toContain(privateOwner);
+    expect(JSON.stringify(result)).not.toContain(privateHelper);
+    expect(JSON.stringify(result)).not.toContain("@");
+    expect(result.items[0].proposedIdentityShape).toBeNull();
+  });
+
+  it("does not expose email values when conflicting normalized mappings block a record", () => {
+    const email = "owner@example.test";
+    const result = planLegacyHelpMigration([
+      { id: "conflict", data: { user: " OWNER@example.test ", helpers: [] } },
+    ], { "owner@example.test": "uid-one", "OWNER@example.test": "uid-two" });
+    expect(result.items[0].status).toBe("blocked");
+    expect(result.items[0].reasonCodes).toContain("owner_uid_mapping_ambiguous");
+    expect(JSON.stringify(result)).not.toContain(email);
+    expect(JSON.stringify(result)).not.toContain("@");
+    expect(result.items[0].proposedIdentityShape).toBeNull();
+  });
