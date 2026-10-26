@@ -42,12 +42,12 @@ export default function SOSPage() {
   useEffect(() => {
     if (!sosId) return;
     return subscribeActiveSOSRequests(
-      (requests) => {
-        const current = requests.find((request) => request.id === sosId);
+      (requests: Array<{ id: string; acceptedBy?: string | null }>) => {
+        const current = requests.find((request: { id: string; acceptedBy?: string | null }) => request.id === sosId);
         if (!current) return;
         setStatus(current.acceptedBy ? "yanit_geliyor" : "bekleniyor");
       },
-      (error) => {
+      (error: unknown) => {
         console.warn("Could not refresh active SOS status", error);
       },
     );
