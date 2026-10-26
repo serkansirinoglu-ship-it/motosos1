@@ -26,6 +26,8 @@ type HelpRequest = {
   helpers?: string[];
   resolvedBy?: string | null;
   resolvedAt?: number | null;
+  // Explicitly marks a browser-only fallback that has not been confirmed by Firestore.
+  localOnly?: boolean;
 };
 
 type MessageContextType = {
@@ -122,9 +124,10 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
 		}));
         setHelpRequests((current) => {
           const remoteIds = new Set(normalized.map((item: HelpRequest) => item.id));
+          for (const id of remoteIds) localOnlyHelpRequestIds.current.delete(id);
           const localOnly = current.filter((item) =>
             localOnlyHelpRequestIds.current.has(item.id) && !remoteIds.has(item.id)
-          );
+          ).map((item) => ({ ...item, localOnly: true }));
           return [...localOnly, ...(normalized as HelpRequest[])];
         });
 	  });
@@ -163,9 +166,9 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
         if (result) return;
         console.warn("Realtime help request unavailable; keeping a local copy");
         localOnlyHelpRequestIds.current.add(hr.id);
-        setHelpRequests((current) =>
-          current.some((item) => item.id === hr.id) ? current : [hr, ...current]
-        );
+        setHelpRequests((current) => current.map((item) =>
+          item.id === hr.id ? { ...item, localOnly: true } : item
+        ));
       }).catch((error) => {
         console.warn("Realtime help request failed; keeping a local copy", error);
         localOnlyHelpRequestIds.current.add(hr.id);
@@ -178,7 +181,9 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.warn("Realtime help request unavailable; keeping a local copy", error);
       localOnlyHelpRequestIds.current.add(hr.id);
-      setHelpRequests((current) => [hr, ...current]);
+      setHelpRequests((current) => current.map((item) =>
+        item.id === hr.id ? { ...item, localOnly: true } : item
+      ));
       setMessages((current) => ({ ...current, [id]: [] }));
       return hr;
     }
