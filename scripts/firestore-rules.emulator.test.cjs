@@ -81,6 +81,7 @@ async function main() {
       await setDoc(doc(db, "events", "legacy-private-event"), { organizerId: "owner", title: "Legacy event", contactEmail: "organizer@example.test" });
       await setDoc(doc(db, "listings", "public-listing"), { sellerId: "owner", sellerName: "Owner", title: "Public listing fixture", category: "Kask", price: 1000, city: "İzmir", description: "Valid listing fixture", createdAt: new Date(), featured: false });
       await setDoc(doc(db, "listings", "legacy-email-listing"), { sellerId: "owner", sellerName: "Owner", sellerEmail: "legacy@example.test", title: "Legacy listing with email", category: "Kask", price: 500, city: "İzmir", description: "Legacy fixture", createdAt: new Date(), featured: false });
+      await setDoc(doc(db, "listings", "legacy-private-listing"), { sellerId: "owner", sellerName: "Owner", title: "Legacy listing with private field", category: "Kask", price: 500, city: "İzmir", description: "Legacy fixture", internalNotes: "not for public", createdAt: new Date(), featured: false });
       await setDoc(doc(db, "presence", "owner"), { uid: "owner", lastSeen: new Date() });
       // Simulate a legacy document that would expose an extra field if public reads were unconditional.
       await setDoc(doc(db, "presence", "malformed-legacy"), { uid: "owner", lastSeen: new Date(), email: "private@example.test" });
@@ -326,6 +327,9 @@ async function main() {
     await assertSucceeds(getDoc(doc(anonymous, "listings", "public-listing")));
     await assertFails(getDoc(doc(anonymous, "listings", "legacy-email-listing")));
     await assertSucceeds(getDoc(doc(owner, "listings", "legacy-email-listing")));
+    await assertFails(getDoc(doc(anonymous, "listings", "legacy-private-listing")));
+    await assertSucceeds(getDoc(doc(owner, "listings", "legacy-private-listing")));
+    console.log("PASS: public listing reads reject legacy documents with unapproved private fields");
     console.log("PASS: legacy listings containing seller email are private to owner/admin");
     console.log("PASS: explicitly public catalog, banners, posts, events, and listings remain readable");
 
