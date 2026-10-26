@@ -346,12 +346,12 @@ export default function CommunityPage() {
                   </div>
                   <div>
                     <p className="font-bold text-white text-xs uppercase">{prov}</p>
-                    <p className="text-[10px] text-muted-foreground">Canlı Moto Grubu</p>
+                    <p className="text-[10px] text-muted-foreground">Şehir grubu · sunucu entegrasyonu bekleniyor</p>
                   </div>
                 </div>
                 <div className="mt-3 flex items-center justify-between pt-2 border-t border-border/50 text-[10px]">
                   <span className="text-primary font-semibold">Gruba Katıl →</span>
-                  <span className="text-green-400 font-bold">🟢 Aktif</span>
+                  <span className="text-amber-300 font-semibold">Yerel katılım</span>
                 </div>
               </Card>
             </Link>
