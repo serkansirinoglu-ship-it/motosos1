@@ -6,9 +6,12 @@
  * not endpoint authentication/authorization or production readiness.
  */
 const assert = require("node:assert/strict");
+const path = require("node:path");
+const { createRequire } = require("node:module");
 const { randomUUID } = require("node:crypto");
-const { initializeApp, deleteApp } = require("firebase-admin/app");
-const { getFirestore, FieldValue } = require("firebase-admin/firestore");
+const testRequire = createRequire(path.resolve(".firestore-test-runtime/package.json"));
+const { initializeApp, deleteApp } = testRequire("firebase-admin/app");
+const { getFirestore, FieldValue } = testRequire("firebase-admin/firestore");
 
 const projectId = process.env.GCLOUD_PROJECT || "demo-motoguard-firestore-rules";
 if (!process.env.FIRESTORE_EMULATOR_HOST) {
