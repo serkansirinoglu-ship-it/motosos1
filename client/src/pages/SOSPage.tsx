@@ -321,11 +321,11 @@ export default function SOSPage() {
                 }
               }
 
-              const canRestoreExistingRequest =
+              if (
                 existingRequest &&
                 isSameSOSAuthScope(initiatingUid, getCurrentAuthUid()) &&
-                isSameSOSAuthScope(initiatingUid, currentUserUidRef.current);
-              if (canRestoreExistingRequest) {
+                isSameSOSAuthScope(initiatingUid, currentUserUidRef.current)
+              ) {
                 const existingLat = existingRequest.latitude;
                 const existingLng = existingRequest.longitude;
                 const hasValidPosition =
