@@ -9,7 +9,7 @@ import { communityService, CommunityPost } from "@/services/communityService";
 import { marketplaceService, ListingItem } from "@/services/marketplaceService";
 import { businessService, BusinessProfile } from "@/services/businessService";
 import { sosService, SOSRequestItem } from "@/services/sosService";
-import adService, { AdBanner } from "@/services/adService";
+import type { AdBanner } from "@/services/adService";
 import { toast } from "sonner";
 
 export default function AdminPanel() {
@@ -426,7 +426,7 @@ export default function AdminPanel() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in">
           <Card className="w-full max-w-md bg-card-gradient border-border p-5 rounded-2xl shadow-2xl space-y-3">
             <div className="flex items-center justify-between border-b border-border pb-3">
-              <h3 className="font-display font-bold text-white uppercase text-base">Oturum İçi Banner Ekle</h3>
+              <h3 className="font-display font-bold text-white uppercase text-base">Sunucuya Reklam Ekle</h3>
               <button onClick={() => setIsNewBannerOpen(false)} className="p-1 rounded-lg hover:bg-muted text-muted-foreground">
                 <X className="w-5 h-5" />
               </button>
