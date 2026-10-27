@@ -335,7 +335,7 @@ export async function getMyActiveSOSRequest(uid) {
     return active[0] || null;
   } catch (error) {
     console.error("getMyActiveSOSRequest error", error);
-    return null;
+    throw error;
   }
 }
 

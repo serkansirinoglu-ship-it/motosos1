@@ -33,7 +33,8 @@ export default function SOSPage() {
   sosActiveRef.current = sosActive;
   const sosIdRef = useRef(sosId);
   sosIdRef.current = sosId;
-  const restoreStartedForUidRef = useRef<string | null>(null);
+  const [restoreRetryToken, setRestoreRetryToken] = useState(0);
+  const [restoreLookupFailed, setRestoreLookupFailed] = useState(false);
   const { createHelpRequest } = useMessages();
   const isSOSOwnerScopeCurrent = () =>
     isSameSOSAuthScope(sosOwnerUid, getCurrentAuthUid()) &&
@@ -43,20 +44,23 @@ export default function SOSPage() {
   // Only public parent fields are read; exact coordinates/contact details remain private.
   useEffect(() => {
     const uid = user?.uid;
-    if (!authReady || !uid || restoreStartedForUidRef.current === uid) return;
-    restoreStartedForUidRef.current = uid;
+    if (!authReady || !uid) {
+      setRestoreLookupFailed(false);
+      return;
+    }
     let cancelled = false;
 
     void getMyActiveSOSRequest(uid).then((request) => {
       if (
         cancelled ||
-        !request ||
         currentUserUidRef.current !== uid ||
         getCurrentAuthUid() !== uid ||
         sosActiveRef.current ||
         submittingRef.current ||
         sosIdRef.current
       ) return;
+      setRestoreLookupFailed(false);
+      if (!request) return;
 
       const latitude = request.latitude;
       const longitude = request.longitude;
@@ -79,12 +83,15 @@ export default function SOSPage() {
       toast.info("Aktif SOS çağrınız geri yüklendi. Haritada gösterilen konum yaklaşık konum olabilir.");
     }).catch((error) => {
       console.warn("Could not restore active SOS", error);
+      if (!cancelled && currentUserUidRef.current === uid && getCurrentAuthUid() === uid) {
+        setRestoreLookupFailed(true);
+      }
     });
 
     return () => {
       cancelled = true;
     };
-  }, [authReady, user?.uid]);
+  }, [authReady, user?.uid, restoreRetryToken]);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -522,6 +529,22 @@ export default function SOSPage() {
         <div className="w-full mt-4">
           <EmergencyWarning />
         </div>
+
+        {restoreLookupFailed && (
+          <div role="alert" className="w-full mt-4 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3">
+            <p className="text-xs leading-relaxed text-amber-200">
+              Aktif SOS kaydı kontrol edilemedi. Bağlantınızı kontrol edip yeniden deneyin; çağrının durumu doğrulanana kadar yeni SOS açmayın.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              className="mt-3 w-full"
+              onClick={() => setRestoreRetryToken((value) => value + 1)}
+            >
+              Aktif SOS kaydını yeniden kontrol et
+            </Button>
+          </div>
+        )}
 
         {/* Big SOS Button */}
         <button
