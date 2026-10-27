@@ -201,10 +201,15 @@ export default function AdminPanel() {
 
   const handleCreateEvent = async () => {
     if (!eventTitle.trim() || !eventCity.trim() || !eventLocation.trim() || !eventStartsAt || !eventEndsAt) { toast.error("Etkinlik başlığı, şehir, konum ve tarih aralığı zorunludur."); return; }
-    const id = await createMotoGuardEvent({ title: eventTitle.trim(), description: eventDescription.trim(), city: eventCity.trim(), location: eventLocation.trim(), startsAt: new Date(eventStartsAt).toISOString(), endsAt: new Date(eventEndsAt).toISOString(), image: eventImage.trim() || undefined });
-    if (!id) { toast.error("Etkinlik sunucuya kaydedilemedi. Yönetici yetkisini, tarihleri ve Firebase bağlantısını kontrol edin."); return; }
-    toast.success("Etkinlik Firestore'a kaydedildi.");
-    setEventTitle(""); setEventDescription(""); setEventCity(""); setEventLocation(""); setEventStartsAt(""); setEventEndsAt(""); setEventImage(""); setIsNewEventOpen(false);
+    try {
+      const id = await createMotoGuardEvent({ title: eventTitle.trim(), description: eventDescription.trim(), city: eventCity.trim(), location: eventLocation.trim(), startsAt: new Date(eventStartsAt).toISOString(), endsAt: new Date(eventEndsAt).toISOString(), image: eventImage.trim() || undefined });
+      if (!id) { toast.error("Etkinlik sunucuya kaydedilemedi. Yönetici yetkisini, tarihleri ve Firebase bağlantısını kontrol edin."); return; }
+      toast.success("Etkinlik Firestore'a kaydedildi.");
+      setEventTitle(""); setEventDescription(""); setEventCity(""); setEventLocation(""); setEventStartsAt(""); setEventEndsAt(""); setEventImage(""); setIsNewEventOpen(false);
+    } catch (error) {
+      console.error("Event creation failed", error);
+      toast.error("Etkinlik sunucuya kaydedilemedi. Alanları ve Firebase bağlantısını kontrol edin.");
+    }
   };
 
   const handleDeleteEvent = async (eventId: string) => {
