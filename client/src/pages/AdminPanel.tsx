@@ -262,7 +262,8 @@ export default function AdminPanel() {
             ) : (
               <Card className="bg-card-gradient border-border p-8 text-center rounded-xl">
                 <CheckCircle className="w-10 h-10 text-green-400 mx-auto mb-2" />
-                <p className="text-sm font-bold text-foreground">Bekleyen şikayet bulunmuyor.</p>
+                <p className="text-sm font-bold text-foreground">Bu oturumda yerel olarak tutulan bekleyen şikâyet yok.</p>
+                <p className="text-xs text-muted-foreground">Sunucuya bağlı kalıcı şikâyet kuyruğu henüz mevcut değil; bu ekran tüm kullanıcı bildirimlerini göstermez.</p>
               </Card>
             )}
           </div>
