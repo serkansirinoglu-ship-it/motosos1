@@ -629,16 +629,23 @@ export async function deleteProductRealtime(id) {
   }
 }
 
-export function subscribeBannersRealtime(onUpdate) {
-  if (!db) return () => {};
+export function subscribeBannersRealtime(onUpdate, onError = () => {}) {
+  if (!db) {
+    onError(new Error("firebase_not_configured"));
+    return () => {};
+  }
   try {
     const q = query(collection(db, "banners"), orderBy("createdAt", "desc"));
     return onSnapshot(q, (snap) => {
       const arr = snap.docs.map((d) => ({ ...d.data(), id: d.id }));
       onUpdate(arr);
+    }, (error) => {
+      console.error("subscribeBannersRealtime snapshot error", error);
+      onError(error);
     });
   } catch (e) {
     console.error("subscribeBannersRealtime error", e);
+    onError(e);
     return () => {};
   }
 }
