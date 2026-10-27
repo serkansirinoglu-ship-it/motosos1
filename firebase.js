@@ -681,3 +681,84 @@ export async function deleteBannerRealtime(id) {
     return null;
   }
 }
+
+
+// Persistent user reports. Firestore rules permit creation by signed-in users
+// and reading/status changes only by admins.
+export async function submitReportRealtime(report) {
+  if (!db || !auth?.currentUser?.uid) {
+    return { ok: false, error: "auth_required" };
+  }
+  const targetTypes = ["post", "listing", "user", "message", "sos"];
+  if (!report || !targetTypes.includes(report.targetType) ||
+      typeof report.targetId !== "string" || !report.targetId.trim() ||
+      report.targetId.length > 200 ||
+      typeof report.reason !== "string" || !report.reason.trim() ||
+      report.reason.length > 160 ||
+      typeof report.details !== "string" || report.details.length > 1000) {
+    return { ok: false, error: "invalid_report" };
+  }
+  try {
+    const user = auth.currentUser;
+    const ref = await addDoc(collection(db, "reports"), {
+      targetType: report.targetType,
+      targetId: report.targetId.trim(),
+      reason: report.reason.trim(),
+      details: report.details.trim(),
+      reporterUid: user.uid,
+      reporterEmail: user.email || "",
+      status: "pending",
+      createdAt: serverTimestamp(),
+    });
+    return { ok: true, id: ref.id };
+  } catch (error) {
+    console.error("submitReportRealtime error", error);
+    return { ok: false, error: "write_failed" };
+  }
+}
+
+export async function subscribeReportsRealtime(onUpdate, onError = () => {}) {
+  if (!db || !(await hasAdminClaim())) {
+    onError(new Error("admin_or_firebase_required"));
+    return () => {};
+  }
+  try {
+    return onSnapshot(
+      query(collection(db, "reports"), orderBy("createdAt", "desc")),
+      (snapshot) => onUpdate(snapshot.docs.map((item) => {
+        const data = item.data();
+        const createdAt = data.createdAt?.toDate?.();
+        return {
+          id: item.id,
+          targetType: data.targetType,
+          targetId: data.targetId,
+          reason: data.reason,
+          details: data.details || "",
+          reportedBy: data.reporterEmail || data.reporterUid,
+          status: data.status,
+          createdAt: createdAt ? createdAt.toLocaleString("tr-TR") : "Yeni",
+        };
+      })),
+      onError
+    );
+  } catch (error) {
+    onError(error);
+    return () => {};
+  }
+}
+
+export async function resolveReportRealtime(id, status) {
+  if (!db || !(await hasAdminClaim()) || !validateAdminDocumentId(id) ||
+      !["resolved", "dismissed"].includes(status)) return false;
+  try {
+    await updateDoc(doc(db, "reports", id), {
+      status,
+      resolvedAt: serverTimestamp(),
+      resolvedBy: auth.currentUser.uid,
+    });
+    return true;
+  } catch (error) {
+    console.error("resolveReportRealtime error", error);
+    return false;
+  }
+}
