@@ -107,7 +107,7 @@ async function main() {
       });
       await setDoc(doc(db, "communityPosts", "public-post"), { authorId: "owner", authorName: "Owner", city: "İzmir", content: "Public post fixture", likes: [], comments: [], createdAt: new Date() });
       await setDoc(doc(db, "communityPosts", "legacy-email-post"), { authorId: "owner", authorName: "Owner", authorEmail: "legacy@example.test", city: "İzmir", content: "Legacy email-bearing post", likes: [], comments: [], createdAt: new Date() });
-      await setDoc(doc(db, "events", "public-event"), { organizerId: "owner", title: "Public event fixture" });
+      await setDoc(doc(db, "events", "public-event"), { organizerId: "owner", title: "Public event fixture", createdAt: new Date() });
       await setDoc(doc(db, "events", "legacy-private-event"), { organizerId: "owner", title: "Legacy event", contactEmail: "organizer@example.test" });
       await setDoc(doc(db, "listings", "public-listing"), { sellerId: "owner", sellerName: "Owner", title: "Public listing fixture", category: "Kask", price: 1000, city: "İzmir", description: "Valid listing fixture", createdAt: new Date(), featured: false });
       await setDoc(doc(db, "listings", "legacy-email-listing"), { sellerId: "owner", sellerName: "Owner", sellerEmail: "legacy@example.test", title: "Legacy listing with email", category: "Kask", price: 500, city: "İzmir", description: "Legacy fixture", createdAt: new Date(), featured: false });
@@ -611,8 +611,11 @@ async function main() {
       sellerId: "owner", title: "Email-bearing listing", category: "Kask", price: 100, city: "İzmir", description: "Must not publish email", sellerEmail: "owner@example.test", createdAt: serverTimestamp(),
     }));
     console.log("PASS: new listings cannot store seller email in publicly readable documents");
-    await assertSucceeds(setDoc(doc(owner, "events", "owner-event"), {
+    await assertFails(setDoc(doc(owner, "events", "owner-event"), {
       organizerId: "owner", title: "Owner event", createdAt: serverTimestamp(),
+    }));
+    await assertSucceeds(setDoc(doc(admin, "events", "admin-event"), {
+      organizerId: "admin", title: "Admin event", createdAt: serverTimestamp(),
     }));
     await assertFails(setDoc(doc(owner, "events", "event-missing-created-at"), {
       organizerId: "owner", title: "Missing creation timestamp",
