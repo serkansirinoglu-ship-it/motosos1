@@ -10,6 +10,7 @@ import EmergencyWarning from "@/components/EmergencyWarning";
 import { sosService, SOSHelpCategory, CATEGORY_LABELS, STATUS_LABELS, SOSStatus } from "@/services/sosService";
 import { getCurrentAuthUid, createSOSRequest, updateSOSRequest, getMyActiveSOSRequest, subscribeActiveSOSRequests } from "../../../firebase";
 import { isSameSOSAuthScope } from "@/services/sosInputValidation";
+import { buildNearbyServiceLinks } from "@/services/nearbyServices";
 
 export default function SOSPage() {
   const [sosActive, setSosActive] = useState(false);
@@ -73,12 +74,13 @@ export default function SOSPage() {
           : "diger"
       );
       setStatus(request.acceptedBy ? "yanit_geliyor" : "bekleniyor");
-      setPosition(
+      const hasValidPosition =
         typeof latitude === "number" && Number.isFinite(latitude) &&
-        typeof longitude === "number" && Number.isFinite(longitude)
-          ? { lat: latitude, lng: longitude }
-          : null
-      );
+        latitude >= -90 && latitude <= 90 &&
+        typeof longitude === "number" && Number.isFinite(longitude) &&
+        longitude >= -180 && longitude <= 180;
+      setPosition(hasValidPosition ? { lat: latitude, lng: longitude } : null);
+      setNearbyServices(hasValidPosition ? buildNearbyServiceLinks(latitude, longitude) : []);
       setSosActive(true);
       toast.info("Aktif SOS çağrınız geri yüklendi. Haritada gösterilen konum yaklaşık konum olabilir.");
     }).catch((error) => {
@@ -179,20 +181,8 @@ export default function SOSPage() {
         const lng = pos.coords.longitude;
         setPosition({ lat, lng });
 
-        // Generate nearby search links
-        const services = [
-          { key: "usta", label: "Motosiklet Ustaları", query: "motosiklet usta tamirci" },
-          { key: "cekici", label: "Oto & Moto Çekiciler", query: "çekici oto kurtarma" },
-          { key: "lastikci", label: "7/24 Lastikçiler", query: "lastikçi oto lastik" },
-          { key: "benzinlik", label: "Benzin İstasyonları", query: "benzinlik akaryakıt" },
-        ].map((item) => ({
-          key: item.key,
-          label: item.label,
-          searchUrl: `https://www.google.com/maps/search/${encodeURIComponent(item.query)}/@${lat},${lng},14z`,
-          directionsUrl: `https://www.google.com/maps/dir/?api=1&origin=${lat},${lng}&destination=${encodeURIComponent(item.query)}`,
-        }));
-
-        setNearbyServices(services);
+        // Reuse the same validated links when creating and restoring an SOS.
+        setNearbyServices(buildNearbyServiceLinks(lat, lng));
 
         // Save local SOS state
         const localReq = sosService.createRequest({
