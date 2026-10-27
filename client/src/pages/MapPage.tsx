@@ -60,7 +60,10 @@ export default function MapPage() {
   };
 
   useEffect(() => {
-    setBusinesses(businessService.getBusinesses());
+    const unsubscribeBusinesses = businessService.subscribe(
+      () => setBusinesses(businessService.getBusinesses()),
+      (error) => console.warn("Business directory subscription failed", error),
+    );
     setActiveSOS(sosService.getActiveRequests());
 
     // Merge public Firestore SOS updates with this browser's local-only requests.
@@ -109,7 +112,7 @@ export default function MapPage() {
       );
     }
 
-    return () => unsubscribe();
+    return () => { unsubscribe(); unsubscribeBusinesses(); };
   }, []);
 
   const locateMe = () => {
@@ -151,7 +154,7 @@ export default function MapPage() {
       <div className="px-4 pt-3 max-w-lg mx-auto">
         <Card className="bg-amber-500/10 border-amber-500/30 p-3 rounded-xl">
           <p className="text-[11px] text-amber-200 leading-relaxed">
-            İşletme rehberi henüz doğrulanmış bir veri kaynağına bağlı değil; sahte adres, telefon veya puan gösterilmiyor. Yerel test SOS kayıtları yalnızca bu cihazda görünür.
+            İşletme rehberi Firestore'daki herkese açık kayıtları gösterir. Yerel test SOS kayıtları yalnızca bu cihazda görünür.
           </p>
         </Card>
       </div>
