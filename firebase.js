@@ -1,7 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut, onAuthStateChanged, getIdTokenResult } from "firebase/auth";
 import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, getDocs, doc, setDoc, getDoc, updateDoc, deleteDoc, where, Timestamp, writeBatch } from "firebase/firestore";
-import { isCurrentSOSAuthSession, validateSOSRequestInput, validateSOSStatusUpdatePatch, validateUserProfilePatch, validateUserProfileCreation, validateProductInput, validateProductPatch, validateBannerInput, validateBannerPatch, validateAdminDocumentId } from "./client/src/services/sosInputValidation";
+import { isCurrentSOSAuthSession, validateSOSRequestInput, validateSOSStatusUpdatePatch, validateUserProfilePatch, validateUserProfileCreation, validateProductInput, validateProductPatch, validateBannerInput, validateBannerPatch, validateBusinessInput, validateBusinessPatch, validateAdminDocumentId } from "./client/src/services/sosInputValidation";
 import { acquireSOSCreationLock, releaseSOSCreationLock } from "./client/src/services/sosCreateLock";
 import { validateHelpMessageInput, validateHelpRequestInput, validateHelpRequestUpdatePatch } from "./client/src/services/helpMessageValidation";
 
@@ -691,6 +691,79 @@ export async function deleteBannerRealtime(id) {
   }
 }
 
+
+// Public business directory: records are persisted in Firestore; writes are admin-only.
+export function subscribeBusinessesRealtime(onUpdate, onError = () => {}) {
+  if (!db) {
+    onError(new Error("firebase_not_configured"));
+    return () => {};
+  }
+  try {
+    const q = query(collection(db, "businesses"), where("publicVisible", "==", true));
+    return onSnapshot(q, (snap) => {
+      const items = snap.docs.map((d) => ({ ...d.data(), id: d.id }));
+      onUpdate(items);
+    }, (error) => {
+      console.error("subscribeBusinessesRealtime snapshot error", error);
+      onError(error);
+    });
+  } catch (error) {
+    console.error("subscribeBusinessesRealtime error", error);
+    onError(error);
+    return () => {};
+  }
+}
+
+export async function createBusinessRealtime(data) {
+  if (!db || !(await hasAdminClaim()) || !validateBusinessInput(data)) return null;
+  const payload = {
+    name: data.name.trim(),
+    category: data.category,
+    city: data.city.trim(),
+    address: data.address.trim(),
+    phone: data.phone.trim(),
+    workingHours: data.workingHours.trim(),
+    lat: data.lat,
+    lng: data.lng,
+    tier: data.tier,
+    verified: data.verified,
+    publicVisible: data.publicVisible,
+    rating: 0,
+    reviewCount: 0,
+    ...(data.photo !== undefined ? { photo: data.photo.trim() } : {}),
+    ...(data.description !== undefined ? { description: data.description.trim() } : {}),
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+  try {
+    return await addDoc(collection(db, "businesses"), payload);
+  } catch (error) {
+    console.error("createBusinessRealtime error", error);
+    return null;
+  }
+}
+
+export async function updateBusinessRealtime(id, patch) {
+  if (!db || !(await hasAdminClaim()) || !validateBusinessPatch(id, patch)) return null;
+  const safePatch = { ...patch, updatedAt: serverTimestamp() };
+  try {
+    return await updateDoc(doc(db, "businesses", id), safePatch);
+  } catch (error) {
+    console.error("updateBusinessRealtime error", error);
+    return null;
+  }
+}
+
+export async function deleteBusinessRealtime(id) {
+  if (!db || !(await hasAdminClaim()) || !validateAdminDocumentId(id)) return null;
+  try {
+    await deleteDoc(doc(db, "businesses", id));
+    return true;
+  } catch (error) {
+    console.error("deleteBusinessRealtime error", error);
+    return null;
+  }
+}
 
 // Persistent user reports. Firestore rules permit creation by signed-in users
 // and reading/status changes only by admins.
