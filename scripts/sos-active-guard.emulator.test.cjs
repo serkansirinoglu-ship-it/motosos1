@@ -38,6 +38,11 @@ async function run() {
   let recoveredId = null;
 
   try {
+    await assert.rejects(() => create(""), TypeError,
+      "the transaction primitive must reject an empty UID");
+    await assert.rejects(() => close(uid, "any-id", "active"), TypeError,
+      "the close primitive must reject non-terminal statuses");
+
     const simultaneous = await Promise.all(
       Array.from({ length: 6 }, () => create(uid)),
     );
