@@ -12,7 +12,10 @@ export default function LastikciPage() {
   const [position, setPosition] = useState<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
-    setBusinesses(businessService.getBusinesses("lastikci", selectedCity === "Tümü" ? undefined : selectedCity));
+    const unsubscribeBusinesses = businessService.subscribe(
+      () => setBusinesses(businessService.getBusinesses("lastikci", selectedCity === "Tümü" ? undefined : selectedCity)),
+      (error) => console.warn("Business directory subscription failed", error),
+    );
 
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -21,6 +24,7 @@ export default function LastikciPage() {
         { timeout: 5000 }
       );
     }
+    return () => unsubscribeBusinesses();
   }, [selectedCity]);
 
   return (
