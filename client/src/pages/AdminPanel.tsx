@@ -99,7 +99,7 @@ export default function AdminPanel() {
     }
     try {
       unsubscribeBanners = subscribeBannersRealtime(
-        (items) => {
+        (items: Record<string, unknown>[]) => {
           if (cancelled) return;
           setBanners(items.map((item: Record<string, unknown>) => ({
             id: String(item.id || ""),
