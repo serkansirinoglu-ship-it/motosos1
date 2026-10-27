@@ -111,6 +111,34 @@ async function main() {
     const anonymous = env.unauthenticatedContext().firestore();
     const owner = env.authenticatedContext("owner", { email: "owner@example.test" }).firestore();
     const helper = env.authenticatedContext("helper", { email: "helper@example.test" }).firestore();
+    const admin = env.authenticatedContext("admin", { email: "admin@example.test", admin: true }).firestore();
+
+    // Reports must be persisted by the authenticated reporter and remain private to admins.
+    await assertFails(setDoc(doc(anonymous, "reports", "anonymous-report"), {
+      targetType: "post", targetId: "post-1", reason: "Spam", details: "",
+      reporterUid: "anonymous", reporterEmail: "", status: "pending", createdAt: serverTimestamp(),
+    }));
+    await assertFails(setDoc(doc(outsider, "reports", "spoofed-report"), {
+      targetType: "post", targetId: "post-1", reason: "Spam", details: "",
+      reporterUid: "owner", reporterEmail: "owner@example.test", status: "pending", createdAt: serverTimestamp(),
+    }));
+    await assertSucceeds(setDoc(doc(owner, "reports", "valid-report"), {
+      targetType: "post", targetId: "post-1", reason: "Spam", details: "",
+      reporterUid: "owner", reporterEmail: "owner@example.test", status: "pending", createdAt: serverTimestamp(),
+    }));
+    await assertFails(getDoc(doc(outsider, "reports", "valid-report")));
+    await assertSucceeds(getDoc(doc(admin, "reports", "valid-report")));
+    await assertFails(updateDoc(doc(owner, "reports", "valid-report"), {
+      status: "resolved", resolvedAt: serverTimestamp(), resolvedBy: "owner",
+    }));
+    await assertSucceeds(updateDoc(doc(admin, "reports", "valid-report"), {
+      status: "resolved", resolvedAt: serverTimestamp(), resolvedBy: "admin",
+    }));
+    await assertFails(updateDoc(doc(admin, "reports", "valid-report"), {
+      status: "pending", resolvedAt: serverTimestamp(), resolvedBy: "admin",
+    }));
+    console.log("PASS: reports require authenticated non-spoofed submission and admin-only review/status transitions");
+
 
     await assertFails(getDoc(doc(outsider, "sosRequests", "private-sos")));
     console.log("PASS: outsider cannot read inactive SOS");
