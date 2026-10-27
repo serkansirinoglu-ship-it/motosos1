@@ -66,3 +66,27 @@ Safe CI now includes `scripts/sos-active-guard.emulator.test.cjs`, which runs on
 - a guard pointing to a missing SOS document can be recovered.
 
 This is a transaction-pattern proof of concept, not a production endpoint. The Admin SDK bypasses Firestore Security Rules, so it does not validate endpoint authentication or authorization. The client is not wired to this code; the cross-device issue remains unresolved until a supported server runtime, authenticated endpoint, dependency/secret management, lifecycle integration, and deployment plan are implemented and reviewed.
+
+
+## SOS client integration audit (2026-10-27)
+
+Reviewed the current branch's `firebase.js`, `client/src/pages/SOSPage.tsx`, `server/index.ts`, `vercel.json`, `firebase.json`, and root `package.json`.
+
+### Confirmed call paths and schema constraints
+
+- `createSOSRequest(data)` in `firebase.js` takes its effective identity from `auth.currentUser`, checks it against the caller UID, queries `sosRequests` by `requesterId`, then writes a public parent plus `privateDetails/owner` in a batch. The query and batch are separate operations, so the client can still race across devices.
+- The public parent currently expects `requesterId`, `helpType`, rounded `latitude`/`longitude`, `status: "active"`, `acceptedBy: null`, `createdAt`, `updatedAt`, `resolvedAt: null`, and `cancelledAt: null`. Exact coordinates, contact email, and note belong in `privateDetails/owner`.
+- `acceptSOSRequest(id)` currently writes `acceptedBy` and `updatedAt` directly from the client. `updateSOSRequest(id, patch, expectedUid)` directly writes owner terminal status and the corresponding timestamp. Any server-authoritative migration must explicitly preserve or intentionally redesign these paths; swapping only creation would leave lifecycle and guard reconciliation inconsistent.
+- `SOSPage.tsx` also maintains a local placeholder while the remote request is pending/fails and contains session-change handling. Integration must preserve honest local-only vs server-confirmed messaging and must not silently report a local placeholder as an active server SOS.
+- `server/index.ts` is a static SPA server with a catch-all route, `vercel.json` has no API/function routing configuration, and `package.json` has no Firebase Admin SDK dependency. `firebase.json` configures the Firestore emulator but does not identify a dedicated non-production Firebase project.
+
+### Required implementation sequence (not yet implemented)
+
+1. Decide the supported server execution target and deployment ownership; configure a dedicated non-production Firebase project and isolated credentials/data. Prove the target with a harmless health endpoint before adding SOS operations.
+2. Define and test a server contract for create, accept, cancel, and resolve. Verify Firebase ID tokens server-side; derive UID only from verified claims; validate App Check where supported; enforce request schema, per-UID rate limits, bounded payloads, structured redacted logs, and fail-closed behavior.
+3. In one transaction, read the per-UID guard and any legacy active records needed for reconciliation; create the complete public parent, owner-private document, and guard atomically. Preserve rounded public coordinates and exact-location privacy. Do not trust caller-provided requester IDs/emails.
+4. Make accept and terminal transitions server-authoritative or retain direct Firestore writes only if rules and the chosen invariant prove they cannot bypass the guard lifecycle. For terminal transitions, clear the guard only if it still references the same SOS. Specify behavior for stale guards and legacy active records before rollout.
+5. Add emulator tests for schema parity, simultaneous creation from independent clients, retries, account changes, unauthorized callers, accept/close races, stale/legacy reconciliation, privacy boundaries, and failure responses. Add UI/service tests for loading, local-only fallback, remote errors, session switches, refresh/restore, and helper visibility.
+6. Run the existing Safe CI suite on the exact candidate, then perform manual two-account end-to-end acceptance against non-production only. Document monitoring, alerts, rollback, data retention, and operational ownership before any production approval.
+
+**Current decision unchanged:** do not wire the client or expose a new endpoint yet. The transaction helper intentionally writes only a minimal proof-of-concept record and is not schema-compatible with the current client flow. A green Safe CI run does not close these integration gates.
