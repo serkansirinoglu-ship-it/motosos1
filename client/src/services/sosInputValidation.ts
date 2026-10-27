@@ -171,7 +171,7 @@ export function validateUserProfileCreation(
 
 
 const PRODUCT_FIELDS = ["name", "price", "stock", "image", "description"] as const;
-const BANNER_FIELDS = ["title", "image", "link", "active"] as const;
+const BANNER_FIELDS = ["title", "subtitle", "sponsorName", "image", "link", "active"] as const;
 
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
@@ -201,6 +201,8 @@ function validBannerFields(value: Record<string, unknown>, requireAll: boolean):
   if (!hasOnlyFields(value, BANNER_FIELDS)) return false;
   if (requireAll && (!("title" in value) || !("active" in value))) return false;
   if ("title" in value && (typeof value.title !== "string" || !value.title.trim() || value.title.length > 120)) return false;
+  if ("subtitle" in value && !validOptionalText(value.subtitle, 300)) return false;
+  if ("sponsorName" in value && !validOptionalText(value.sponsorName, 120)) return false;
   if ("image" in value && !validOptionalText(value.image, 2048)) return false;
   if ("link" in value && !validOptionalText(value.link, 2048)) return false;
   if ("active" in value && typeof value.active !== "boolean") return false;
