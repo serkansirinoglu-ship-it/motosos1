@@ -58,7 +58,7 @@ export default function AdminPanel() {
     let cancelled = false;
     let unsubscribeReports: (() => void) | undefined;
     void subscribeReportsRealtime(
-      (items) => { if (!cancelled) setReports(items); },
+      (items: ReportItem[]) => { if (!cancelled) setReports(items); },
       () => { if (!cancelled) toast.error("Şikâyetler sunucudan alınamadı. Firebase bağlantısını ve yönetici yetkisini kontrol edin."); },
     ).then((unsubscribe) => {
       if (cancelled) unsubscribe();
