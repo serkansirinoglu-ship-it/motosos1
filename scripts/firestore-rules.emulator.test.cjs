@@ -577,12 +577,14 @@ async function main() {
     await assertFails(setDoc(doc(owner, "communityPosts", "missing-timestamp-post"), {
       authorId: "owner", authorName: "Owner", content: "Post", city: "İzmir", likes: [], comments: [],
     }));
-    await assertSucceeds(updateDoc(doc(owner, "events", "public-event"), { title: "Edited public event" }));
+    await assertFails(updateDoc(doc(owner, "events", "public-event"), { title: "Owner edit not allowed" }));
     await assertFails(updateDoc(doc(owner, "events", "public-event"), { organizerId: "outsider" }));
     await assertFails(updateDoc(doc(owner, "events", "public-event"), { createdAt: serverTimestamp() }));
     await assertFails(updateDoc(doc(owner, "events", "public-event"), { isAdmin: true }));
+    await assertSucceeds(updateDoc(doc(admin, "events", "public-event"), { title: "Admin edited event" }));
     await assertFails(updateDoc(doc(outsider, "events", "public-event"), { title: "Unauthorized event edit" }));
     await assertFails(deleteDoc(doc(outsider, "events", "public-event")));
+    await assertSucceeds(deleteDoc(doc(admin, "events", "public-event")));
     await assertFails(setDoc(doc(owner, "events", "extra-field-event"), {
       organizerId: "owner", title: "Event", isAdmin: true,
     }));
