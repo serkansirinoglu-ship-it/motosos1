@@ -648,8 +648,10 @@ export async function createBannerRealtime(data) {
   const payload = {
     title: data.title.trim(),
     active: data.active,
-    ...(data.image !== undefined ? { image: data.image } : {}),
-    ...(data.link !== undefined ? { link: data.link } : {}),
+    ...(data.subtitle !== undefined ? { subtitle: data.subtitle.trim() } : {}),
+    ...(data.sponsorName !== undefined ? { sponsorName: data.sponsorName.trim() } : {}),
+    ...(data.image !== undefined ? { image: data.image.trim() } : {}),
+    ...(data.link !== undefined ? { link: data.link.trim() } : {}),
     createdAt: serverTimestamp(),
   };
   try {
