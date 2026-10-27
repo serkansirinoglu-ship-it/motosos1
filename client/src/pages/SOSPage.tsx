@@ -30,7 +30,7 @@ export default function SOSPage() {
   const currentUserUidRef = useRef<string | null>(user?.uid ?? null);
   currentUserUidRef.current = user?.uid ?? null;
   const { createHelpRequest } = useMessages();
-  const sosOwnerScopeCurrent =
+  const isSOSOwnerScopeCurrent = () =>
     isSameSOSAuthScope(sosOwnerUid, getCurrentAuthUid()) &&
     isSameSOSAuthScope(sosOwnerUid, currentUserUidRef.current);
 
@@ -257,7 +257,7 @@ export default function SOSPage() {
     if (finishingRef.current) return;
     finishingRef.current = true;
     setFinishing(true);
-    if (!sosOwnerScopeCurrent) {
+    if (!isSOSOwnerScopeCurrent()) {
       toast.error("Bu SOS farklı bir oturumda oluşturuldu. İptal etmek için çağrıyı oluşturan hesaba yeniden giriş yapın. Acil tehlikede 112’yi arayın.");
       finishingRef.current = false;
       setFinishing(false);
@@ -272,7 +272,7 @@ export default function SOSPage() {
       }
       if (!remoteUpdated) {
         toast.error(
-          !sosOwnerScopeCurrent
+          !isSOSOwnerScopeCurrent()
             ? "Oturum değişti. Çağrının durumu doğrulanamadı; ilk hesabınıza dönerek kontrol edin. Acil tehlikede 112’yi arayın."
             : "Sunucu çağrısı iptal edilemedi. Çağrı aktif tutuldu; bağlantınızı kontrol edip yeniden deneyin."
         );
@@ -298,7 +298,7 @@ export default function SOSPage() {
     if (finishingRef.current) return;
     finishingRef.current = true;
     setFinishing(true);
-    if (!sosOwnerScopeCurrent) {
+    if (!isSOSOwnerScopeCurrent()) {
       toast.error("Bu SOS farklı bir oturumda oluşturuldu. Tamamlamak için çağrıyı oluşturan hesaba yeniden giriş yapın. Acil tehlikede 112’yi arayın.");
       finishingRef.current = false;
       setFinishing(false);
@@ -313,7 +313,7 @@ export default function SOSPage() {
       }
       if (!remoteUpdated) {
         toast.error(
-          !sosOwnerScopeCurrent
+          !isSOSOwnerScopeCurrent()
             ? "Oturum değişti. Çağrının durumu doğrulanamadı; ilk hesabınıza dönerek kontrol edin. Acil tehlikede 112’yi arayın."
             : "Sunucu çağrısı tamamlandı olarak işaretlenemedi. Çağrı aktif tutuldu; bağlantınızı kontrol edip yeniden deneyin."
         );
@@ -368,7 +368,7 @@ export default function SOSPage() {
               Bu çağrı yalnızca bu oturumda kayıtlı. Sunucuya kaydedildiği ve diğer sürücülere ulaştığı doğrulanmadı. Acil tehlikede 112’yi arayın.
             </p>
           )}
-          {!sosOwnerScopeCurrent && (
+          {!isSOSOwnerScopeCurrent() && (
             <p role="alert" className="w-full mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs leading-relaxed text-amber-200">
               Oturum değişti. Bu çağrıyı yanlış hesapla değiştirmemek için iptal ve tamamlama kilitlendi. Çağrıyı oluşturan hesaba yeniden giriş yapın. Acil tehlikede 112’yi arayın.
             </p>
@@ -431,7 +431,7 @@ export default function SOSPage() {
           <div className="w-full mt-6 flex gap-3">
             <Button
               onClick={handleResolve}
-              disabled={finishing || !sosOwnerScopeCurrent}
+              disabled={finishing || !isSOSOwnerScopeCurrent()}
               className="flex-1 h-12 bg-green-600 hover:bg-green-700 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-green-600/30"
             >
               <Check className="w-4 h-4 mr-1.5" />
@@ -439,7 +439,7 @@ export default function SOSPage() {
             </Button>
             <Button
               onClick={handleCancel}
-              disabled={finishing || !sosOwnerScopeCurrent}
+              disabled={finishing || !isSOSOwnerScopeCurrent()}
               variant="outline"
               className="flex-1 h-12 border-destructive text-destructive hover:bg-destructive/10 font-bold text-xs uppercase tracking-wider rounded-xl"
             >
