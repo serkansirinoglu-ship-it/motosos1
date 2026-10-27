@@ -39,6 +39,8 @@ async function run() {
   let otherUid = null;
   let otherGuardRef = null;
   let otherSOSId = null;
+  let corruptGuardUid = null;
+  let corruptGuardRef = null;
 
   try {
     await assert.rejects(() => create(""), TypeError,
@@ -75,6 +77,21 @@ async function run() {
     assert.notEqual(other.id, activeId, "different users must not share an SOS ID");
     assert.equal((await otherGuardRef.get()).data()?.sosId, other.id,
       "each user must own a separate active guard");
+
+    // A guard must never be repointed away from another owner's active SOS.
+    corruptGuardUid = `emulator-sos-corrupt-guard-${randomUUID()}`;
+    corruptGuardRef = db.collection("activeSOSLocks").doc(corruptGuardUid);
+    await corruptGuardRef.set({ sosId: other.id });
+    await assert.rejects(
+      () => create(corruptGuardUid),
+      /active SOS guard points to a different owner/,
+      "a mismatched active guard must fail closed",
+    );
+    assert.equal((await corruptGuardRef.get()).data()?.sosId, other.id,
+      "the mismatched guard must not be overwritten");
+    const orphanedRequests = await sosCollection.where("requesterId", "==", corruptGuardUid).get();
+    assert.equal(orphanedRequests.size, 0,
+      "a mismatched guard must not create an orphan active SOS");
     assert.equal(await close(otherUid, activeId, "cancelled"), false,
       "another user must not close the first user's SOS");
     assert.equal((await sosCollection.doc(activeId).get()).data()?.status, "active",
@@ -134,6 +151,7 @@ async function run() {
       if (recoveredId) await sosCollection.doc(recoveredId).delete().catch(() => {});
       await staleGuardRef.delete().catch(() => {});
     }
+    if (corruptGuardRef) await corruptGuardRef.delete().catch(() => {});
     if (otherGuardRef) await otherGuardRef.delete().catch(() => {});
     if (otherSOSId) await sosCollection.doc(otherSOSId).delete().catch(() => {});
     await deleteApp(app);
