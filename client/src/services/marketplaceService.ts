@@ -106,6 +106,18 @@ class MarketplaceService {
     return listingRef.id;
   }
 
+  /** Admin moderation deletion; the refreshed Firebase token and Firestore rules both enforce admin access. */
+  public async deleteRemoteListingAsAdmin(listingId: string): Promise<void> {
+    const user = marketplaceAuth?.currentUser;
+    if (!marketplaceDb || !user) throw new Error("Yönetici oturumu veya Firebase bağlantısı gerekli.");
+    if (typeof listingId !== "string" || !listingId.trim() || listingId.includes("/") || listingId.length > 1500) {
+      throw new Error("İlan kimliği geçersiz.");
+    }
+    const token = await user.getIdTokenResult(true);
+    if (token.claims.admin !== true) throw new Error("Yönetici yetkisi doğrulanamadı.");
+    await deleteDoc(doc(marketplaceDb, "listings", listingId));
+  }
+
   public async deleteRemoteListing(listingId: string, sellerId: string): Promise<void> {
     if (!marketplaceDb || !marketplaceAuth?.currentUser?.uid) throw new Error("İlan silmek için giriş yapın.");
     if (!listingId || marketplaceAuth.currentUser.uid !== sellerId) throw new Error("Yalnızca kendi ilanınızı silebilirsiniz.");
