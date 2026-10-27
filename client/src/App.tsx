@@ -26,6 +26,7 @@ import AdminPanel from "./pages/AdminPanel";
 import GroupPage from "./pages/GroupPage";
 import HelpRequestsPage from "./pages/HelpRequestsPage";
 import ChatPage from "./pages/ChatPage";
+import HomeEngagementSection from "./components/HomeEngagementSection";
 
 function AppLayout({ children, onAuthOpen, isAuthenticated }: { children: React.ReactNode; onAuthOpen?: () => void; isAuthenticated?: boolean }) {
   return (
@@ -42,6 +43,7 @@ function Router({ onAuthOpen, isAuthenticated }: { onAuthOpen?: () => void; isAu
       <Route path="/">
         <AppLayout onAuthOpen={onAuthOpen} isAuthenticated={isAuthenticated}>
           <Home />
+          <HomeEngagementSection />
         </AppLayout>
       </Route>
       <Route path="/harita">

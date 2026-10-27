@@ -12,7 +12,10 @@ export default function LastikciPage() {
   const [position, setPosition] = useState<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
-    setBusinesses(businessService.getBusinesses("lastikci", selectedCity === "Tümü" ? undefined : selectedCity));
+    const unsubscribeBusinesses = businessService.subscribe(
+      () => setBusinesses(businessService.getBusinesses("lastikci", selectedCity === "Tümü" ? undefined : selectedCity)),
+      (error) => console.warn("Business directory subscription failed", error),
+    );
 
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -21,10 +24,11 @@ export default function LastikciPage() {
         { timeout: 5000 }
       );
     }
+    return () => unsubscribeBusinesses();
   }, [selectedCity]);
 
   return (
-    <div className="min-h-screen bg-asphalt pb-8">
+    <div className="min-h-screen bg-asphalt-light pb-8 page-surface-light">
       <Header />
 
       <div className="px-4 pt-4 max-w-lg mx-auto">
@@ -33,7 +37,7 @@ export default function LastikciPage() {
             <Bike className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="font-display text-2xl font-extrabold text-white uppercase tracking-wider">
+            <h1 className="font-display text-2xl font-extrabold text-foreground uppercase tracking-wider">
               Lastikçi & Balans
             </h1>
             <p className="text-xs text-muted-foreground">Motosiklet lastik tamiri, değişimi ve hava takviyesi</p>
@@ -112,7 +116,7 @@ export default function LastikciPage() {
           ) : (
             <Card className="bg-card-gradient border-border p-8 flex flex-col items-center justify-center text-center rounded-xl">
               <AlertCircle className="w-10 h-10 text-muted-foreground/40 mb-2" />
-              <p className="text-sm font-bold text-foreground">Bu şehirde henüz kayıtlı lastikçi bulunmuyor.</p>
+              <p className="text-sm font-bold text-foreground">Henüz doğrulanmış lastikçi kaydı bağlı değil.</p>
             </Card>
           )}
         </div>

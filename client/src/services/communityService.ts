@@ -1,3 +1,11 @@
+import { getApps } from "firebase/app";
+import { getAuth, type Auth } from "firebase/auth";
+import { collection, deleteDoc, doc, getFirestore, onSnapshot, orderBy, query, serverTimestamp, setDoc, type Firestore } from "firebase/firestore";
+
+const firebaseApp = getApps()[0];
+const communityAuth: Auth | null = firebaseApp ? getAuth(firebaseApp) : null;
+const communityDb: Firestore | null = firebaseApp ? getFirestore(firebaseApp) : null;
+
 /**
  * CommunityService — Manages social posts, comments, likes, city feeds, and post moderation.
  */
@@ -14,8 +22,9 @@ export interface PostComment {
 
 export interface CommunityPost {
   id: string;
+  authorId?: string;
   authorName: string;
-  authorEmail: string;
+  authorEmail?: string;
   authorPhoto?: string;
   city: string;
   content: string;
@@ -26,42 +35,83 @@ export interface CommunityPost {
   createdAt: string;
 }
 
-const INITIAL_POSTS: CommunityPost[] = [
-  {
-    id: 'post-1',
-    authorName: 'Motorcu Efe',
-    authorEmail: 'efe@motoguard.tr',
-    city: 'İzmir',
-    content: 'Hafta sonu Karaburun kıyı rotası yapıyoruz. Çeşmealtı kavşağında saat 09:30 buluşma. Katılmak isteyen kardeşler yoruma yazsın! 🏍️💨',
-    tag: 'Grup Sürüşü',
-    likes: ['ahmet@motoguard.tr', 'can@motoguard.tr'],
-    comments: [
-      {
-        id: 'c-1',
-        postId: 'post-1',
-        authorName: 'Ahmet Y.',
-        authorEmail: 'ahmet@motoguard.tr',
-        content: 'Harika fikir, depoyu fulleyip geliyorum!',
-        createdAt: '2026-08-12 14:30',
-      },
-    ],
-    createdAt: '2026-08-12 12:00',
-  },
-  {
-    id: 'post-2',
-    authorName: 'Selin Yıldız',
-    authorEmail: 'selin@motoguard.tr',
-    city: 'İstanbul',
-    content: 'Şile otoyolunda viraj sonrasında mazot döküntüsü var, geçen arkadaşlar lütfen dikkat etsin! Kaskınız sağlam olsun.',
-    tag: 'Tehlikeli Yol',
-    likes: ['efe@motoguard.tr'],
-    comments: [],
-    createdAt: '2026-08-12 10:15',
-  },
-];
+// No invented users, comments, sponsors, offers, or discount claims are shown as real data.
+const INITIAL_POSTS: CommunityPost[] = [];
 
 class CommunityService {
   private posts: CommunityPost[] = [...INITIAL_POSTS];
+
+  /** Subscribe to server-backed community posts. No local fallback is presented as remote data. */
+  public subscribeRemotePosts(
+    onPosts: (posts: CommunityPost[]) => void,
+    onError: (error: unknown) => void,
+    shouldApply: () => boolean = () => true,
+  ): () => void {
+    if (!communityDb) throw new Error("Firebase yapılandırılmamış; topluluk akışı sunucuya bağlanamadı.");
+    const postsQuery = query(collection(communityDb, "communityPosts"), orderBy("createdAt", "desc"));
+    return onSnapshot(postsQuery, (snapshot) => {
+      if (!shouldApply()) return;
+      const remotePosts = snapshot.docs.map((item) => {
+        const data = item.data();
+        const timestamp = data.createdAt;
+        const createdAt = timestamp && typeof timestamp.toDate === "function" ? timestamp.toDate().toLocaleString("tr-TR") : "Tarih bekleniyor";
+        return {
+          id: item.id,
+          authorId: String(data.authorId || ""),
+          authorName: String(data.authorName || "Motorcu"),
+          city: String(data.city || ""),
+          content: String(data.content || ""),
+          image: typeof data.image === "string" ? data.image : undefined,
+          tag: typeof data.tag === "string" ? data.tag : undefined,
+          likes: [],
+          comments: [],
+          createdAt,
+        } satisfies CommunityPost;
+      });
+      this.posts = remotePosts;
+      onPosts(remotePosts);
+    }, (error) => {
+      if (shouldApply()) onError(error);
+    });
+  }
+
+  /** Create a post only when Firebase Auth and Firestore are both available. */
+  public async createRemotePost(input: { authorName: string; authorId: string; city: string; content: string; image?: string; tag?: string }): Promise<string> {
+    if (!communityDb || !communityAuth?.currentUser?.uid) throw new Error("Gönderi için Firebase oturumu gerekli.");
+    if (communityAuth.currentUser.uid !== input.authorId) throw new Error("Oturum kimliği doğrulanamadı.");
+    const content = input.content.trim();
+    const authorName = input.authorName.trim();
+    const city = input.city.trim();
+    const image = input.image?.trim();
+    if (!content || content.length > 5000 || !authorName || authorName.length > 80 || !city || city.length > 100 || (input.tag && input.tag.length > 80) || (image && !isAllowedCommunityImageUrl(image))) {
+      throw new Error("Gönderi doğrulanamadı. Metin, şehir veya görsel adresini kontrol edin.");
+    }
+    const postRef = doc(collection(communityDb, "communityPosts"));
+    const payload: Record<string, unknown> = { id: postRef.id, authorId: input.authorId, authorName, city, content, likes: [], comments: [], createdAt: serverTimestamp() };
+    if (image) payload.image = image;
+    if (input.tag) payload.tag = input.tag;
+    await setDoc(postRef, payload);
+    return postRef.id;
+  }
+
+  /** Admin moderation deletion; the refreshed Firebase token and Firestore rules both enforce admin access. */
+  public async deleteRemotePostAsAdmin(postId: string): Promise<void> {
+    const user = communityAuth?.currentUser;
+    if (!communityDb || !user) throw new Error("Yönetici oturumu veya Firebase bağlantısı gerekli.");
+    if (typeof postId !== "string" || !postId.trim() || postId.includes("/") || postId.length > 1500) {
+      throw new Error("Gönderi kimliği geçersiz.");
+    }
+    const token = await user.getIdTokenResult(true);
+    if (token.claims.admin !== true) throw new Error("Yönetici yetkisi doğrulanamadı.");
+    await deleteDoc(doc(communityDb, "communityPosts", postId));
+  }
+
+  /** Firestore rules are the final authority for owner-only deletion. */
+  public async deleteRemotePost(postId: string, authorId: string): Promise<void> {
+    if (!communityDb || !communityAuth?.currentUser?.uid) throw new Error("Gönderi silmek için giriş yapın.");
+    if (!postId || communityAuth.currentUser.uid !== authorId) throw new Error("Yalnızca kendi gönderinizi silebilirsiniz.");
+    await deleteDoc(doc(communityDb, "communityPosts", postId));
+  }
 
   public getPosts(city?: string, tag?: string): CommunityPost[] {
     let list = [...this.posts];
@@ -74,9 +124,25 @@ class CommunityService {
     return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
-  public createPost(post: Omit<CommunityPost, 'id' | 'likes' | 'comments' | 'createdAt'>): CommunityPost {
+  public createPost(post: Omit<CommunityPost, 'id' | 'likes' | 'comments' | 'createdAt'>): CommunityPost | null {
+    const content = post.content.trim();
+    const image = post.image?.trim();
+    if (
+      !content ||
+      content.length > 5000 ||
+      !post.authorName.trim() ||
+      post.authorName.length > 80 ||
+      !post.authorEmail?.trim() ||
+      !post.city.trim() ||
+      post.city.length > 100 ||
+      (post.tag !== undefined && post.tag.length > 80) ||
+      (image !== undefined && image !== '' && !isAllowedCommunityImageUrl(image))
+    ) return null;
+
     const newPost: CommunityPost = {
       ...post,
+      content,
+      image: image || undefined,
       id: `post-${Date.now()}`,
       likes: [],
       comments: [],
@@ -100,15 +166,28 @@ class CommunityService {
 
   public addComment(postId: string, comment: Omit<PostComment, 'id' | 'postId' | 'createdAt'>): PostComment | null {
     const post = this.posts.find((p) => p.id === postId);
-    if (!post) return null;
+    const content = comment.content.trim();
+    if (
+      !post ||
+      !content ||
+      content.length > 1000 ||
+      !comment.authorName.trim() ||
+      comment.authorName.length > 80 ||
+      !comment.authorEmail.trim()
+    ) return null;
     const newComment: PostComment = {
       ...comment,
+      content,
       id: `c-${Date.now()}`,
       postId,
       createdAt: new Date().toLocaleString('tr-TR'),
     };
     post.comments.push(newComment);
     return newComment;
+  }
+
+  public clearLocalSession(): void {
+    this.posts = [];
   }
 
   public deletePost(postId: string): boolean {
@@ -120,3 +199,15 @@ class CommunityService {
 
 export const communityService = new CommunityService();
 export default communityService;
+
+
+/** Restrict remote images to explicit HTTP(S) URLs; reject javascript:, data:, and malformed values. */
+export function isAllowedCommunityImageUrl(value: string): boolean {
+  if (!value || value.length > 2048) return false;
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "https:" || parsed.protocol === "http:";
+  } catch {
+    return false;
+  }
+}

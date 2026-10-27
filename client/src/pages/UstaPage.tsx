@@ -12,7 +12,10 @@ export default function UstaPage() {
   const [position, setPosition] = useState<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
-    setBusinesses(businessService.getBusinesses("usta", selectedCity === "Tümü" ? undefined : selectedCity));
+    const unsubscribeBusinesses = businessService.subscribe(
+      () => setBusinesses(businessService.getBusinesses("usta", selectedCity === "Tümü" ? undefined : selectedCity)),
+      (error) => console.warn("Business directory subscription failed", error),
+    );
 
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -21,10 +24,11 @@ export default function UstaPage() {
         { timeout: 5000 }
       );
     }
+    return () => unsubscribeBusinesses();
   }, [selectedCity]);
 
   return (
-    <div className="min-h-screen bg-asphalt pb-8">
+    <div className="min-h-screen bg-asphalt-light pb-8 page-surface-light">
       <Header />
 
       <div className="px-4 pt-4 max-w-lg mx-auto">
@@ -33,7 +37,7 @@ export default function UstaPage() {
             <Wrench className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="font-display text-2xl font-extrabold text-white uppercase tracking-wider">
+            <h1 className="font-display text-2xl font-extrabold text-foreground uppercase tracking-wider">
               Usta & Servis Rehberi
             </h1>
             <p className="text-xs text-muted-foreground">Güvenilir motosiklet tamircileri ve yetkili servisler</p>
@@ -124,8 +128,8 @@ export default function UstaPage() {
           ) : (
             <Card className="bg-card-gradient border-border p-8 flex flex-col items-center justify-center text-center rounded-xl">
               <AlertCircle className="w-10 h-10 text-muted-foreground/40 mb-2" />
-              <p className="text-sm font-bold text-foreground">Bu şehirde henüz kayıtlı usta bulunmuyor.</p>
-              <p className="text-xs text-muted-foreground mt-1">Genişleyen ağımıza yeni ustalar eklenmeye devam ediyor.</p>
+              <p className="text-sm font-bold text-foreground">Henüz doğrulanmış usta kaydı bağlı değil.</p>
+              <p className="text-xs text-muted-foreground mt-1">Gerçek işletme verisi bağlanana kadar doğrulanmamış kayıt göstermiyoruz.</p>
             </Card>
           )}
         </div>

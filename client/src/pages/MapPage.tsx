@@ -1,10 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { MapPin, Wrench, Fuel, Bike, Truck, Navigation, AlertCircle, ShoppingBag, ShieldAlert, Phone, ExternalLink, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import Header from "@/components/Header";
 import { businessService, BusinessProfile, BusinessCategory } from "@/services/businessService";
 import { sosService, SOSRequestItem } from "@/services/sosService";
 import { makeDirectionsUrl } from "@/lib/places";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+import { acceptSOSRequest, subscribeActiveSOSRequests } from "../../../firebase";
 
 export default function MapPage() {
   const [activeFilter, setActiveFilter] = useState<string>("all");
@@ -13,10 +16,93 @@ export default function MapPage() {
   const [selectedPlace, setSelectedPlace] = useState<BusinessProfile | SOSRequestItem | null>(null);
   const [businesses, setBusinesses] = useState<BusinessProfile[]>([]);
   const [activeSOS, setActiveSOS] = useState<SOSRequestItem[]>([]);
+  const [acceptingSOSId, setAcceptingSOSId] = useState<string | null>(null);
+  const acceptingSOSRef = useRef(false);
+  const { user } = useAuth();
+
+  const handleAcceptSOS = async (request: SOSRequestItem) => {
+    if (!user?.uid) {
+      (window as any).__openAuthModal?.();
+      toast.error("SOS çağrısını üstlenmek için giriş yapmalısınız.");
+      return;
+    }
+    if (request.requesterId === user.uid) {
+      toast.error("Kendi SOS çağrınızı üstlenemezsiniz.");
+      return;
+    }
+    if (request.acceptedBy) {
+      toast.info("Bu çağrı başka bir sürücü tarafından üstlenilmiş.");
+      return;
+    }
+
+    if (acceptingSOSRef.current) {
+      toast.info("Başka bir SOS çağrısı için sunucu onayı bekleniyor.");
+      return;
+    }
+
+    acceptingSOSRef.current = true;
+    setAcceptingSOSId(request.id);
+    try {
+      const confirmed = await acceptSOSRequest(request.id);
+      if (confirmed) {
+        toast.success("SOS çağrısını üstlendiniz. Harita sunucu güncellemesini gösterecek.");
+        setSelectedPlace(null);
+      } else {
+        toast.error("SOS çağrısı sunucuda üstlenilemedi. Çağrı kapanmış veya başka biri tarafından alınmış olabilir.");
+      }
+    } catch (error) {
+      console.error("SOS acceptance failed", error);
+      toast.error("SOS çağrısı üstlenilemedi. Bağlantınızı kontrol edin.");
+    } finally {
+      acceptingSOSRef.current = false;
+      setAcceptingSOSId(null);
+    }
+  };
 
   useEffect(() => {
-    setBusinesses(businessService.getBusinesses());
+    const unsubscribeBusinesses = businessService.subscribe(
+      () => setBusinesses(businessService.getBusinesses()),
+      (error) => console.warn("Business directory subscription failed", error),
+    );
     setActiveSOS(sosService.getActiveRequests());
+
+    // Merge public Firestore SOS updates with this browser's local-only requests.
+    // Never fetch or expose the privateDetails subcollection from the public map.
+    const unsubscribe = subscribeActiveSOSRequests(
+      (documents: any[]) => {
+        const remoteRequests: SOSRequestItem[] = documents.map((doc) => {
+          const createdAt = doc.createdAt?.toMillis
+            ? new Date(doc.createdAt.toMillis()).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })
+            : typeof doc.createdAt === "string"
+              ? doc.createdAt
+              : "";
+          const categories: Record<string, SOSRequestItem["category"]> = {
+            lastik: "lastik", aku: "aku", yakit: "yakit", ariza: "ariza",
+            kaza: "kaza", cekici: "cekici", diger: "diger",
+          };
+          return {
+            id: doc.id,
+            requesterId: doc.requesterId || "",
+            requesterEmail: "",
+            requesterName: undefined,
+            category: categories[doc.helpType] || "diger",
+            latitude: Number(doc.latitude),
+            longitude: Number(doc.longitude),
+            status: doc.acceptedBy ? "yanit_geliyor" : "bekleniyor",
+            helpersCount: doc.acceptedBy ? 1 : 0,
+            acceptedBy: doc.acceptedBy || undefined,
+            createdAt,
+          };
+        });
+        const localRequests = sosService.getActiveRequests();
+        const remoteIds = new Set(remoteRequests.map((request) => request.id));
+        setActiveSOS([...localRequests.filter((request) => !remoteIds.has(request.id)), ...remoteRequests]);
+      },
+      () => {
+        // Keep local requests visible if remote discovery is unavailable.
+        setActiveSOS(sosService.getActiveRequests());
+      }
+    );
 
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -25,6 +111,8 @@ export default function MapPage() {
         { enableHighAccuracy: false, timeout: 5000 }
       );
     }
+
+    return () => { unsubscribe(); unsubscribeBusinesses(); };
   }, []);
 
   const locateMe = () => {
@@ -42,7 +130,7 @@ export default function MapPage() {
 
   const filterTabs = [
     { id: "all", label: "Tümü", icon: MapPin },
-    { id: "sos", label: "🆘 Aktif Çağrılar", icon: ShieldAlert },
+    { id: "sos", label: "🆘 Yerel Çağrılar", icon: ShieldAlert },
     { id: "usta", label: "🔧 Ustalar", icon: Wrench },
     { id: "cekici", label: "🚚 Çekiciler", icon: Truck },
     { id: "lastikci", label: "🛞 Lastikçiler", icon: Bike },
@@ -60,8 +148,16 @@ export default function MapPage() {
   const filteredSOS = activeFilter === "all" || activeFilter === "sos" ? activeSOS : [];
 
   return (
-    <div className="min-h-screen bg-asphalt pb-8">
+    <div className="min-h-screen bg-asphalt-light pb-8 page-surface-light">
       <Header />
+
+      <div className="px-4 pt-3 max-w-lg mx-auto">
+        <Card className="bg-amber-500/10 border-amber-500/30 p-3 rounded-xl">
+          <p className="text-[11px] text-amber-200 leading-relaxed">
+            İşletme rehberi Firestore'daki herkese açık kayıtları gösterir. Yerel test SOS kayıtları yalnızca bu cihazda görünür.
+          </p>
+        </Card>
+      </div>
 
       {/* Map Embed & Locate Header */}
       <div className="relative h-72 bg-card-gradient border-b border-border overflow-hidden">
@@ -103,7 +199,7 @@ export default function MapPage() {
             Bulunan Noktalar: <span className="text-primary font-bold">{filteredBusinesses.length + filteredSOS.length} Hızlı Erişim</span>
           </p>
           <span className="text-[10px] font-bold text-green-400 bg-green-500/10 px-2 py-0.5 rounded-full border border-green-500/20">
-            🟢 Canlı Radar
+            SOS / Harita
           </span>
         </div>
       </div>
@@ -145,6 +241,9 @@ export default function MapPage() {
                   <span className="text-[10px] font-bold text-red-400 uppercase tracking-wider block">ACİL YARDIM ÇAĞRISI</span>
                   <p className="font-bold text-white text-sm uppercase">{sos.category} Talebi</p>
                   <p className="text-[11px] text-muted-foreground">{sos.requesterName || "Motorcu Kardeş"}</p>
+                  {sos.id.startsWith("sos-") && (
+                    <span className="mt-1 inline-block text-[9px] font-bold text-amber-400">Yalnızca bu cihazda kayıtlı</span>
+                  )}
                 </div>
               </div>
               <a
@@ -251,6 +350,20 @@ export default function MapPage() {
                   </a>
                 </div>
               )}
+
+              {!("name" in selectedPlace) &&
+                !selectedPlace.id.startsWith("sos-") &&
+                selectedPlace.requesterId !== user?.uid &&
+                !selectedPlace.acceptedBy && (
+                  <button
+                    type="button"
+                    disabled={acceptingSOSId === selectedPlace.id}
+                    onClick={() => void handleAcceptSOS(selectedPlace)}
+                    className="w-full bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white font-bold text-xs py-3 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all mt-2"
+                  >
+                    {acceptingSOSId === selectedPlace.id ? "Sunucu onayı bekleniyor..." : "🆘 Yardım Çağrısını Üstlen"}
+                  </button>
+                )}
 
               <a
                 href={makeDirectionsUrl(

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Shield, Wrench, Fuel, Bike, Phone, X, Check, Award, Zap, Truck, HelpCircle, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -8,20 +8,96 @@ import { useMessages } from "@/contexts/MessageContext";
 import Header from "@/components/Header";
 import EmergencyWarning from "@/components/EmergencyWarning";
 import { sosService, SOSHelpCategory, CATEGORY_LABELS, STATUS_LABELS, SOSStatus } from "@/services/sosService";
-import { createSOSRequest, updateSOSRequest } from "../../../firebase";
+import { getCurrentAuthUid, createSOSRequest, updateSOSRequest, getMyActiveSOSRequest, subscribeActiveSOSRequests } from "../../../firebase";
+import { isSameSOSAuthScope } from "@/services/sosInputValidation";
+import { buildNearbyServiceLinks } from "@/services/nearbyServices";
+import { getElapsedSOSSeconds } from "@/services/sosTiming";
 
 export default function SOSPage() {
   const [sosActive, setSosActive] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<SOSHelpCategory | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [position, setPosition] = useState<{ lat: number; lng: number } | null>(null);
-  const [sosId, setSosId] = useState<string | null>(null);
+  const [sosId, setSosId] = useState<string | null>(null); // Firebase document ID, when persisted
+  const [sosOwnerUid, setSosOwnerUid] = useState<string | null>(null);
+  const [localSosId, setLocalSosId] = useState<string | null>(null);
   const [status, setStatus] = useState<SOSStatus>("bekleniyor");
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
+  const [finishing, setFinishing] = useState(false);
+  const finishingRef = useRef(false);
+  // Invalidates in-flight close operations when the authenticated SOS scope changes.
+  const finishOperationRef = useRef(0);
   const [nearbyServices, setNearbyServices] = useState<Array<{ key: string; label: string; searchUrl: string; directionsUrl: string }>>([]);
 
-  const { user } = useAuth();
+  const { user, authReady } = useAuth();
+  const currentUserUidRef = useRef<string | null>(user?.uid ?? null);
+  currentUserUidRef.current = user?.uid ?? null;
+  const sosActiveRef = useRef(sosActive);
+  sosActiveRef.current = sosActive;
+  const sosIdRef = useRef(sosId);
+  sosIdRef.current = sosId;
+  const [restoreRetryToken, setRestoreRetryToken] = useState(0);
+  const [restoreLookupFailed, setRestoreLookupFailed] = useState(false);
   const { createHelpRequest } = useMessages();
+  const isSOSOwnerScopeCurrent = () =>
+    isSameSOSAuthScope(sosOwnerUid, getCurrentAuthUid()) &&
+    isSameSOSAuthScope(sosOwnerUid, currentUserUidRef.current);
+
+  // Restore an authenticated rider's active remote SOS after a page refresh.
+  // Only public parent fields are read; exact coordinates/contact details remain private.
+  useEffect(() => {
+    const uid = user?.uid;
+    if (!authReady || !uid) {
+      setRestoreLookupFailed(false);
+      return;
+    }
+    let cancelled = false;
+
+    void getMyActiveSOSRequest(uid).then((request) => {
+      if (
+        cancelled ||
+        currentUserUidRef.current !== uid ||
+        getCurrentAuthUid() !== uid ||
+        sosActiveRef.current ||
+        submittingRef.current ||
+        sosIdRef.current
+      ) return;
+      setRestoreLookupFailed(false);
+      if (!request) return;
+
+      const latitude = request.latitude;
+      const longitude = request.longitude;
+      setSosOwnerUid(uid);
+      setSosId(request.id);
+      setLocalSosId(null);
+      setSelectedCategory(
+        request.helpType && request.helpType in CATEGORY_LABELS
+          ? request.helpType as SOSHelpCategory
+          : "diger"
+      );
+      setStatus(request.acceptedBy ? "yanit_geliyor" : "bekleniyor");
+      const hasValidPosition =
+        typeof latitude === "number" && Number.isFinite(latitude) &&
+        latitude >= -90 && latitude <= 90 &&
+        typeof longitude === "number" && Number.isFinite(longitude) &&
+        longitude >= -180 && longitude <= 180;
+      setPosition(hasValidPosition ? { lat: latitude, lng: longitude } : null);
+      setNearbyServices(hasValidPosition ? buildNearbyServiceLinks(latitude, longitude) : []);
+      setElapsed(getElapsedSOSSeconds(request.createdAt));
+      setSosActive(true);
+      toast.info("Aktif SOS çağrınız geri yüklendi. Haritada gösterilen konum yaklaşık konum olabilir.");
+    }).catch((error) => {
+      console.warn("Could not restore active SOS", error);
+      if (!cancelled && currentUserUidRef.current === uid && getCurrentAuthUid() === uid) {
+        setRestoreLookupFailed(true);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authReady, user?.uid, restoreRetryToken]);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -33,7 +109,75 @@ export default function SOSPage() {
     };
   }, [sosActive]);
 
+  // Never keep a previous account's SOS visible or manageable after auth changes.
+  // The remote request is not cancelled; its owner can manage it after signing back in.
+  useEffect(() => {
+    const hasSOSContext = Boolean(sosActive || sosId || localSosId);
+    if (!hasSOSContext || isSameSOSAuthScope(sosOwnerUid, user?.uid)) return;
+
+    // Release the UI lock for the next account and prevent an old promise from
+    // unlocking or otherwise mutating a newer account's close operation.
+    finishOperationRef.current += 1;
+    finishingRef.current = false;
+    setFinishing(false);
+
+    if (localSosId) sosService.removeRequest(localSosId);
+    setSosActive(false);
+    setSosId(null);
+    setSosOwnerUid(null);
+    setLocalSosId(null);
+    setPosition(null);
+    setNearbyServices([]);
+    setElapsed(0);
+    setSelectedCategory(null);
+    setStatus("bekleniyor");
+    toast.info("Oturum değiştiği için önceki SOS bu ekrandan kaldırıldı. Sunucuya kaydedilmiş çağrı varsa sahibi olan hesapla yeniden giriş yaparak yönetin.");
+  }, [user?.uid, sosOwnerUid, sosActive, sosId, localSosId]);
+
+  // Keep the requester-facing status in sync when another rider accepts the SOS.
+  // The subscription returns public active SOS fields only, never private GPS details.
+  useEffect(() => {
+    if (!sosId) return;
+    let active = true;
+    const unsubscribe = subscribeActiveSOSRequests(
+      (requests: Array<{ id: string; acceptedBy?: string | null }>, metadata?: { fromCache?: boolean }) => {
+        if (!active) return;
+        const current = requests.find((request: { id: string; acceptedBy?: string | null }) => request.id === sosId);
+        if (!current) {
+          // Do not clear state from a cache-only snapshot: a restored SOS may not
+          // yet be present in this device's cache. Wait for the server snapshot.
+          if (metadata?.fromCache !== false || !sosActiveRef.current || sosIdRef.current !== sosId) return;
+          // This query contains active SOS records only. A server-confirmed snapshot
+          // omitting our known ID means it is no longer active.
+          if (localSosId) sosService.removeRequest(localSosId);
+          setSosActive(false);
+          setSosId(null);
+          setSosOwnerUid(null);
+          setLocalSosId(null);
+          setPosition(null);
+          setNearbyServices([]);
+          setElapsed(0);
+          setSelectedCategory(null);
+          setStatus("bekleniyor");
+          toast.info("Sunucu aktif çağrılar listesinde bu SOS artık görünmüyor. Ekrandaki aktif durum kapatıldı; ayrıntılı son durum doğrulanmadı.");
+          return;
+        }
+        setStatus(current.acceptedBy ? "yanit_geliyor" : "bekleniyor");
+      },
+      (error: unknown) => {
+        if (active) console.warn("Could not refresh active SOS status", error);
+      },
+    );
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [sosId]);
+
   const handleSOS = async (catOverride?: SOSHelpCategory) => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    const initiatingUid = user?.uid ?? null;
     const category = catOverride || selectedCategory || "diger";
     setSelectedCategory(category);
     setSubmitting(true);
@@ -41,32 +185,33 @@ export default function SOSPage() {
     if (!navigator.geolocation) {
       toast.error("Konum erişimi tarayıcınız tarafından desteklenmiyor.");
       setSubmitting(false);
+      submittingRef.current = false;
       return;
     }
 
     toast.loading("Konumunuz alınıyor...");
 
-    navigator.geolocation.getCurrentPosition(
+    try {
+      navigator.geolocation.getCurrentPosition(
       async (pos) => {
         toast.dismiss();
+        // Geolocation may resolve after sign-out or account switching. Do not
+        // create even a local SOS under the identity that initiated the request.
+        if (
+          !isSameSOSAuthScope(initiatingUid, getCurrentAuthUid()) ||
+          !isSameSOSAuthScope(initiatingUid, currentUserUidRef.current)
+        ) {
+          setSubmitting(false);
+          submittingRef.current = false;
+          toast.error("Oturumunuz değiştiği için SOS oluşturulmadı. Yeni oturumda yeniden deneyin.");
+          return;
+        }
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
         setPosition({ lat, lng });
 
-        // Generate nearby search links
-        const services = [
-          { key: "usta", label: "Motosiklet Ustaları", query: "motosiklet usta tamirci" },
-          { key: "cekici", label: "Oto & Moto Çekiciler", query: "çekici oto kurtarma" },
-          { key: "lastikci", label: "7/24 Lastikçiler", query: "lastikçi oto lastik" },
-          { key: "benzinlik", label: "Benzin İstasyonları", query: "benzinlik akaryakıt" },
-        ].map((item) => ({
-          key: item.key,
-          label: item.label,
-          searchUrl: `https://www.google.com/maps/search/${encodeURIComponent(item.query)}/@${lat},${lng},14z`,
-          directionsUrl: `https://www.google.com/maps/dir/?api=1&origin=${lat},${lng}&destination=${encodeURIComponent(item.query)}`,
-        }));
-
-        setNearbyServices(services);
+        // Reuse the same validated links when creating and restoring an SOS.
+        setNearbyServices(buildNearbyServiceLinks(lat, lng));
 
         // Save local SOS state
         const localReq = sosService.createRequest({
@@ -78,11 +223,14 @@ export default function SOSPage() {
           longitude: lng,
         });
 
-        setSosId(localReq.id);
+        setLocalSosId(localReq.id);
+        setSosOwnerUid(initiatingUid);
+        setSosId(null);
         setStatus("bekleniyor");
+        let firebaseSaved = false;
 
         // Save to Firebase if online & user logged in
-        if (user?.uid && user?.email) {
+        if (user?.uid) {
           try {
             const res = await createSOSRequest({
               requesterId: user.uid,
@@ -91,57 +239,290 @@ export default function SOSPage() {
               latitude: lat,
               longitude: lng,
             });
+            const scopeStillCurrent =
+              isSameSOSAuthScope(initiatingUid, getCurrentAuthUid()) &&
+              isSameSOSAuthScope(initiatingUid, currentUserUidRef.current);
+            if (!scopeStillCurrent && res?.error !== "active_duplicate") {
+              sosService.updateStatus(localReq.id, "iptal_edildi");
+              setLocalSosId(null);
+              setPosition(null);
+              setNearbyServices([]);
+              setSubmitting(false);
+              submittingRef.current = false;
+              if (res?.id) {
+                // The server confirmed creation before the account switch. Do not
+                // attach that SOS to the newly authenticated user's visible UI.
+                setSosId(null);
+                setSosOwnerUid(null);
+                setSosActive(false);
+                setSelectedCategory(null);
+                setElapsed(0);
+                toast.error("SOS sunucuya kaydedildi ancak oturum değişti. Çağrıyı yönetmek için ilk hesaba yeniden giriş yapın. Acil tehlikede 112’yi arayın.");
+              } else {
+                setSosId(null);
+                toast.error("Oturum değiştiği için SOS sonucu doğrulanamadı. İlk hesabınızla aktif çağrınızı kontrol edin; acil tehlikede 112’yi arayın.");
+              }
+              return;
+            }
             if (res?.id) {
               setSosId(res.id);
+              firebaseSaved = true;
+            } else if (res?.error === "auth_changed") {
+              // The service rejected the write before committing because the
+              // authenticated identity changed. Remove the local placeholder too.
+              sosService.updateStatus(localReq.id, "iptal_edildi");
+              setLocalSosId(null);
+              setSosOwnerUid(null);
+              setSosId(null);
+              setPosition(null);
+              setNearbyServices([]);
+              setSubmitting(false);
+              submittingRef.current = false;
+              toast.error("Oturumunuz değiştiği için SOS sunucuya kaydedilmedi. Yeni oturumda yeniden deneyin.");
+              return;
+            } else if (res?.error === "creation_in_progress") {
+              // Another SOS creation for this account is already running in this app runtime.
+              // Remove this attempt's local placeholder instead of showing a false active SOS.
+              sosService.updateStatus(localReq.id, "iptal_edildi");
+              setLocalSosId(null);
+              setSosOwnerUid(null);
+              setSosId(null);
+              setPosition(null);
+              setNearbyServices([]);
+              setSubmitting(false);
+              submittingRef.current = false;
+              toast.error("Bu hesap için başka bir SOS oluşturma işlemi sürüyor. Sonucu kontrol edip yeniden deneyin.");
+              return;
+            } else if (res?.error === "active_duplicate") {
+              // Remove this attempt's local placeholder, then restore the authoritative
+              // active SOS if it still exists. Never turn a duplicate into a local-only SOS.
+              sosService.updateStatus(localReq.id, "iptal_edildi");
+              setLocalSosId(null);
+              setSosOwnerUid(null);
+              setSosId(null);
+              setPosition(null);
+              setNearbyServices([]);
+              setElapsed(0);
+              setSelectedCategory(null);
+              setStatus("bekleniyor");
+
+              let existingRequest = null;
+              const authScopeStillCurrent =
+                Boolean(initiatingUid) &&
+                isSameSOSAuthScope(initiatingUid, getCurrentAuthUid()) &&
+                isSameSOSAuthScope(initiatingUid, currentUserUidRef.current);
+              if (authScopeStillCurrent) {
+                try {
+                  existingRequest = await getMyActiveSOSRequest(initiatingUid);
+                } catch (error) {
+                  console.warn("Could not restore existing active SOS after duplicate rejection", error);
+                }
+              }
+
+              if (
+                existingRequest &&
+                isSameSOSAuthScope(initiatingUid, getCurrentAuthUid()) &&
+                isSameSOSAuthScope(initiatingUid, currentUserUidRef.current)
+              ) {
+                const existingLat = existingRequest.latitude;
+                const existingLng = existingRequest.longitude;
+                const hasValidPosition =
+                  typeof existingLat === "number" && Number.isFinite(existingLat) &&
+                  existingLat >= -90 && existingLat <= 90 &&
+                  typeof existingLng === "number" && Number.isFinite(existingLng) &&
+                  existingLng >= -180 && existingLng <= 180;
+                setSosOwnerUid(initiatingUid);
+                setSosId(existingRequest.id);
+                setSelectedCategory(
+                  existingRequest.helpType && existingRequest.helpType in CATEGORY_LABELS
+                    ? existingRequest.helpType as SOSHelpCategory
+                    : "diger"
+                );
+                setStatus(existingRequest.acceptedBy ? "yanit_geliyor" : "bekleniyor");
+                setPosition(hasValidPosition ? { lat: existingLat, lng: existingLng } : null);
+                setNearbyServices(
+                  hasValidPosition ? buildNearbyServiceLinks(existingLat, existingLng) : []
+                );
+                setElapsed(getElapsedSOSSeconds(existingRequest.createdAt));
+                setSosActive(true);
+                toast.info("Mevcut aktif SOS çağrınız geri yüklendi.");
+              } else {
+                toast.error(
+                  authScopeStillCurrent
+                    ? "Zaten aktif bir SOS çağrınız var veya durum henüz doğrulanamadı. Yeni çağrı açmadan önce aktif SOS kaydınızı yeniden kontrol edin."
+                    : "Oturumunuz değiştiği için mevcut SOS geri yüklenmedi. İlk hesabınıza yeniden giriş yapıp çağrınızı kontrol edin."
+                );
+              }
+              // Keep the submit lock until the authoritative active SOS lookup finishes.
+              setSubmitting(false);
+              submittingRef.current = false;
+              return;
+            } else {
+              console.warn("SOS was not persisted to Firebase", res?.error || "Firebase unavailable");
             }
           } catch (e) {
             console.error("Firebase SOS save fallback to local mode", e);
           }
 
-          // Legacy chat sync
-          createHelpRequest({
-            title: `Acil Yardım - ${CATEGORY_LABELS[category].label}`,
-            description: `Konum: ${lat.toFixed(5)}, ${lng.toFixed(5)}`,
-            user: user.email,
-          });
+          // Do not create a parallel legacy chat request when the authoritative SOS
+          // write failed; that could make a local-only SOS look like a shared request.
+          if (firebaseSaved) {
+            // The authoritative SOS is already saved. A legacy chat-sync failure
+            // must not block the active SOS UI or create an unhandled rejection.
+            try {
+              void Promise.resolve(createHelpRequest({
+                title: `Acil Yardım - ${CATEGORY_LABELS[category].label}`,
+                description: "Acil yardım talebi. Kesin konum yalnızca yetkili katılımcılarla paylaşılır.",
+                ownerId: user.uid,
+              })).catch((error) => {
+                console.warn("Legacy SOS chat sync failed; authoritative SOS remains saved", error);
+              });
+            } catch (error) {
+              console.warn("Legacy SOS chat sync could not be started; authoritative SOS remains saved", error);
+            }
+          }
         }
 
         setSosActive(true);
         setSubmitting(false);
-        toast.success("Yardım çağrınız oluşturuldu! Yakındaki motorcular bilgilendiriliyor.");
+        submittingRef.current = false;
+        toast.success(
+          firebaseSaved
+            ? "SOS talebiniz kaydedildi. Yakındaki motorculara otomatik bildirim gönderildiği henüz doğrulanamıyor."
+            : "SOS talebiniz bu oturumda yerel olarak oluşturuldu; sunucuya kaydedildiği doğrulanamadı."
+        );
       },
       (err) => {
         toast.dismiss();
         console.error("GPS error", err);
-        toast.error("Konum alınamadı. Lütfen cihazınızın GPS iznini açın.");
+        const message = err.code === 1
+          ? "Konum izni reddedildi. Tarayıcı veya cihaz ayarlarından konum iznini açın."
+          : err.code === 2
+            ? "Cihaz konumu belirleyemedi. GPS'i açıp daha iyi sinyal olan bir yerde yeniden deneyin."
+            : err.code === 3
+              ? "Konum isteği zaman aşımına uğradı. GPS bağlantısını kontrol edip yeniden deneyin."
+              : "Konum alınamadı. GPS iznini ve cihaz ayarlarını kontrol edin.";
+        toast.error(message);
         setSubmitting(false);
+        submittingRef.current = false;
       },
       { enableHighAccuracy: true, timeout: 10000 }
-    );
+      );
+    } catch (error) {
+      toast.dismiss();
+      console.error("GPS request could not be started", error);
+      toast.error("Konum isteği başlatılamadı. Konum iznini ve tarayıcı ayarlarını kontrol edin.");
+      setSubmitting(false);
+      submittingRef.current = false;
+    }
   };
 
   const handleCancel = async () => {
-    if (sosId) {
-      sosService.updateStatus(sosId, "iptal_edildi");
-      await updateSOSRequest(sosId, { status: "cancelled" }).catch(() => {});
+    if (finishingRef.current) return;
+    finishingRef.current = true;
+    const operationId = ++finishOperationRef.current;
+    setFinishing(true);
+    if (!isSOSOwnerScopeCurrent()) {
+      toast.error("Bu SOS farklı bir oturumda oluşturuldu. İptal etmek için çağrıyı oluşturan hesaba yeniden giriş yapın. Acil tehlikede 112’yi arayın.");
+      finishingRef.current = false;
+      setFinishing(false);
+      return;
     }
+    if (sosId) {
+      let remoteUpdated = false;
+      try {
+        remoteUpdated = (await updateSOSRequest(sosId, { status: "cancelled" }, sosOwnerUid)) === true;
+      } catch (error) {
+        console.error("Firebase SOS cancellation failed", error);
+      }
+      if (operationId !== finishOperationRef.current) return;
+      if (!remoteUpdated) {
+        toast.error(
+          !isSOSOwnerScopeCurrent()
+            ? "Oturum değişti. Çağrının durumu doğrulanamadı; ilk hesabınıza dönerek kontrol edin. Acil tehlikede 112’yi arayın."
+            : "Sunucu çağrısı iptal edilemedi. Çağrı aktif tutuldu; bağlantınızı kontrol edip yeniden deneyin."
+        );
+        finishingRef.current = false;
+        setFinishing(false);
+        return;
+      }
+      // The auth scope or active request may have changed while the remote write
+      // was pending. Never let an old completion clear a newer session's SOS UI.
+      if (!isSOSOwnerScopeCurrent() || sosIdRef.current !== sosId) {
+        finishingRef.current = false;
+        setFinishing(false);
+        toast.error("Oturum veya aktif çağrı değişti. Yeni ekrandaki SOS korunarak eski işlemin sonucu ayrıştırıldı; ilk hesabınızda çağrı durumunu kontrol edin.");
+        return;
+      }
+    }
+
+    if (localSosId) sosService.updateStatus(localSosId, "iptal_edildi");
     setSosActive(false);
     setSosId(null);
+    setSosOwnerUid(null);
+    setLocalSosId(null);
+    setPosition(null);
+    setNearbyServices([]);
     setElapsed(0);
     setSelectedCategory(null);
-    toast.info("Yardım çağrısı iptal edildi.");
+    finishingRef.current = false;
+    setFinishing(false);
+    toast.info(sosId ? "Yardım çağrısı sunucuda iptal edildi." : "Yerel yardım çağrısı iptal edildi; sunucu kaydı doğrulanmadı.");
   };
 
   const handleResolve = async () => {
-    if (sosId) {
-      sosService.updateStatus(sosId, "tamamlandi");
-      await updateSOSRequest(sosId, { status: "resolved" }).catch(() => {});
+    if (finishingRef.current) return;
+    finishingRef.current = true;
+    const operationId = ++finishOperationRef.current;
+    setFinishing(true);
+    if (!isSOSOwnerScopeCurrent()) {
+      toast.error("Bu SOS farklı bir oturumda oluşturuldu. Tamamlamak için çağrıyı oluşturan hesaba yeniden giriş yapın. Acil tehlikede 112’yi arayın.");
+      finishingRef.current = false;
+      setFinishing(false);
+      return;
     }
+    if (sosId) {
+      let remoteUpdated = false;
+      try {
+        remoteUpdated = (await updateSOSRequest(sosId, { status: "resolved" }, sosOwnerUid)) === true;
+      } catch (error) {
+        console.error("Firebase SOS completion failed", error);
+      }
+      if (operationId !== finishOperationRef.current) return;
+      if (!remoteUpdated) {
+        toast.error(
+          !isSOSOwnerScopeCurrent()
+            ? "Oturum değişti. Çağrının durumu doğrulanamadı; ilk hesabınıza dönerek kontrol edin. Acil tehlikede 112’yi arayın."
+            : "Sunucu çağrısı tamamlandı olarak işaretlenemedi. Çağrı aktif tutuldu; bağlantınızı kontrol edip yeniden deneyin."
+        );
+        finishingRef.current = false;
+        setFinishing(false);
+        return;
+      }
+      // The auth scope or active request may have changed while the remote write
+      // was pending. Never let an old completion clear a newer session's SOS UI.
+      if (!isSOSOwnerScopeCurrent() || sosIdRef.current !== sosId) {
+        finishingRef.current = false;
+        setFinishing(false);
+        toast.error("Oturum veya aktif çağrı değişti. Yeni ekrandaki SOS korunarak eski işlemin sonucu ayrıştırıldı; ilk hesabınızda çağrı durumunu kontrol edin.");
+        return;
+      }
+    }
+
+    if (localSosId) sosService.updateStatus(localSosId, "tamamlandi");
     setSosActive(false);
     setSosId(null);
+    setSosOwnerUid(null);
+    setLocalSosId(null);
+    setPosition(null);
+    setNearbyServices([]);
     setElapsed(0);
     setSelectedCategory(null);
-    toast.success("Harika! Yardım tamamlandı. Puan ve rozetiniz güncellendi.");
+    finishingRef.current = false;
+    setFinishing(false);
+    toast.success(sosId
+      ? "Yardım talebiniz sunucuda tamamlandı olarak işaretlendi. Puan ve rozet güncellemesi henüz doğrulanmadı."
+      : "Yerel yardım talebiniz tamamlandı; sunucu kaydı doğrulanmadı.");
   };
 
   if (sosActive) {
@@ -149,7 +530,7 @@ export default function SOSPage() {
     const statusInfo = STATUS_LABELS[status];
 
     return (
-      <div className="min-h-screen bg-asphalt pb-8">
+      <div className="min-h-screen bg-asphalt-light pb-8 page-surface-light">
         <Header />
         <div className="px-4 pt-4 max-w-lg mx-auto flex flex-col items-center">
           {/* Status Indicator */}
@@ -162,14 +543,24 @@ export default function SOSPage() {
             </div>
           </div>
 
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border text-xs font-bold uppercase tracking-wider mb-2 ${statusInfo.color}">
+          <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border text-xs font-bold uppercase tracking-wider mb-2 ${statusInfo.color}`}>
             <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
             {statusInfo.label}
           </div>
 
-          <h1 className="font-display text-2xl font-extrabold text-white uppercase tracking-wide text-center">
+          <h1 className="font-display text-2xl font-extrabold text-foreground uppercase tracking-wide text-center">
             Yardım Çağrınız Aktif
           </h1>
+          {!sosId && (
+            <p role="status" className="w-full mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs leading-relaxed text-amber-200">
+              Bu çağrı yalnızca bu oturumda kayıtlı. Sunucuya kaydedildiği ve diğer sürücülere ulaştığı doğrulanmadı. Acil tehlikede 112’yi arayın.
+            </p>
+          )}
+          {!isSOSOwnerScopeCurrent() && (
+            <p role="alert" className="w-full mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs leading-relaxed text-amber-200">
+              Oturum değişti. Bu çağrıyı yanlış hesapla değiştirmemek için iptal ve tamamlama kilitlendi. Çağrıyı oluşturan hesaba yeniden giriş yapın. Acil tehlikede 112’yi arayın.
+            </p>
+          )}
 
           <p className="text-muted-foreground mt-1 text-xs font-mono bg-card px-3 py-1 rounded-full border border-border">
             Süre: {String(Math.floor(elapsed / 60)).padStart(2, "0")}:{String(elapsed % 60).padStart(2, "0")}
@@ -228,6 +619,7 @@ export default function SOSPage() {
           <div className="w-full mt-6 flex gap-3">
             <Button
               onClick={handleResolve}
+              disabled={finishing || !isSOSOwnerScopeCurrent()}
               className="flex-1 h-12 bg-green-600 hover:bg-green-700 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-green-600/30"
             >
               <Check className="w-4 h-4 mr-1.5" />
@@ -235,6 +627,7 @@ export default function SOSPage() {
             </Button>
             <Button
               onClick={handleCancel}
+              disabled={finishing || !isSOSOwnerScopeCurrent()}
               variant="outline"
               className="flex-1 h-12 border-destructive text-destructive hover:bg-destructive/10 font-bold text-xs uppercase tracking-wider rounded-xl"
             >
@@ -248,16 +641,16 @@ export default function SOSPage() {
   }
 
   return (
-    <div className="min-h-screen bg-asphalt pb-8">
+    <div className="min-h-screen bg-asphalt-light pb-8 page-surface-light">
       <Header />
 
       <div className="px-4 pt-4 max-w-lg mx-auto flex flex-col items-center">
         <div className="text-center max-w-sm">
-          <h1 className="font-display text-3xl font-extrabold text-white uppercase tracking-wider">
+          <h1 className="font-display text-3xl font-extrabold text-foreground uppercase tracking-wider">
             Acil Yardım
           </h1>
           <p className="text-muted-foreground mt-1.5 text-xs sm:text-sm leading-relaxed">
-            Tek tuşla konumunu paylaş ve çevrendeki MotoGuard sürücülerinden acil destek çağır.
+            Konumunu alıp SOS kaydı oluşturmayı deneriz. Diğer sürücülere bildirim iletimi henüz doğrulanmış değildir.
           </p>
         </div>
 
@@ -265,6 +658,22 @@ export default function SOSPage() {
         <div className="w-full mt-4">
           <EmergencyWarning />
         </div>
+
+        {restoreLookupFailed && (
+          <div role="alert" className="w-full mt-4 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3">
+            <p className="text-xs leading-relaxed text-amber-200">
+              Aktif SOS kaydı kontrol edilemedi. Bağlantınızı kontrol edip yeniden deneyin; çağrının durumu doğrulanana kadar yeni SOS açmayın.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              className="mt-3 w-full"
+              onClick={() => setRestoreRetryToken((value) => value + 1)}
+            >
+              Aktif SOS kaydını yeniden kontrol et
+            </Button>
+          </div>
+        )}
 
         {/* Big SOS Button */}
         <button
@@ -288,12 +697,13 @@ export default function SOSPage() {
             Özel Durum Seç (7 Kategori)
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-            <CategoryCard icon={Bike} title="Lastik" desc="Patlak / İnik" onClick={() => handleSOS("lastik")} />
-            <CategoryCard icon={Zap} title="Akü" desc="Takviye Lazım" onClick={() => handleSOS("aku")} />
-            <CategoryCard icon={Fuel} title="Yakıt" desc="Benzin Bitti" onClick={() => handleSOS("yakit")} />
-            <CategoryCard icon={Wrench} title="Arıza" desc="Mekanik Arıza" onClick={() => handleSOS("ariza")} />
-            <CategoryCard icon={Phone} title="Kaza" desc="Maddi Hasarlı" onClick={() => handleSOS("kaza")} />
-            <CategoryCard icon={Truck} title="Çekici" desc="Çekici Desteği" onClick={() => handleSOS("cekici")} />
+            <CategoryCard icon={Bike} title="Lastik" desc="Patlak / İnik" disabled={submitting} onClick={() => handleSOS("lastik")} />
+            <CategoryCard icon={Zap} title="Akü" desc="Takviye Lazım" disabled={submitting} onClick={() => handleSOS("aku")} />
+            <CategoryCard icon={Fuel} title="Yakıt" desc="Benzin Bitti" disabled={submitting} onClick={() => handleSOS("yakit")} />
+            <CategoryCard icon={Wrench} title="Arıza" desc="Mekanik Arıza" disabled={submitting} onClick={() => handleSOS("ariza")} />
+            <CategoryCard icon={Phone} title="Kaza" desc="Maddi Hasarlı" disabled={submitting} onClick={() => handleSOS("kaza")} />
+            <CategoryCard icon={Truck} title="Çekici" desc="Çekici Desteği" disabled={submitting} onClick={() => handleSOS("cekici")} />
+            <CategoryCard icon={HelpCircle} title="Diğer" desc="Farklı yardım ihtiyacı" disabled={submitting} onClick={() => handleSOS("diger")} />
           </div>
         </div>
 
@@ -308,7 +718,7 @@ export default function SOSPage() {
                 Koruyucu Kardeş Rozet Sistemi
               </p>
               <p className="text-xs text-muted-foreground mt-0.5 leading-snug">
-                Yardım talebine ilk giden sürücüler koruyucu kardeş puanı ve rozeti kazanır.
+                Puan ve rozetlerin sunucu tarafında güvenilir biçimde hesaplanması henüz etkinleştirilmedi.
               </p>
             </div>
           </div>
@@ -323,16 +733,19 @@ function CategoryCard({
   title,
   desc,
   onClick,
+  disabled = false,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   title: string;
   desc: string;
   onClick: () => void;
+  disabled?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
-      className="bg-card-gradient border border-border/80 hover:border-primary/50 rounded-xl p-3.5 flex flex-col items-start gap-1.5 active:scale-95 transition-all text-left group cursor-pointer"
+      disabled={disabled}
+      className="bg-card-gradient border border-border/80 hover:border-primary/50 rounded-xl p-3.5 flex flex-col items-start gap-1.5 active:scale-95 transition-all text-left group cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
     >
       <Icon className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
       <span className="font-bold text-white text-xs uppercase tracking-wide">{title}</span>

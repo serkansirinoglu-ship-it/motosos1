@@ -4,6 +4,7 @@ import { signIn, signUp, signOutUser, onAuthStateChangedListener } from '../../.
 type AuthContextType = {
   user: any | null;
   isAuthenticated: boolean;
+  authReady: boolean;
   signIn: (email: string, password: string) => Promise<any>;
   signUp: (email: string, password: string) => Promise<any>;
   signOut: () => Promise<void>;
@@ -13,10 +14,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<any | null>(null);
+  const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
 	const unsub = onAuthStateChangedListener((u: any) => {
 	  setUser(u);
+      setAuthReady(true);
 	});
 	return () => unsub();
   }, []);
@@ -24,6 +27,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const value: AuthContextType = {
 	user,
 	isAuthenticated: !!user,
+    authReady,
 	signIn,
 	signUp,
 	signOut: signOutUser,

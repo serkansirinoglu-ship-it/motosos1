@@ -1,18 +1,26 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { subscribeHelpRequestsRealtime, createHelpRequestRealtime, subscribeMessagesRealtime, sendMessageRealtime, updateHelpRequestRealtime } from '../../../firebase';
 import { nanoid } from "nanoid";
+import { validateHelpMessageInput, validateHelpRequestInput } from "@/services/helpMessageValidation";
+import { useAuth } from "./AuthContext";
+import { readScopedJson, scopedStorageKey, writeScopedJson } from "@/services/scopedLocalCache";
 
 type Message = {
   id: string;
   from: string | null;
+  fromName?: string;
   text: string;
   ts: number;
+  // Explicitly marks a browser-only fallback; it is never proof of server persistence.
+  localOnly?: boolean;
 };
 
 type HelpRequest = {
   id: string;
   title: string;
   description: string;
+  // ownerId is the Firebase UID; user is retained only for legacy local-cache records.
+  ownerId?: string | null;
   user?: string | null;
   lat?: number;
   lng?: number;
@@ -21,16 +29,18 @@ type HelpRequest = {
   helpers?: string[];
   resolvedBy?: string | null;
   resolvedAt?: number | null;
+  // Explicitly marks a browser-only fallback that has not been confirmed by Firestore.
+  localOnly?: boolean;
 };
 
 type MessageContextType = {
   helpRequests: HelpRequest[];
   messages: Record<string, Message[]>;
-  createHelpRequest: (r: Omit<HelpRequest, "id" | "createdAt" | "active">) => HelpRequest;
-  sendMessage: (requestId: string, text: string, from?: string | null) => Message;
+  createHelpRequest: (r: Omit<HelpRequest, "id" | "createdAt" | "active">) => HelpRequest | null;
+  sendMessage: (requestId: string, text: string, from?: string | null, fromName?: string) => Message | null;
   subscribeToMessages: (requestId: string, onUpdate: (arr: Message[]) => void) => (() => void);
-  acceptHelp: (requestId: string, helperEmail: string) => void;
-  resolveHelp: (requestId: string, helperEmail: string) => void;
+  acceptHelp: (requestId: string, helperUid: string) => Promise<boolean>;
+  resolveHelp: (requestId: string, helperUid: string, helperEmail?: string | null) => Promise<boolean>;
   getTopHelpers: (limit?: number) => {email:string,count:number}[];
   getHelpCount: (email?: string) => number;
 };
@@ -38,41 +48,70 @@ type MessageContextType = {
 const MessageContext = createContext<MessageContextType | undefined>(undefined);
 
 const STORAGE_KEY = "motosos_help_requests_v1";
+const STATS_STORAGE_KEY = "motosos_user_stats_v1";
+const PROFILES_STORAGE_KEY = "motosos_user_profiles_v1";
+type HelpCache = { helpRequests: HelpRequest[]; messages: Record<string, Message[]> };
 
 export function MessageProvider({ children }: { children: React.ReactNode }) {
-  const [helpRequests, setHelpRequests] = useState<HelpRequest[]>(() => {
-	try {
-	  const raw = localStorage.getItem(STORAGE_KEY);
-	  return raw ? JSON.parse(raw).helpRequests || [] : [];
-	} catch (e) {
-	  return [];
-	}
-  });
+  const { user, authReady } = useAuth();
+  const uid = typeof user?.uid === "string" ? user.uid : null;
+  const storageKey = scopedStorageKey(STORAGE_KEY, uid);
+  const statsStorageKey = scopedStorageKey(STATS_STORAGE_KEY, uid);
+  const profilesStorageKey = scopedStorageKey(PROFILES_STORAGE_KEY, uid);
+  const [cacheForKey, setCacheForKey] = useState<string | null>(null);
+  // Realtime callbacks can arrive after an account switch; gate them against the
+  // currently rendered identity, not the identity captured by an old listener.
+  const identityRef = useRef({ uid, storageKey, authReady, cacheForKey });
+  identityRef.current = { uid, storageKey, authReady, cacheForKey };
+  const [helpRequests, setHelpRequests] = useState<HelpRequest[]>([]);
+  const localOnlyHelpRequestIds = useRef(new Set<string>());
+  const [messages, setMessages] = useState<Record<string, Message[]>>({});
+  // Keep the latest message cache available without recreating realtime subscriptions.
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
+  // Preserve explicitly local-only messages across realtime snapshots and reloads.
+  const localOnlyMessagesByRequest = useRef<Map<string, Message[]>>(
+    new Map(
+      Object.entries(messages)
+        .map(([requestId, items]) => [requestId, items.filter((item) => item.localOnly)] as [string, Message[]])
+        .filter(([, items]) => items.length > 0),
+    ),
+  );
 
-  const [messages, setMessages] = useState<Record<string, Message[]>>(() => {
-	try {
-	  const raw = localStorage.getItem(STORAGE_KEY);
-	  return raw ? JSON.parse(raw).messages || {} : {};
-	} catch (e) {
-	  return {};
-	}
-  });
+  // Do not hydrate or persist private browser caches until Firebase has resolved the account.
+  // Each UID gets a separate namespace; legacy unscoped cache keys are intentionally not read.
+  useEffect(() => {
+    if (!authReady) return;
+    const storage = typeof localStorage === "undefined" ? null : localStorage;
+    const cached = readScopedJson<HelpCache>(storage, storageKey, { helpRequests: [], messages: {} });
+    const nextRequests = Array.isArray(cached.helpRequests) ? cached.helpRequests : [];
+    const nextMessages = cached.messages && typeof cached.messages === "object" ? cached.messages : {};
+    setHelpRequests(nextRequests);
+    setMessages(nextMessages);
+    localOnlyHelpRequestIds.current = new Set(nextRequests.filter((item) => item.localOnly).map((item) => item.id));
+    localOnlyMessagesByRequest.current = new Map(
+      Object.entries(nextMessages)
+        .map(([requestId, items]) => [requestId, items.filter((item) => item.localOnly)] as [string, Message[]])
+        .filter(([, items]) => items.length > 0),
+    );
+    setHelpCounts(readScopedJson<Record<string, number>>(storage, statsStorageKey, {}));
+    setCacheForKey(storageKey);
+  }, [authReady, storageKey, statsStorageKey]);
 
   useEffect(() => {
-	localStorage.setItem(STORAGE_KEY, JSON.stringify({ helpRequests, messages }));
-  }, [helpRequests, messages]);
+    if (!authReady || cacheForKey !== storageKey) return;
+    const storage = typeof localStorage === "undefined" ? null : localStorage;
+    writeScopedJson(storage, storageKey, { helpRequests, messages });
+  }, [authReady, cacheForKey, storageKey, helpRequests, messages]);
 
   // helpCounts per user
-  const [helpCounts, setHelpCounts] = useState<Record<string, number>>(() => {
-	try {
-	  const raw = localStorage.getItem("motosos_user_stats_v1");
-	  return raw ? JSON.parse(raw) : {};
-	} catch (e) { return {}; }
-  });
+  const [helpCounts, setHelpCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
-	try { localStorage.setItem("motosos_user_stats_v1", JSON.stringify(helpCounts)); } catch(e){}
-  }, [helpCounts]);
+    if (!authReady || cacheForKey !== storageKey) return;
+    const storage = typeof localStorage === "undefined" ? null : localStorage;
+    writeScopedJson(storage, statsStorageKey, helpCounts);
+  }, [authReady, cacheForKey, storageKey, statsStorageKey, helpCounts]);
 
   function incrementHelpCount(email?: string) {
 	if (!email) return;
@@ -90,15 +129,35 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
 
   // Realtime subscription to helpRequests (Firestore). If available, it will keep local state in sync.
   useEffect(() => {
+    if (!authReady) return;
 	let unsub = null;
 	try {
 	  unsub = subscribeHelpRequestsRealtime((arr: any[]) => {
+        const activeIdentity = identityRef.current;
+        if (!activeIdentity.authReady || activeIdentity.uid !== uid || activeIdentity.storageKey !== storageKey) return;
 		// Map Firestore timestamp to number if necessary
 		const normalized = arr.map((d: any) => ({
 		  ...d,
 		  createdAt: d.createdAt && d.createdAt.toMillis ? d.createdAt.toMillis() : d.createdAt || Date.now(),
 		}));
-		setHelpRequests(normalized as HelpRequest[]);
+        setHelpRequests((current) => {
+          const remoteIds = new Set(normalized.map((item: HelpRequest) => item.id));
+          for (const id of remoteIds) localOnlyHelpRequestIds.current.delete(id);
+          const localOnly = current.filter((item) =>
+            localOnlyHelpRequestIds.current.has(item.id) && !remoteIds.has(item.id)
+          ).map((item) => ({ ...item, localOnly: true }));
+          // Keep already-observed conversations during brief gaps between the
+          // public-feed and account-scoped snapshots; never retain another user's data.
+          const email = typeof user?.email === "string" ? user.email : null;
+          const participantRequests = current.filter((item) => {
+            if (remoteIds.has(item.id) || localOnlyHelpRequestIds.current.has(item.id)) return false;
+            const isOwner = item.ownerId === uid || (!!email && item.user === email);
+            const helpers = item.helpers || [];
+            const isHelper = helpers.includes(uid!) || (!!email && helpers.includes(email));
+            return isOwner || isHelper;
+          });
+          return [...localOnly, ...participantRequests, ...(normalized as HelpRequest[])];
+        });
 	  });
 	} catch (e) {
 	  console.info("Realtime helpRequests not available", e);
@@ -107,90 +166,274 @@ export function MessageProvider({ children }: { children: React.ReactNode }) {
 	return () => {
 	  if (unsub) unsub();
 	};
-  }, []);
+  }, [authReady, storageKey, uid, user?.email]);
 
-  function createHelpRequest(r: Omit<HelpRequest, "id" | "createdAt" | "active">) {
-	// Try realtime first
-	try {
-	  createHelpRequestRealtime(r);
-	  // Firestore snapshot will update local state
-	  const id = nanoid();
-	  setMessages((m) => ({ ...m, [id]: [] }));
-	  return { ...r, id, createdAt: Date.now(), active: true } as HelpRequest;
-	} catch (e) {
-	  const id = nanoid();
-		const hr: HelpRequest = { ...r, id, createdAt: Date.now(), active: true, helpers: [], resolvedBy: null, resolvedAt: null };
-	  setHelpRequests((s) => [hr, ...s]);
-	  setMessages((m) => ({ ...m, [id]: [] }));
-	  return hr;
-	}
+  function createHelpRequest(r: Omit<HelpRequest, "id" | "createdAt" | "active">): HelpRequest | null {
+    // Do not create even a local-only request before authentication is resolved.
+    if (!authReady || !uid || (r.ownerId != null && r.ownerId !== uid)) return null;
+
+    const operationUid = uid;
+    const operationStorageKey = storageKey;
+    const operationIsCurrent = () => {
+      const active = identityRef.current;
+      return active.authReady && active.uid === operationUid &&
+        active.storageKey === operationStorageKey && active.cacheForKey === operationStorageKey;
+    };
+    const id = nanoid();
+    const hr: HelpRequest = {
+      ...r,
+      ownerId: uid,
+      id,
+      createdAt: Date.now(),
+      active: true,
+      helpers: [],
+      resolvedBy: null,
+      resolvedAt: null,
+      // Treat the optimistic request as unconfirmed until Firestore acknowledges it.
+      localOnly: true,
+    };
+    if (validateHelpRequestInput(hr, uid)) return null;
+
+    // Track the optimistic ID immediately so an early realtime snapshot cannot
+    // drop the request before the create promise confirms success or failure.
+    localOnlyHelpRequestIds.current.add(hr.id);
+    setHelpRequests((current) =>
+      current.some((item) => item.id === hr.id) ? current : [hr, ...current]
+    );
+
+    // Firebase calls are asynchronous: a surrounding try/catch does not catch
+    // permission/network rejections unless the returned promise is observed.
+    try {
+      const pending = createHelpRequestRealtime(hr);
+      void Promise.resolve(pending).then((result) => {
+        if (!operationIsCurrent()) return;
+        if (result) {
+          localOnlyHelpRequestIds.current.delete(hr.id);
+          setHelpRequests((current) => current.map((item) =>
+            item.id === hr.id ? { ...item, localOnly: false } : item
+          ));
+          return;
+        }
+        console.warn("Realtime help request unavailable; keeping a local copy");
+        localOnlyHelpRequestIds.current.add(hr.id);
+        setHelpRequests((current) => current.map((item) =>
+          item.id === hr.id ? { ...item, localOnly: true } : item
+        ));
+      }).catch((error) => {
+        if (!operationIsCurrent()) return;
+        console.warn("Realtime help request failed; keeping a local copy", error);
+        localOnlyHelpRequestIds.current.add(hr.id);
+        setHelpRequests((current) => current.map((item) =>
+          item.id === hr.id ? { ...item, localOnly: true } : item
+        ));
+      });
+      setMessages((current) => ({ ...current, [id]: [] }));
+      return hr;
+    } catch (error) {
+      console.warn("Realtime help request unavailable; keeping a local copy", error);
+      localOnlyHelpRequestIds.current.add(hr.id);
+      setHelpRequests((current) => current.map((item) =>
+        item.id === hr.id ? { ...item, localOnly: true } : item
+      ));
+      setMessages((current) => ({ ...current, [id]: [] }));
+      return hr;
+    }
   }
 
-  // accept helping a request
-  function acceptHelp(requestId: string, helperEmail: string) {
-	// update local
-	setHelpRequests((s) => s.map(hr => hr.id === requestId ? { ...hr, helpers: Array.from(new Set([...(hr.helpers||[]), helperEmail])) } : hr));
-	try { updateHelpRequestRealtime(requestId, { helpers: (helpRequests.find(h=>h.id===requestId)?.helpers||[])}); } catch(e){}
+  // Only report success after Firestore confirms the update.
+  async function acceptHelp(requestId: string, helperUid: string): Promise<boolean> {
+    // Only the resolved Firebase account may claim help; never trust a caller-supplied UID.
+    if (!authReady || !uid || helperUid !== uid) return false;
+    const request = helpRequests.find((item) => item.id === requestId);
+    if (!request || !request.active || request.localOnly) return false;
+    const currentHelpers = request.helpers || [];
+    const authenticatedEmail = typeof user?.email === "string" ? user.email : null;
+    const isOwner = request.ownerId === uid || (!!authenticatedEmail && request.user === authenticatedEmail);
+    const alreadyHelper = currentHelpers.includes(uid) ||
+      (!!authenticatedEmail && currentHelpers.includes(authenticatedEmail));
+    if (isOwner || alreadyHelper) return false;
+    const helpers = Array.from(new Set([...currentHelpers, helperUid]));
+    try {
+      const operationStorageKey = storageKey;
+      const operationUid = uid;
+      const pending = updateHelpRequestRealtime(requestId, { helpers });
+      if (!pending) return false;
+      await pending;
+      const activeIdentity = identityRef.current;
+      if (!activeIdentity.authReady || activeIdentity.uid !== operationUid ||
+        activeIdentity.storageKey !== operationStorageKey || activeIdentity.cacheForKey !== operationStorageKey) return false;
+      setHelpRequests((current) =>
+        current.map((item) => item.id === requestId ? { ...item, helpers } : item)
+      );
+      return true;
+    } catch (error) {
+      console.warn("Realtime helper acceptance failed; server did not confirm the update", error);
+      return false;
+    }
   }
 
-  // resolve help: credit helper and mark resolved
-  function resolveHelp(requestId: string, helperEmail: string) {
-	setHelpRequests((s) => s.map(hr => hr.id === requestId ? { ...hr, resolvedBy: helperEmail, resolvedAt: Date.now(), active: false } : hr));
-	incrementHelpCount(helperEmail);
-	try { updateHelpRequestRealtime(requestId, { resolvedBy: helperEmail, resolvedAt: Date.now(), active: false }); } catch(e){}
-	  // after increment, check thresholds and award badges
-	const newCount = (helpCounts[helperEmail] || 0) + 1;
-	// Koruyucu Kardeş at 1, Yol Meleği at 5
-	if (newCount >= 1) addBadgeToProfile(helperEmail, 'Koruyucu Kardeş');
-	if (newCount >= 5) addBadgeToProfile(helperEmail, 'Yol Meleği');
+  // Credit the helper and update local state only after Firestore confirms resolution.
+  async function resolveHelp(requestId: string, helperUid: string, _helperEmail?: string | null): Promise<boolean> {
+    // Only the resolved Firebase account may resolve a request or receive credit.
+    if (!authReady || !uid || helperUid !== uid) return false;
+    const request = helpRequests.find((item) => item.id === requestId);
+    if (!request || !request.active || request.localOnly) return false;
+    const currentHelpers = request.helpers || [];
+    const authenticatedEmail = typeof user?.email === "string" ? user.email : null;
+    const isOwner = request.ownerId === uid || (!!authenticatedEmail && request.user === authenticatedEmail);
+    const isHelper = currentHelpers.includes(uid) ||
+      (!!authenticatedEmail && currentHelpers.includes(authenticatedEmail));
+    if (isOwner || !isHelper) return false;
+    const resolvedAt = Date.now();
+    try {
+      const operationStorageKey = storageKey;
+      const operationUid = uid;
+      const operationEmail = authenticatedEmail;
+      const pending = updateHelpRequestRealtime(requestId, {
+        resolvedBy: helperUid,
+        resolvedAt,
+        active: false,
+      });
+      if (!pending) return false;
+      await pending;
+      const activeIdentity = identityRef.current;
+      if (!activeIdentity.authReady || activeIdentity.uid !== operationUid ||
+        activeIdentity.storageKey !== operationStorageKey || activeIdentity.cacheForKey !== operationStorageKey) return false;
+      setHelpRequests((current) =>
+        current.map((item) => item.id === requestId
+          ? { ...item, resolvedBy: helperUid, resolvedAt, active: false }
+          : item)
+      );
+      // Use the authenticated profile, not an email supplied by the UI caller.
+      const statsKey = operationEmail && operationEmail.trim() ? operationEmail : operationUid;
+      incrementHelpCount(statsKey);
+      const newCount = (helpCounts[statsKey] || 0) + 1;
+      if (newCount >= 1) addBadgeToProfile(statsKey, "Koruyucu Kardeş");
+      if (newCount >= 5) addBadgeToProfile(statsKey, "Yol Meleği");
+      return true;
+    } catch (error) {
+      console.warn("Realtime help resolution failed; server did not confirm the update", error);
+      return false;
+    }
   }
 
   // add badge to user's profile based on thresholds
   function addBadgeToProfile(email: string, badge: string){
 	if(!email) return;
 	try{
-	  const raw = localStorage.getItem('motosos_user_profiles_v1');
+	  const raw = localStorage.getItem(profilesStorageKey);
 	  const obj = raw ? JSON.parse(raw) : {};
 	  const prof = obj[email] || { contacts: [], badges: [] };
 	  prof.badges = prof.badges || [];
 	  if(!prof.badges.includes(badge)) prof.badges.push(badge);
 	  obj[email] = prof;
-	  localStorage.setItem('motosos_user_profiles_v1', JSON.stringify(obj));
+	  localStorage.setItem(profilesStorageKey, JSON.stringify(obj));
 	}catch(e){console.error(e)}
   }
 
-  function sendMessage(requestId: string, text: string, from: string | null = null) {
-	const msg: Message = { id: nanoid(), from, text, ts: Date.now() };
-	try {
-	  sendMessageRealtime(requestId, msg);
-	  return msg; // Firestore snapshot will sync
-	} catch (e) {
-	  setMessages((m) => {
-		const arr = m[requestId] ? [...m[requestId], msg] : [msg];
-		return { ...m, [requestId]: arr };
-	  });
-	  return msg;
-	}
+  function sendMessage(requestId: string, text: string, from: string | null = null, fromName = "Motorcu"): Message | null {
+    // Never persist or submit a message unless its sender matches the resolved Firebase account.
+    if (!authReady || !uid || from !== uid) return null;
+
+    // Enforce conversation membership at the context boundary too, so callers
+    // cannot create misleading local-only messages in another rider's request.
+    const request = helpRequests.find((item) => item.id === requestId);
+    if (!request || !request.active || request.localOnly) return null;
+    const helpers = request.helpers || [];
+    const authenticatedEmail = typeof user?.email === "string" ? user.email : null;
+    const isOwner = request.ownerId === uid || (!!authenticatedEmail && request.user === authenticatedEmail);
+    const isHelper = helpers.includes(uid) || (!!authenticatedEmail && helpers.includes(authenticatedEmail));
+    if (!isOwner && !isHelper) return null;
+
+    if (validateHelpMessageInput({ requestId, text, from, fromName, authenticatedUid: uid })) return null;
+    const operationUid = uid;
+    const operationStorageKey = storageKey;
+    const msg: Message = {
+      id: nanoid(),
+      from,
+      fromName: fromName.trim(),
+      text: text.trim(),
+      ts: Date.now(),
+    };
+    const keepLocal = () => {
+      const activeIdentity = identityRef.current;
+      if (!activeIdentity.authReady || activeIdentity.uid !== operationUid ||
+        activeIdentity.storageKey !== operationStorageKey || activeIdentity.cacheForKey !== operationStorageKey) return;
+      const localMessage: Message = { ...msg, localOnly: true };
+      const retained = localOnlyMessagesByRequest.current.get(requestId) || [];
+      if (!retained.some((item) => item.id === localMessage.id)) {
+        localOnlyMessagesByRequest.current.set(requestId, [...retained, localMessage]);
+      }
+      setMessages((current) => {
+        const existing = current[requestId] || [];
+        return existing.some((item) => item.id === localMessage.id)
+          ? current
+          : { ...current, [requestId]: [...existing, localMessage] };
+      });
+    };
+
+    try {
+      const pending = sendMessageRealtime(requestId, msg);
+      void Promise.resolve(pending).then((result) => {
+        if (result) return;
+        console.warn("Realtime message unavailable; keeping a local copy");
+        keepLocal();
+      }).catch((error) => {
+        console.warn("Realtime message failed; keeping a local copy", error);
+        keepLocal();
+      });
+      return msg;
+    } catch (error) {
+      console.warn("Realtime message unavailable; keeping a local copy", error);
+      keepLocal();
+      return msg;
+    }
   }
 
-  // Allow components to subscribe to realtime messages for a specific request
-  function subscribeToMessages(requestId: string, onUpdate: (arr: Message[]) => void) {
-	try {
-	  return subscribeMessagesRealtime(requestId, (arr: any[]) => {
-		const normalized = arr.map((d) => ({ ...d, ts: d.ts && d.ts.toMillis ? d.ts.toMillis() : d.ts }));
-		// update local messages store as well
-		setMessages((m) => ({ ...m, [requestId]: normalized }));
-		onUpdate(normalized as Message[]);
-	  });
-	} catch (e) {
-	  // fallback: no-op unsubscribe
-	  return () => {};
-	}
-  }
-
+  // Keep this callback stable so consumers do not churn Firestore listeners on provider renders.
+  const subscribeToMessages = useCallback((requestId: string, onUpdate: (arr: Message[]) => void) => {
+    const identityAtSubscribe = identityRef.current;
+    const subscriptionUid = identityAtSubscribe.uid;
+    const subscriptionKey = identityAtSubscribe.storageKey;
+    const canReadCache = identityAtSubscribe.authReady &&
+      identityAtSubscribe.cacheForKey === identityAtSubscribe.storageKey;
+    // Never deliver the previous account's in-memory cache during auth transitions.
+    const initialMessages = canReadCache ? (messagesRef.current[requestId] || []) : [];
+    onUpdate([...initialMessages].sort((a, b) => a.ts - b.ts));
+    try {
+      return subscribeMessagesRealtime(requestId, (arr: any[]) => {
+        const activeIdentity = identityRef.current;
+        if (!activeIdentity.authReady || activeIdentity.uid !== subscriptionUid ||
+          activeIdentity.storageKey !== subscriptionKey) return;
+        const normalized = arr.map((d) => ({ ...d, ts: d.ts && d.ts.toMillis ? d.ts.toMillis() : d.ts })) as Message[];
+        const remoteIds = new Set(normalized.map((item) => item.id));
+        const localOnly = (localOnlyMessagesByRequest.current.get(requestId) || [])
+          .filter((item) => !remoteIds.has(item.id));
+        localOnlyMessagesByRequest.current.set(requestId, localOnly);
+        const merged = [...normalized, ...localOnly].sort((a, b) => a.ts - b.ts);
+        // Avoid needless provider rerenders when the realtime snapshot is unchanged.
+        setMessages((current) => {
+          const previous = current[requestId] || [];
+          const unchanged = previous.length === merged.length && previous.every((item, index) => {
+            const nextItem = merged[index];
+            return item.id === nextItem.id && item.text === nextItem.text &&
+              item.from === nextItem.from && item.fromName === nextItem.fromName &&
+              item.ts === nextItem.ts && item.localOnly === nextItem.localOnly;
+          });
+          return unchanged ? current : { ...current, [requestId]: merged };
+        });
+        onUpdate(merged);
+      });
+    } catch (error) {
+      console.warn("Message subscription unavailable", error);
+      return () => {};
+    }
+  }, []);
+  // Hide the previous account's in-memory state immediately while a new account cache hydrates.
+  const cacheReadyForCurrentUser = authReady && cacheForKey === storageKey;
   const value: MessageContextType = {
-	helpRequests,
-	messages,
+	helpRequests: cacheReadyForCurrentUser ? helpRequests : [],
+	messages: cacheReadyForCurrentUser ? messages : {},
 	createHelpRequest,
 	sendMessage,
 	  subscribeToMessages,

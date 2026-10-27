@@ -5,11 +5,14 @@
   "license": "MIT",
   "scripts": {
     "dev": "vite --host",
-    "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
+    "build": "node scripts/verify-production-env.mjs && vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "start": "NODE_ENV=production node dist/index.js",
     "preview": "vite preview --host",
     "check": "tsc --noEmit",
-    "format": "prettier --write ."
+    "test": "vitest run",
+    "format": "prettier --write .",
+    "security:rules": "node scripts/check-firestore-rules.mjs",
+    "security:rules:strict": "STRICT_FIRESTORE_RULES=1 node scripts/check-firestore-rules.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

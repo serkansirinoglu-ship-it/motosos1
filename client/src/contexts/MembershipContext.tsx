@@ -1,65 +1,85 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { useAuth } from "./AuthContext";
+import { migrateLegacyScopedArray, scopedStorageKey } from "@/services/scopedLocalCache";
 
 type MembershipContextType = {
   joinedCities: string[];
   isMember: (city: string) => boolean;
   joinCity: (city: string) => void;
   leaveCity: (city: string) => void;
-  getMemberCount: (city: string) => number;
 };
 
-const STORAGE_KEY = "motosos_memberships_v1"; // maps email -> string[]
+const LEGACY_STORAGE_KEY = "motosos_memberships_v1";
+const STORAGE_KEY = "motosos_memberships_v2";
 
 const MembershipContext = createContext<MembershipContextType | undefined>(undefined);
 
-export function MembershipProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
-  const userKey = user?.email || "__anon__";
+function cleanCities(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return Array.from(new Set(value.filter((city): city is string => typeof city === "string" && city.trim().length > 0 && city.length <= 100).map((city) => city.trim())));
+}
 
-  const [store, setStore] = useState<Record<string, string[]>>(() => {
-	try {
-	  const raw = localStorage.getItem(STORAGE_KEY);
-	  return raw ? JSON.parse(raw) : {};
-	} catch (e) {
-	  return {};
-	}
-  });
+export function MembershipProvider({ children }: { children: React.ReactNode }) {
+  const { user, authReady } = useAuth();
+  const uid = typeof user?.uid === "string" && user.uid.trim() ? user.uid : null;
+  const email = typeof user?.email === "string" ? user.email : null;
+  const storageKey = scopedStorageKey(STORAGE_KEY, uid);
+  const [joinedCities, setJoinedCities] = useState<string[]>([]);
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
 
   useEffect(() => {
-	try {
-	  localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
-	} catch (e) {}
-  }, [store]);
+    if (!authReady) return;
+    if (!uid) {
+      setJoinedCities([]);
+      setLoadedKey(null);
+      return;
+    }
 
-  const joinedCities = store[userKey] || [];
+    let nextCities: string[] = [];
+    try {
+      const existing = localStorage.getItem(storageKey);
+      if (existing !== null) {
+        nextCities = cleanCities(JSON.parse(existing));
+      } else {
+        const migrated = migrateLegacyScopedArray(localStorage, LEGACY_STORAGE_KEY, storageKey, email);
+        if (migrated !== null) nextCities = cleanCities(migrated);
+      }
+    } catch {
+      nextCities = [];
+    }
+
+    setJoinedCities(nextCities);
+    setLoadedKey(storageKey);
+  }, [authReady, uid, email, storageKey]);
+
+  useEffect(() => {
+    if (!authReady || !uid || loadedKey !== storageKey) return;
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(joinedCities));
+    } catch {
+      // Local membership is optional; do not claim server persistence.
+    }
+  }, [authReady, uid, loadedKey, storageKey, joinedCities]);
 
   function isMember(city: string) {
-	return joinedCities.includes(city);
+    return joinedCities.includes(city);
   }
 
   function joinCity(city: string) {
-	if (!user) return; // require login to join
-	setStore((s) => ({ ...s, [userKey]: Array.from(new Set([...(s[userKey] || []), city])) }));
+    if (!authReady || !uid || loadedKey !== storageKey || !city.trim() || city.length > 100) return;
+    const cleanCity = city.trim();
+    setJoinedCities((current) => Array.from(new Set([...current, cleanCity])));
   }
 
   function leaveCity(city: string) {
-	if (!user) return;
-	setStore((s) => ({ ...s, [userKey]: (s[userKey] || []).filter((c) => c !== city) }));
-  }
-
-  function getMemberCount(city: string) {
-	let count = 0;
-	for (const k of Object.keys(store)) {
-	  if ((store[k] || []).includes(city)) count++;
-	}
-	return count;
+    if (!authReady || !uid || loadedKey !== storageKey) return;
+    setJoinedCities((current) => current.filter((item) => item !== city));
   }
 
   return (
-	<MembershipContext.Provider value={{ joinedCities, isMember, joinCity, leaveCity, getMemberCount }}>
-	  {children}
-	</MembershipContext.Provider>
+    <MembershipContext.Provider value={{ joinedCities, isMember, joinCity, leaveCity }}>
+      {children}
+    </MembershipContext.Provider>
   );
 }
 

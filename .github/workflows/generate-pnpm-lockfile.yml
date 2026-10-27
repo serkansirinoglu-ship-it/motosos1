@@ -1,0 +1,39 @@
+name: Generate pnpm lockfile artifact
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - audit/add-nonprod-ci-gates
+    paths:
+      - package.json
+      - pnpm-lock.yaml
+      - .github/workflows/generate-pnpm-lockfile.yml
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Regenerate lockfile from package manifest
+        run: pnpm install --lockfile-only --no-frozen-lockfile
+      - name: Validate frozen installation
+        run: pnpm install --frozen-lockfile
+      - name: Upload generated lockfile
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-pnpm-lockfile
+          path: pnpm-lock.yaml
+          if-no-files-found: error
+          retention-days: 3

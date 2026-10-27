@@ -1,3 +1,11 @@
+import { getApps } from "firebase/app";
+import { getAuth, type Auth } from "firebase/auth";
+import { collection, deleteDoc, doc, getFirestore, onSnapshot, orderBy, query, serverTimestamp, setDoc, type Firestore } from "firebase/firestore";
+
+const marketplaceApp = getApps()[0];
+const marketplaceAuth: Auth | null = marketplaceApp ? getAuth(marketplaceApp) : null;
+const marketplaceDb: Firestore | null = marketplaceApp ? getFirestore(marketplaceApp) : null;
+
 /**
  * MarketplaceService — Handles Motorcycle Marketplace listings, categories,
  * searching, and listing moderation.
@@ -16,6 +24,7 @@ export type ListingCategory =
 
 export interface ListingItem {
   id: string;
+  sellerId?: string;
   title: string;
   category: ListingCategory;
   price: number;
@@ -23,57 +32,97 @@ export interface ListingItem {
   description: string;
   image?: string;
   sellerName: string;
-  sellerEmail: string;
   sellerPhone?: string;
   createdAt: string;
   featured?: boolean;
 }
 
-const INITIAL_LISTINGS: ListingItem[] = [
-  {
-    id: 'mkt-1',
-    title: 'Shoei NXR2 Kask - M Beden (Çiziksiz)',
-    category: 'Kask',
-    price: 18500,
-    city: 'İzmir',
-    description: 'Sadece 3 ay hafta sonu sürüldü. Pinlock takılı, taşıma kılıfı ve kutusuyla teslim verilecektir.',
-    image: 'https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&w=600&q=80',
-    sellerName: 'Kaan Demir',
-    sellerEmail: 'kaan@motoguard.tr',
-    sellerPhone: '0533 111 22 33',
-    createdAt: '2026-08-10',
-    featured: true,
-  },
-  {
-    id: 'mkt-2',
-    title: 'Alpinestars Stella Su Geçirmez Mont',
-    category: 'Mont',
-    price: 9200,
-    city: 'İstanbul',
-    description: 'CE korumalı, kışlık termal içliği mevcut. L beden, temiz kullanıldı.',
-    image: 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=600&q=80',
-    sellerName: 'Deniz Aksu',
-    sellerEmail: 'deniz@motoguard.tr',
-    createdAt: '2026-08-11',
-    featured: false,
-  },
-  {
-    id: 'mkt-3',
-    title: 'Pirelli Diablo Rosso IV Örnek Set (120/70 & 180/55)',
-    category: 'Lastik',
-    price: 11000,
-    city: 'Ankara',
-    description: '2025/44. hafta üretimi. Hiç takılmadı, ambalajında.',
-    image: 'https://images.unsplash.com/photo-1578844251758-2f71da64c96f?auto=format&fit=crop&w=600&q=80',
-    sellerName: 'Murat Kara',
-    sellerEmail: 'murat@motoguard.tr',
-    createdAt: '2026-08-09',
-    featured: false,
-  },
-];
+function isHttpUrl(value: string): boolean {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
 
 class MarketplaceService {
-  private listings: ListingItem[] = [...INITIAL_LISTINGS];
+  // Server snapshots are the source of truth; never fabricate marketplace records.
+  private listings: ListingItem[] = [];
+
+  public subscribeRemoteListings(
+    onListings: (listings: ListingItem[]) => void,
+    onError: (error: unknown) => void,
+    shouldApply: () => boolean = () => true,
+  ): () => void {
+    if (!marketplaceDb) throw new Error("Firebase yapılandırılmamış; pazar yeri sunucuya bağlanamadı.");
+    const listingsQuery = query(collection(marketplaceDb, "listings"), orderBy("createdAt", "desc"));
+    return onSnapshot(listingsQuery, (snapshot) => {
+      if (!shouldApply()) return;
+      const remoteListings = snapshot.docs.map((item) => {
+        const data = item.data();
+        const timestamp = data.createdAt;
+        const createdAt = timestamp && typeof timestamp.toDate === "function" ? timestamp.toDate().toISOString() : "";
+        return {
+          id: item.id,
+          sellerId: String(data.sellerId || ""),
+          title: String(data.title || ""),
+          category: data.category as ListingCategory,
+          price: typeof data.price === "number" ? data.price : 0,
+          city: String(data.city || ""),
+          description: String(data.description || ""),
+          image: typeof data.image === "string" ? data.image : undefined,
+          sellerName: String(data.sellerName || "İlan Sahibi"),
+          sellerPhone: typeof data.sellerPhone === "string" ? data.sellerPhone : undefined,
+          createdAt,
+          featured: data.featured === true,
+        } satisfies ListingItem;
+      });
+      this.listings = remoteListings;
+      onListings(remoteListings);
+    }, (error) => {
+      if (shouldApply()) onError(error);
+    });
+  }
+
+  public async createRemoteListing(input: Omit<ListingItem, "id" | "createdAt" | "sellerId" | "featured"> & { sellerId: string }): Promise<string> {
+    if (!marketplaceDb || !marketplaceAuth?.currentUser?.uid) throw new Error("İlan vermek için Firebase oturumu gerekli.");
+    if (marketplaceAuth.currentUser.uid !== input.sellerId) throw new Error("Satıcı kimliği doğrulanamadı.");
+    const title = input.title.trim();
+    const description = input.description.trim();
+    const city = input.city.trim();
+    const sellerName = input.sellerName.trim();
+    const image = input.image?.trim();
+    const sellerPhone = input.sellerPhone?.trim();
+    const allowedCategories: ListingCategory[] = ["Motosiklet", "Kask", "Mont", "Pantolon", "Eldiven", "Lastik", "Parça", "Aksesuar", "Diğer"];
+    if (!title || title.length > 160 || !description || description.length > 5000 || !city || city.length > 100 || !sellerName || sellerName.length > 80 || !allowedCategories.includes(input.category) || !Number.isFinite(input.price) || input.price <= 0 || (image && (image.length > 2048 || !isHttpUrl(image))) || (sellerPhone && sellerPhone.length > 40)) {
+      throw new Error("İlan bilgileri geçersiz. Alanları, fiyatı ve bağlantıları kontrol edin.");
+    }
+    const listingRef = doc(collection(marketplaceDb, "listings"));
+    const payload: Record<string, unknown> = { id: listingRef.id, title, category: input.category, price: input.price, city, description, sellerId: input.sellerId, sellerName, createdAt: serverTimestamp(), featured: false };
+    if (image) payload.image = image;
+    if (sellerPhone) payload.sellerPhone = sellerPhone;
+    await setDoc(listingRef, payload);
+    return listingRef.id;
+  }
+
+  /** Admin moderation deletion; the refreshed Firebase token and Firestore rules both enforce admin access. */
+  public async deleteRemoteListingAsAdmin(listingId: string): Promise<void> {
+    const user = marketplaceAuth?.currentUser;
+    if (!marketplaceDb || !user) throw new Error("Yönetici oturumu veya Firebase bağlantısı gerekli.");
+    if (typeof listingId !== "string" || !listingId.trim() || listingId.includes("/") || listingId.length > 1500) {
+      throw new Error("İlan kimliği geçersiz.");
+    }
+    const token = await user.getIdTokenResult(true);
+    if (token.claims.admin !== true) throw new Error("Yönetici yetkisi doğrulanamadı.");
+    await deleteDoc(doc(marketplaceDb, "listings", listingId));
+  }
+
+  public async deleteRemoteListing(listingId: string, sellerId: string): Promise<void> {
+    if (!marketplaceDb || !marketplaceAuth?.currentUser?.uid) throw new Error("İlan silmek için giriş yapın.");
+    if (!listingId || marketplaceAuth.currentUser.uid !== sellerId) throw new Error("Yalnızca kendi ilanınızı silebilirsiniz.");
+    await deleteDoc(doc(marketplaceDb, "listings", listingId));
+  }
 
   public getListings(category?: string, query?: string, city?: string): ListingItem[] {
     let list = [...this.listings];
@@ -96,14 +145,47 @@ class MarketplaceService {
     return this.listings.find((l) => l.id === id);
   }
 
-  public createListing(listing: Omit<ListingItem, 'id' | 'createdAt'>): ListingItem {
+  public createListing(listing: Omit<ListingItem, 'id' | 'createdAt'>): ListingItem | null {
+    const allowedCategories: ListingCategory[] = [
+      'Motosiklet', 'Kask', 'Mont', 'Pantolon', 'Eldiven', 'Lastik', 'Parça', 'Aksesuar', 'Diğer',
+    ];
+    const title = typeof listing.title === 'string' ? listing.title.trim() : '';
+    const description = typeof listing.description === 'string' ? listing.description.trim() : '';
+    const city = typeof listing.city === 'string' ? listing.city.trim() : '';
+    const sellerName = typeof listing.sellerName === 'string' ? listing.sellerName.trim() : '';
+    const image = typeof listing.image === 'string' ? listing.image.trim() : '';
+    const sellerPhone = typeof listing.sellerPhone === 'string' ? listing.sellerPhone.trim() : '';
+
+    if (
+      !title || title.length > 160 ||
+      !description || description.length > 5000 ||
+      !city || city.length > 100 ||
+      !sellerName || sellerName.length > 80 ||
+      !allowedCategories.includes(listing.category) ||
+      typeof listing.price !== 'number' || !Number.isFinite(listing.price) || listing.price <= 0 ||
+      (image.length > 0 && (image.length > 2048 || !isHttpUrl(image))) ||
+      sellerPhone.length > 40
+    ) {
+      return null;
+    }
+
     const newListing: ListingItem = {
       ...listing,
+      title,
+      description,
+      city,
+      sellerName,
+      image: image || undefined,
+      sellerPhone: sellerPhone || undefined,
       id: `mkt-${Date.now()}`,
       createdAt: new Date().toISOString().split('T')[0],
     };
     this.listings.unshift(newListing);
     return newListing;
+  }
+
+  public clearLocalSession(): void {
+    this.listings = [];
   }
 
   public deleteListing(id: string): boolean {

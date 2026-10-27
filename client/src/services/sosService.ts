@@ -44,6 +44,7 @@ export const STATUS_LABELS: Record<SOSStatus, { label: string; color: string }> 
 
 class SOSService {
   private activeRequests: SOSRequestItem[] = [];
+  private idSequence = 0;
 
   public getActiveRequests(): SOSRequestItem[] {
     return this.activeRequests.filter(
@@ -55,10 +56,18 @@ class SOSService {
     return [...this.activeRequests];
   }
 
+  /** Remove a local placeholder after its authoritative remote SOS is no longer active. */
+  public removeRequest(id: string): boolean {
+    const index = this.activeRequests.findIndex((request) => request.id === id);
+    if (index < 0) return false;
+    this.activeRequests.splice(index, 1);
+    return true;
+  }
+
   public createRequest(data: Omit<SOSRequestItem, 'id' | 'status' | 'helpersCount' | 'createdAt'>): SOSRequestItem {
     const newItem: SOSRequestItem = {
       ...data,
-      id: `sos-${Date.now()}`,
+      id: `sos-${Date.now()}-${++this.idSequence}`,
       status: 'bekleniyor',
       helpersCount: 0,
       createdAt: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
@@ -70,6 +79,31 @@ class SOSService {
   public updateStatus(id: string, newStatus: SOSStatus, acceptedBy?: string): boolean {
     const req = this.activeRequests.find((r) => r.id === id);
     if (!req) return false;
+    if (req.status === 'tamamlandi' || req.status === 'iptal_edildi') return false;
+    if (newStatus === req.status) return false;
+
+    // A request can be claimed by only one helper, and claiming is only valid
+    // from the initial pending state.
+    if (acceptedBy && (
+      !acceptedBy.trim() ||
+      req.acceptedBy ||
+      req.status !== 'bekleniyor' ||
+      newStatus !== 'yanit_geliyor'
+    )) {
+      return false;
+    }
+
+    // Non-terminal statuses may only move forward; closing remains available
+    // from any active status so a rider can cancel or finish their request.
+    if (!acceptedBy && (
+      (newStatus === 'yanit_geliyor' && req.status === 'bekleniyor') ||
+      (newStatus === 'yardim_bulundu' && req.status === 'bekleniyor') ||
+      (newStatus === 'bekleniyor' && req.status !== 'bekleniyor') ||
+      (newStatus === 'yanit_geliyor' && req.status === 'yardim_bulundu')
+    )) {
+      return false;
+    }
+
     req.status = newStatus;
     if (acceptedBy) {
       req.acceptedBy = acceptedBy;

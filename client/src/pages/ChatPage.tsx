@@ -12,29 +12,43 @@ export default function ChatPage() {
   const [match, params] = useRoute("/chat/:id");
   const id = params?.id as string | undefined;
   const { messages, sendMessage, helpRequests, subscribeToMessages, acceptHelp, resolveHelp } = useMessages();
-  const { user } = useAuth();
+  const { user, authReady } = useAuth();
+  const userUid = user?.uid || null;
+  const currentIdentityRef = useRef({ uid: userUid, authReady });
+  currentIdentityRef.current = { uid: userUid, authReady };
   const [text, setText] = useState("");
-  const [localMsgs, setLocalMsgs] = useState<any[]>([]);
+  const [localMsgs, setLocalMsgs] = useState<{ uid: string | null; items: any[] }>({ uid: null, items: [] });
+  const [actionPending, setActionPending] = useState<"accept" | "resolve" | null>(null);
+  const actionPendingRef = useRef(false);
   const listRef = useRef<HTMLDivElement | null>(null);
 
   const chatId = id || "";
 
   useEffect(() => {
-    if (!chatId) return;
-    if (subscribeToMessages) {
-      const unsub = subscribeToMessages(chatId, (arr: any[]) => setLocalMsgs(arr));
-      return () => unsub && unsub();
-    }
-  }, [chatId, subscribeToMessages]);
+    // Tag the page-local message list with its account so an account switch
+    // cannot render the previous rider's messages while the new cache loads.
+    setLocalMsgs({ uid: userUid, items: [] });
+    if (!authReady || !userUid || !chatId || !subscribeToMessages) return;
+
+    const subscriptionUid = userUid;
+    const unsub = subscribeToMessages(chatId, (arr: any[]) => {
+      const activeIdentity = currentIdentityRef.current;
+      if (!activeIdentity.authReady || activeIdentity.uid !== subscriptionUid) return;
+      setLocalMsgs({ uid: subscriptionUid, items: arr });
+    });
+    return () => unsub && unsub();
+  }, [authReady, chatId, subscribeToMessages, userUid]);
+
+  const visibleLocalMsgs = authReady && localMsgs.uid === userUid ? localMsgs.items : [];
 
   useEffect(() => {
     const el = listRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [localMsgs.length, messages[chatId]?.length]);
+  }, [visibleLocalMsgs.length, messages[chatId]?.length]);
 
   if (!id || !chatId) {
     return (
-      <div className="min-h-screen bg-asphalt pb-8">
+      <div className="min-h-screen bg-asphalt-light pb-8 page-surface-light">
         <Header />
         <div className="px-4 pt-12 text-center max-w-md mx-auto">
           <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
@@ -48,38 +62,103 @@ export default function ChatPage() {
     );
   }
 
-  const msgs = localMsgs.length ? localMsgs : messages[chatId] || [];
+  const msgs = Array.from(
+    new Map(
+      [...(messages[chatId] || []), ...visibleLocalMsgs].map((message) => [message.id, message]),
+    ).values(),
+  ).sort((a, b) => (a.ts || 0) - (b.ts || 0));
   const req = helpRequests.find((r) => r.id === chatId);
-  const userEmail = user?.email || null;
 
   const handleSend = () => {
     if (!text.trim() || !chatId) return;
-    sendMessage(chatId, text.trim(), user?.email || null);
+    if (!userUid) {
+      toast.error("Mesaj göndermek için önce oturum açmalısınız.");
+      (window as any).__openAuthModal?.();
+      return;
+    }
+    if (!req) {
+      toast.error("Yardım talebi yüklenemedi veya bu sohbete erişiminiz yok.");
+      return;
+    }
+    const helperIds = req.helpers || [];
+    const isOwner = req.ownerId === userUid || (!!user?.email && req.user === user.email);
+    const isHelper = helperIds.includes(userUid) || (!!user?.email && helperIds.includes(user.email));
+    if (!isOwner && !isHelper) {
+      toast.error("Mesaj göndermek için talep sahibi veya kabul edilmiş yardımcı olmalısınız.");
+      return;
+    }
+    const sent = sendMessage(chatId, text.trim(), userUid, user?.displayName || user?.email?.split("@")[0] || "Motorcu");
+    if (!sent) {
+      toast.error("Mesaj boş, çok uzun veya geçersiz. En fazla 2.000 karakter girin.");
+      return;
+    }
     setText("");
   };
 
-  const handleAccept = () => {
-    if (!chatId) return;
-    if (!userEmail) {
+  const handleAccept = async () => {
+    if (!chatId || actionPendingRef.current) return;
+    if (!userUid) {
       (window as any).__openAuthModal?.();
       return;
     }
-    acceptHelp(chatId, userEmail);
-    toast.success("Yardım talebi kabul edildi. Sürücü ile iletişime geçebilirsiniz.");
+    if (req && (req.ownerId === userUid || (!!user?.email && req.user === user.email))) {
+      toast.error("Kendi yardım talebinizi kabul edemezsiniz.");
+      return;
+    }
+    const helperIds = req?.helpers || [];
+    if (helperIds.includes(userUid) || (!!user?.email && helperIds.includes(user.email))) {
+      toast.error("Bu yardım talebini zaten kabul etmişsiniz.");
+      return;
+    }
+    actionPendingRef.current = true;
+    setActionPending("accept");
+    try {
+      const confirmed = await acceptHelp(chatId, userUid);
+      if (confirmed) {
+        toast.success("Yardım talebi sunucuya kaydedildi. Sürücü ile iletişime geçebilirsiniz.");
+      } else {
+        toast.error("Yardım kabulü sunucuda doğrulanamadı. Bağlantınızı kontrol edip tekrar deneyin.");
+      }
+    } catch (error) {
+      console.error("Help acceptance action failed", error);
+      toast.error("Yardım kabul edilemedi. Lütfen tekrar deneyin.");
+    } finally {
+      actionPendingRef.current = false;
+      setActionPending(null);
+    }
   };
 
-  const handleResolveClick = () => {
-    if (!chatId) return;
-    if (!userEmail) {
+  const handleResolveClick = async () => {
+    if (!chatId || actionPendingRef.current) return;
+    if (!userUid) {
       (window as any).__openAuthModal?.();
       return;
     }
-    resolveHelp(chatId, userEmail);
-    toast.success("Yardım çözüldü olarak işaretlendi! Puan ve rozetiniz güncellendi.");
+    const helperIds = req?.helpers || [];
+    if (!helperIds.includes(userUid) && !(user?.email && helperIds.includes(user.email))) {
+      toast.error("Yardımı tamamlandı olarak işaretlemek için önce talebi kabul etmiş olmalısınız.");
+      return;
+    }
+    actionPendingRef.current = true;
+    setActionPending("resolve");
+    try {
+      const confirmed = await resolveHelp(chatId, userUid, user?.email);
+      if (confirmed) {
+        toast.success("Yardım sunucuda tamamlandı. Yerel yardım istatistiği güncellendi; profil puan/rozet eşitlemesi henüz bağlı değil.");
+      } else {
+        toast.error("Yardımın tamamlandığı sunucuda doğrulanamadı. Puan ve rozet güncellenmedi.");
+      }
+    } catch (error) {
+      console.error("Help resolution action failed", error);
+      toast.error("Yardım tamamlanamadı. Lütfen tekrar deneyin.");
+    } finally {
+      actionPendingRef.current = false;
+      setActionPending(null);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-asphalt pb-8 flex flex-col">
+    <div className="min-h-screen bg-asphalt-light pb-8 flex flex-col page-surface-light">
       <Header />
 
       <div className="px-4 pt-3 max-w-lg mx-auto w-full flex-1 flex flex-col">
@@ -107,14 +186,14 @@ export default function ChatPage() {
           <div className="flex-1 overflow-y-auto space-y-3 pr-1" ref={listRef}>
             {msgs.length > 0 ? (
               msgs.map((m) => {
-                const isMe = m.from === user?.email;
+                const isMe = m.from === user?.uid;
                 return (
                   <div
                     key={m.id}
                     className={`flex flex-col max-w-[82%] ${isMe ? "ml-auto items-end" : "items-start"}`}
                   >
                     <span className="text-[10px] text-muted-foreground mb-0.5 px-1">
-                      {m.from ? m.from.split("@")[0] : "Anonim Motorcu"}
+                      {m.fromName || (m.from ? m.from.slice(0, 8) : "Anonim Motorcu")}
                     </span>
                     <div
                       className={`p-3 rounded-2xl text-xs leading-relaxed ${
@@ -127,6 +206,7 @@ export default function ChatPage() {
                     </div>
                     <span className="text-[9px] text-muted-foreground/70 mt-1 px-1">
                       {m.ts ? new Date(m.ts).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }) : "Şimdi"}
+                      {m.localOnly && <span className="block text-amber-400">Yalnızca bu cihazda kayıtlı; sunucuya gönderilemedi.</span>}
                     </span>
                   </div>
                 );
@@ -145,6 +225,7 @@ export default function ChatPage() {
             <div className="flex gap-2">
               <input
                 value={text}
+                maxLength={2000}
                 onChange={(e) => setText(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSend()}
                 placeholder="Mesajınızı yazın..."
@@ -162,15 +243,19 @@ export default function ChatPage() {
               <div className="flex gap-2 pt-1">
                 <button
                   onClick={handleAccept}
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold text-xs py-2 rounded-xl active:scale-95 transition-all shadow-md shadow-green-600/20"
+                  disabled={actionPending !== null}
+                  aria-busy={actionPending === "accept"}
+                  className="flex-1 bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs py-2 rounded-xl active:scale-95 transition-all shadow-md shadow-green-600/20"
                 >
-                  Yardımı Kabul Et
+                  {actionPending === "accept" ? "Kaydediliyor..." : "Yardımı Kabul Et"}
                 </button>
                 <button
                   onClick={handleResolveClick}
-                  className="flex-1 bg-primary hover:bg-primary/90 text-white font-bold text-xs py-2 rounded-xl active:scale-95 transition-all shadow-md shadow-primary/20"
+                  disabled={actionPending !== null}
+                  aria-busy={actionPending === "resolve"}
+                  className="flex-1 bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-xs py-2 rounded-xl active:scale-95 transition-all shadow-md shadow-primary/20"
                 >
-                  Yardım Tamamlandı
+                  {actionPending === "resolve" ? "Tamamlanıyor..." : "Yardım Tamamlandı"}
                 </button>
               </div>
             )}

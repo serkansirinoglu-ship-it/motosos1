@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Flag, X, CheckCircle2 } from "lucide-react";
-import { moderationService } from "@/services/moderationService";
+import { submitReportRealtime } from "../../../firebase";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 
@@ -17,7 +17,6 @@ export default function ReportModal({
   onClose,
   targetType,
   targetId,
-  reporterEmail = "anonim@motoguard.tr",
 }: ReportModalProps) {
   const [reason, setReason] = useState("");
   const [details, setDetails] = useState("");
@@ -42,16 +41,15 @@ export default function ReportModal({
     }
 
     setSubmitting(true);
-    moderationService.submitReport({
-      targetType,
-      targetId,
-      reason,
-      details,
-      reportedBy: reporterEmail,
-    });
-
-    toast.success("Şikayetiniz alındı. Moderasyon ekibimiz inceleyecektir.");
+    const result = await submitReportRealtime({ targetType, targetId, reason, details });
     setSubmitting(false);
+    if (!result.ok) {
+      toast.error(result.error === "auth_required"
+        ? "Şikâyet göndermek için önce giriş yapmalısınız."
+        : "Şikâyet sunucuya kaydedilemedi. Lütfen bağlantınızı kontrol edip tekrar deneyin.");
+      return;
+    }
+    toast.success("Şikâyet moderasyon ekibine güvenli şekilde gönderildi.");
     onClose();
   };
 
@@ -71,6 +69,9 @@ export default function ReportModal({
         </div>
 
         <div className="space-y-4">
+          <div role="status" className="rounded-lg border border-primary/30 bg-primary/10 p-3 text-xs leading-relaxed text-muted-foreground">
+            Şikâyetiniz hesabınızla ilişkilendirilerek güvenli biçimde sunucuya gönderilir ve moderasyon ekibinin panelinde görüntülenir.
+          </div>
           <div>
             <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-2">
               Şikayet Nedeni
@@ -100,6 +101,7 @@ export default function ReportModal({
             </label>
             <textarea
               rows={3}
+              maxLength={1000}
               value={details}
               onChange={(e) => setDetails(e.target.value)}
               placeholder="Sorunu daha detaylı açıklayabilirsiniz..."
@@ -119,7 +121,7 @@ export default function ReportModal({
               disabled={submitting}
               className="flex-1 py-2.5 rounded-xl bg-destructive text-white text-xs font-bold active:scale-95 transition-transform disabled:opacity-50"
             >
-              {submitting ? "Gönderiliyor..." : "Şikayeti Gönder"}
+              {submitting ? "Kaydediliyor..." : "Şikâyeti Gönder"}
             </button>
           </div>
         </div>

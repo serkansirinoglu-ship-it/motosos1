@@ -1,0 +1,82 @@
+name: MotoGuard Safe CI
+
+on:
+  pull_request:
+    branches:
+      - main
+      - fix/remove-community-family-banner
+  push:
+    branches:
+      - audit/add-nonprod-ci-gates
+
+permissions:
+  contents: read
+
+concurrency:
+  group: motoguard-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Typecheck, tests and build (no deployment)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Protect main page from PR changes
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          git fetch --no-tags origin "${{ github.base_ref }}"
+          changed="$(git diff --name-only "origin/${{ github.base_ref }}...HEAD" -- client/src/pages/Home.tsx)"
+          if [ -n "$changed" ]; then
+            echo "::error::Protected main page changed in this PR: $changed"
+            exit 1
+          fi
+          echo "PASS: client/src/pages/Home.tsx is unchanged relative to the PR base."
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+
+      - name: TypeScript check
+        run: pnpm check
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Production build (does not deploy)
+        run: pnpm build
+
+      - name: Firestore rules static audit report
+        run: pnpm security:rules
+
+      - name: Strict Firestore rules static gate
+        run: pnpm security:rules:strict
+
+      - name: Ensure Firestore rules files stay in sync
+        run: |
+          if ! cmp -s firestore.rules firestore.prod.rules; then
+            echo "::error::firestore.rules and firestore.prod.rules have drifted."
+            diff -u firestore.rules firestore.prod.rules || true
+            exit 1
+          fi
+          echo "PASS: source and production rules files are identical."
+
+      - name: Install isolated Firestore emulator test tools
+        run: npm install --prefix .firestore-test-runtime --no-save --package-lock=false @firebase/rules-unit-testing@4.0.1 firebase@11.10.0 firebase-tools@14.22.0 firebase-admin@13.5.0
+
+      - name: Verify Firestore authorization in emulator (non-production)
+        run: .firestore-test-runtime/node_modules/.bin/firebase emulators:exec --only firestore --project demo-motoguard-firestore-rules "node scripts/firestore-rules.emulator.test.cjs && FIRESTORE_RULES_FILE=firestore.prod.rules node scripts/firestore-rules.emulator.test.cjs && node scripts/sos-active-guard.emulator.test.cjs"

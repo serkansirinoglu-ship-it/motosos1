@@ -1,63 +1,56 @@
-import { useParams, useRoute } from "wouter";
-import { useEffect, useState } from "react";
+import { useRoute } from "wouter";
 import { useMembership } from "@/contexts/MembershipContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
-const STORAGE_KEY = 'motosos_group_posts_v1';
-
-function loadStore(){
-  try{ const raw = localStorage.getItem(STORAGE_KEY); return raw? JSON.parse(raw): {}; }catch(e){return {};}
-}
-
-function saveStore(s:any){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); }catch(e){} }
-
-export default function GroupPage(){
-  const [match, params] = useRoute('/group/:city');
+export default function GroupPage() {
+  const [, params] = useRoute("/group/:city");
   const city = params?.city ? decodeURIComponent(params.city) : null;
-  const { isMember, joinCity } = useMembership();
-  const { user } = useAuth();
-  const [posts, setPosts] = useState<any[]>([]);
-  const [text, setText] = useState('');
+  const { isMember, joinCity, leaveCity } = useMembership();
+  const { user, authReady } = useAuth();
+  const member = city ? isMember(city) : false;
 
-  useEffect(()=>{
-	const s = loadStore();
-	setPosts(s[city||''] || []);
-  }, [city]);
-
-  function submit(){
-	if(!text.trim()) return;
-	const s = loadStore();
-	const arr = s[city||''] || [];
-	const entry = { id: Date.now().toString(), from: user?.email||'Anonim', text: text.trim(), ts: Date.now() };
-	const next = [ ...arr, entry ];
-	s[city||''] = next; saveStore(s); setPosts(next); setText('');
+  function handleJoin() {
+    if (!authReady) return;
+    if (!user) {
+      (window as any).__openAuthModal?.();
+      toast.error("Şehir grubuna katılmak için giriş yapın.");
+      return;
+    }
+    if (!city) return;
+    joinCity(city);
+    toast.success("Şehir grubu katılımı bu cihazda kaydedildi.");
   }
 
-  // If user accepts a help request in this group, we could resolve here
-  // For now GroupPage is generic posts; accept/resolve handled on SOS flow.
+  function handleLeave() {
+    if (!city || !user) return;
+    leaveCity(city);
+    toast.success("Bu cihazdaki şehir grubu katılım kaydı kaldırıldı.");
+  }
 
-  if(!city) return <div className="min-h-screen bg-asphalt p-4 text-white">Geçersiz grup.</div>;
+  if (!city) return <div className="min-h-screen bg-asphalt-light p-4 text-white page-surface-light">Geçersiz grup.</div>;
 
   return (
-	<div className="min-h-screen bg-asphalt p-4">
-	  <div className="flex items-center justify-between mb-4">
-		<h1 className="font-display text-2xl text-white">{city} Grubu</h1>
-		{!isMember(city) && <button onClick={()=>joinCity(city)} className="px-3 py-1 rounded bg-primary text-white">Katıl</button>}
-	  </div>
+    <div className="min-h-screen bg-asphalt-light p-4 page-surface-light">
+      <div className="flex items-center justify-between mb-4 gap-3">
+        <h1 className="font-display text-2xl text-foreground">{city} Grubu</h1>
+        {member ? (
+          <button onClick={handleLeave} className="px-3 py-1 rounded border border-border text-muted-foreground">Katılımı bırak</button>
+        ) : (
+          <button onClick={handleJoin} disabled={!authReady} className="px-3 py-1 rounded bg-primary text-white disabled:opacity-50">Katıl</button>
+        )}
+      </div>
 
-	  <div className="mb-4">
-		{posts.map(p=> (
-		  <div key={p.id} className="p-3 bg-card-gradient border border-border rounded mb-2">
-			<div className="text-xs text-muted-foreground">{p.from} • {new Date(p.ts).toLocaleString()}</div>
-			<div className="mt-1 text-foreground">{p.text}</div>
-		  </div>
-		))}
-	  </div>
-
-	  <div className="flex gap-2">
-		<input value={text} onChange={e=>setText(e.target.value)} className="flex-1 px-3 py-2 rounded bg-card-gradient border border-border" placeholder="Gruba mesaj yaz..." />
-		<button onClick={submit} className="px-3 py-2 rounded bg-primary text-white">Gönder</button>
-	  </div>
-	</div>
+      <section className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4" aria-live="polite">
+        <h2 className="text-sm font-bold text-foreground">Şehir grubu mesajlaşması şu an kullanılamıyor</h2>
+        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+          Mevcut Firestore güvenlik kurallarında şehir grupları için ayrı bir mesajlaşma alanı bulunmuyor.
+          Güvenli sunucu kaydı ve üyelik erişim kontrolleri hazır olmadan mesaj gönderimi açılmayacak.
+        </p>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Katılım bilgisi yalnızca bu cihazda tutulur; bu işlem sunucu üyeliği oluşturmaz.
+        </p>
+      </section>
+    </div>
   );
 }

@@ -6,6 +6,7 @@ import Header from "@/components/Header";
 import { getUserProfile, updateUserProfile, createUserProfile } from "../../../firebase";
 import TURKEY_PROVINCES from "@/lib/turkeyProvinces";
 import { toast } from "sonner";
+import ProfileMusicCard from "@/components/ProfileMusicCard";
 
 export default function ProfilePage() {
   const { user, signOut } = useAuth();
@@ -30,33 +31,60 @@ export default function ProfilePage() {
   ]);
 
   // Privacy toggles
-  const [notifEnabled, setNotifEnabled] = useState(true);
-  const [locationEnabled, setLocationEnabled] = useState(true);
+  const [locationEnabled, setLocationEnabled] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+    const uid = user?.uid;
+
     async function load() {
-      if (!user?.uid) {
+      if (!uid) {
+        setProfile(null);
         setLoading(false);
         return;
       }
+
       setLoading(true);
-      const p = await getUserProfile(user.uid);
-      if (p) {
-        setProfile(p);
-        setDisplayName(p.displayName || user.displayName || "");
-        setCity(p.city || "İstanbul");
-        setMotorcycle(p.motorcycle || "");
-        setPhotoURL(p.photoURL || "");
-        setBio(p.bio || "");
-        if (p.contacts && p.contacts.length) setContacts(p.contacts);
-      } else {
-        const created = await createUserProfile(user.uid, user.email || "");
-        setProfile(created);
+      try {
+        const p = await getUserProfile(uid);
+        if (cancelled) return;
+
+        if (p) {
+          setProfile(p);
+          setDisplayName(p.displayName || user?.displayName || "");
+          setCity(p.city || "İstanbul");
+          setMotorcycle(p.motorcycle || "");
+          setPhotoURL(p.photoURL || "");
+          setBio(p.bio || "");
+          setContacts(p.contacts && p.contacts.length ? p.contacts : [
+            { name: "", phone: "" },
+            { name: "", phone: "" },
+          ]);
+          setLocationEnabled(p.privacyLocation === true);
+        } else {
+          const created = await createUserProfile(uid, user?.email || "");
+          if (cancelled) return;
+          setProfile(created);
+          if (!created) {
+            toast.error("Profil bulunamadı veya kaydedilemedi. Bağlantınızı kontrol edip tekrar deneyin.");
+          }
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.error("Profile load failed", error);
+          setProfile(null);
+          toast.error("Profil yüklenemedi. Bağlantınızı kontrol edip tekrar deneyin.");
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-      setLoading(false);
     }
-    load();
-  }, [user]);
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.uid, user?.email, user?.displayName]);
 
   const handleSaveProfile = async () => {
     if (!user?.uid) return;
@@ -66,7 +94,7 @@ export default function ProfilePage() {
       motorcycle: motorcycle.trim(),
       photoURL: photoURL.trim(),
       bio: bio.trim(),
-      contacts: contacts.filter((c) => c.name || c.phone),
+      contacts: contacts.filter((c) => c.name.trim() || c.phone.trim()),
       privacyLocation: locationEnabled,
     });
 
@@ -78,6 +106,8 @@ export default function ProfilePage() {
         motorcycle,
         photoURL,
         bio,
+        contacts: contacts.filter((c) => c.name.trim() || c.phone.trim()),
+        privacyLocation: locationEnabled,
       }));
       toast.success("Profiliniz güncellendi.");
       setIsEditOpen(false);
@@ -86,10 +116,30 @@ export default function ProfilePage() {
     }
   };
 
+  const persistPreference = async (
+    field: "privacyLocation",
+    nextValue: boolean,
+    setValue: (value: boolean) => void,
+  ) => {
+    const previousValue = locationEnabled;
+    if (!user?.uid) {
+      toast.error("Bu ayarı kaydetmek için oturum açmalısınız.");
+      return;
+    }
+    setValue(nextValue);
+    const ok = await updateUserProfile(user.uid, { [field]: nextValue });
+    if (!ok) {
+      setValue(previousValue);
+      toast.error("Ayar kaydedilemedi. Lütfen bağlantınızı kontrol edip tekrar deneyin.");
+      return;
+    }
+    setProfile((prev: any) => ({ ...prev, [field]: nextValue }));
+  };
+
   const handleDeleteAccount = () => {
     // Do not imply that deletion was requested or completed: no verified server-side
     // account/data deletion workflow is currently wired to this control.
-    toast.error("Hesabınız silinmedi. Kalıcı hesap silme şu anda otomatik olarak kullanılamıyor.");
+    toast.info("Kalıcı hesap silme şu anda kullanılamıyor; hesabınız silinmedi.");
     setIsDeleteOpen(false);
   };
 
@@ -99,7 +149,7 @@ export default function ProfilePage() {
   const badges = profile?.badges || ["Yeni Motorcu"];
 
   return (
-    <div className="min-h-screen bg-asphalt pb-8">
+    <div className="min-h-screen bg-asphalt-light pb-8 page-surface-light">
       <Header />
 
       <div className="px-4 pt-4 max-w-lg mx-auto space-y-4">
@@ -144,6 +194,8 @@ export default function ProfilePage() {
                 </p>
               )}
 
+              {profile?.bio && <p className="text-xs text-muted-foreground mt-2 leading-relaxed line-clamp-3">{profile.bio}</p>}
+
               <div className="flex gap-1.5 mt-2 flex-wrap">
                 {badges.map((b: string, i: number) => (
                   <span key={i} className="text-[10px] font-bold bg-primary/15 text-primary px-2 py-0.5 rounded-full border border-primary/30">
@@ -161,6 +213,8 @@ export default function ProfilePage() {
           <StatBox value={String(points)} label="Yardım Puanı" icon={Star} />
           <StatBox value={String(receivedHelpCount)} label="Alınan Yardım" icon={Bike} />
         </div>
+
+        <ProfileMusicCard userId={user?.uid || null} />
 
         {/* Emergency Contacts Section */}
         <Card className="bg-card-gradient border-border p-4 rounded-xl space-y-3">
@@ -211,18 +265,25 @@ export default function ProfilePage() {
           </h3>
 
           <div className="space-y-2">
-            <ToggleRow
-              icon={Bell}
-              label="Push Bildirimleri"
-              enabled={notifEnabled}
-              onToggle={() => setNotifEnabled(!notifEnabled)}
-            />
+            <div className="flex items-center justify-between gap-3 p-2.5 rounded-xl bg-card border border-border text-xs">
+              <div className="flex items-center gap-2">
+                <Bell className="w-4 h-4 text-muted-foreground" />
+                <span className="font-semibold text-foreground">Push bildirimleri</span>
+              </div>
+              <span className="text-[10px] text-muted-foreground text-right">Altyapı bağlı değil</span>
+            </div>
             <ToggleRow
               icon={MapPin}
-              label="Konum Paylaşım İzni"
+              label="Profil konum tercihi"
               enabled={locationEnabled}
-              onToggle={() => setLocationEnabled(!locationEnabled)}
+              onToggle={() => void persistPreference("privacyLocation", !locationEnabled, setLocationEnabled)}
             />
+            <p className="text-[10px] leading-relaxed text-muted-foreground">
+              Konum tercihi profilinde saklanır; canlı harita ve SOS konum paylaşımını henüz otomatik olarak yönetmez.
+            </p>
+            <p className="text-[10px] leading-relaxed text-muted-foreground">
+              Push bildirimleri için ayrıca gerçek bildirim servisi ve cihaz izinleri gerekir.
+            </p>
           </div>
         </Card>
 
@@ -291,6 +352,19 @@ export default function ProfilePage() {
               </div>
 
               <div>
+                <label className="font-bold text-muted-foreground uppercase block mb-1">Motorcu Hakkında</label>
+                <textarea
+                  placeholder="Sürüş tarzını, deneyimini veya motorcu olarak ilgi alanlarını anlat..."
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value.slice(0, 280))}
+                  maxLength={280}
+                  rows={3}
+                  className="w-full resize-y bg-card border border-border rounded-xl p-2.5 text-foreground focus:outline-none focus:border-primary"
+                />
+                <p className="text-[10px] text-muted-foreground mt-1 text-right">{bio.length}/280</p>
+              </div>
+
+              <div>
                 <label className="font-bold text-muted-foreground uppercase block mb-1">Profil Fotoğrafı URL</label>
                 <input
                   placeholder="https://gorsel-linki.com/avatar.jpg"
@@ -325,9 +399,9 @@ export default function ProfilePage() {
           <Card className="w-full max-w-sm bg-card-gradient border-destructive/50 p-5 rounded-2xl shadow-2xl text-center space-y-4">
             <Trash2 className="w-12 h-12 text-destructive mx-auto animate-bounce" />
             <div>
-              <h3 className="font-display font-bold text-white uppercase text-base">Hesabını Silmek İstiyor musun?</h3>
+              <h3 className="font-display font-bold text-white uppercase text-base">Kalıcı Hesap Silme Kullanılamıyor</h3>
               <p className="text-xs text-muted-foreground mt-1">
-                Bu işlem geri alınamaz. Tüm rozetlerin, yardım puanların ve geçmişiniz silinecektir.
+                Bu işlem henüz uygulamaya bağlanmadı. Bu ekrandan hesabınız veya verileriniz silinmeyecek.
               </p>
             </div>
             <div className="flex gap-2">
@@ -341,7 +415,7 @@ export default function ProfilePage() {
                 onClick={handleDeleteAccount}
                 className="flex-1 py-2.5 rounded-xl bg-destructive text-white text-xs font-bold active:scale-95 transition-all shadow-md shadow-destructive/30"
               >
-                Evet, Hesabımı Sil
+                Anladım
               </button>
             </div>
           </Card>
@@ -387,8 +461,12 @@ function ToggleRow({
         <span className="font-semibold text-foreground">{label}</span>
       </div>
       <button
+        type="button"
+        role="switch"
+        aria-checked={enabled}
+        aria-label={`${label}: ${enabled ? "açık" : "kapalı"}`}
         onClick={onToggle}
-        className={`w-10 h-5 rounded-full transition-colors relative ${
+        className={`w-10 h-5 rounded-full transition-colors relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
           enabled ? "bg-primary" : "bg-muted"
         }`}
       >

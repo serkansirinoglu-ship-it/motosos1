@@ -12,7 +12,10 @@ export default function BenzinlikPage() {
   const [position, setPosition] = useState<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
-    setBusinesses(businessService.getBusinesses("benzinlik", selectedCity === "Tümü" ? undefined : selectedCity));
+    const unsubscribeBusinesses = businessService.subscribe(
+      () => setBusinesses(businessService.getBusinesses("benzinlik", selectedCity === "Tümü" ? undefined : selectedCity)),
+      (error) => console.warn("Business directory subscription failed", error),
+    );
 
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -21,10 +24,11 @@ export default function BenzinlikPage() {
         { timeout: 5000 }
       );
     }
+    return () => unsubscribeBusinesses();
   }, [selectedCity]);
 
   return (
-    <div className="min-h-screen bg-asphalt pb-8">
+    <div className="min-h-screen bg-asphalt-light pb-8 page-surface-light">
       <Header />
 
       <div className="px-4 pt-4 max-w-lg mx-auto">
@@ -33,7 +37,7 @@ export default function BenzinlikPage() {
             <Fuel className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="font-display text-2xl font-extrabold text-white uppercase tracking-wider">
+            <h1 className="font-display text-2xl font-extrabold text-foreground uppercase tracking-wider">
               Benzin İstasyonları
             </h1>
             <p className="text-xs text-muted-foreground">Yakınındaki akaryakıt istasyonları ve hava-su noktaları</p>
@@ -96,8 +100,8 @@ export default function BenzinlikPage() {
           ) : (
             <Card className="bg-card-gradient border-border p-8 flex flex-col items-center justify-center text-center rounded-xl">
               <AlertCircle className="w-10 h-10 text-muted-foreground/40 mb-2" />
-              <p className="text-sm font-bold text-foreground">Bu şehirde kayıtlı istasyon bulunmuyor.</p>
-              <p className="text-xs text-muted-foreground mt-1">Harita sekmesinden Google Maps akaryakıt noktalarına erişebilirsiniz.</p>
+              <p className="text-sm font-bold text-foreground">Henüz doğrulanmış istasyon kaydı bağlı değil.</p>
+              <p className="text-xs text-muted-foreground mt-1">Bu listede doğrulanmamış istasyon bilgisi gösterilmiyor.</p>
             </Card>
           )}
         </div>

@@ -7,7 +7,7 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return request.auth != null && request.auth.token.admin == true;
+      return request.auth != null && request.auth.token.get("admin", false) == true;
     }
 
     function isOwner(uid) {
@@ -17,8 +17,51 @@ service cloud.firestore {
     // Users collection: each user can read/write only their own profile
     match /users/{uid} {
       allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
-      allow create: if isOwner(uid);
-      allow update: if isOwner(uid) || isAdmin();
+      allow create: if isOwner(uid)
+        && request.resource.data.keys().hasOnly([
+          'uid', 'email', 'displayName', 'city', 'motorcycle', 'photoURL', 'bio',
+          'privacyLocation', 'points', 'helpCount', 'receivedHelpCount', 'badges',
+          'createdAt', 'updatedAt', 'contacts'
+        ])
+        && request.resource.data.uid == request.auth.uid
+        && 'email' in request.auth.token && request.resource.data.email == request.auth.token.email
+        && request.resource.data.points == 0
+        && request.resource.data.helpCount == 0
+        && request.resource.data.receivedHelpCount == 0
+        && request.resource.data.badges is list
+        && request.resource.data.badges.size() == 0
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        // Validate optional profile fields at creation, not only on later edits.
+        && (!('displayName' in request.resource.data) || (request.resource.data.displayName is string && request.resource.data.displayName.size() <= 80))
+        && (!('city' in request.resource.data) || (request.resource.data.city is string && request.resource.data.city.size() <= 100))
+        && (!('motorcycle' in request.resource.data) || (request.resource.data.motorcycle is string && request.resource.data.motorcycle.size() <= 100))
+        && (!('photoURL' in request.resource.data) || (request.resource.data.photoURL is string && request.resource.data.photoURL.size() <= 2048))
+        && (!('bio' in request.resource.data) || (request.resource.data.bio is string && request.resource.data.bio.size() <= 500))
+        && (!('privacyLocation' in request.resource.data) || request.resource.data.privacyLocation == false)
+        && (!('contacts' in request.resource.data) || (request.resource.data.contacts is list && request.resource.data.contacts.size() <= 10));
+      allow update: if isAdmin() || (
+        isOwner(uid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'displayName', 'city', 'motorcycle', 'photoURL', 'bio',
+          'privacyLocation', 'contacts', 'updatedAt'
+        ])
+        && request.resource.data.updatedAt == request.time
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['displayName'])
+          || (request.resource.data.displayName is string && request.resource.data.displayName.size() <= 80))
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['city'])
+          || (request.resource.data.city is string && request.resource.data.city.size() <= 100))
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['motorcycle'])
+          || (request.resource.data.motorcycle is string && request.resource.data.motorcycle.size() <= 100))
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['photoURL'])
+          || (request.resource.data.photoURL is string && request.resource.data.photoURL.size() <= 2048))
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['bio'])
+          || (request.resource.data.bio is string && request.resource.data.bio.size() <= 500))
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['privacyLocation'])
+          || request.resource.data.privacyLocation is bool)
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['contacts'])
+          || (request.resource.data.contacts is list && request.resource.data.contacts.size() <= 10))
+      );
       allow delete: if isAdmin();
     }
 
@@ -26,35 +69,243 @@ service cloud.firestore {
     // helpers can read active requests; admin full access
     match /sosRequests/{sosId} {
       allow create: if isSignedIn()
+        && request.resource.data.keys().hasOnly([
+          'requesterId', 'helpType', 'latitude', 'longitude', 'status',
+          'acceptedBy', 'createdAt', 'updatedAt', 'resolvedAt', 'cancelledAt'
+        ])
         && request.resource.data.requesterId == request.auth.uid
-        && request.resource.data.status == 'active';
-      allow read: if isSignedIn();
-      allow update: if isSignedIn()
+        && request.resource.data.status == 'active'
+        && request.resource.data.helpType in ['lastik', 'aku', 'yakit', 'ariza', 'kaza', 'cekici', 'diger', 'other']
+        && request.resource.data.acceptedBy == null
+        && request.resource.data.resolvedAt == null
+        && request.resource.data.cancelledAt == null
+        && request.resource.data.latitude is number
+        && request.resource.data.longitude is number
+        && request.resource.data.latitude >= -90
+        && request.resource.data.latitude <= 90
+        && request.resource.data.longitude >= -180
+        && request.resource.data.longitude <= 180
+        // Require coordinates to lie on a 0.01-degree grid. A tiny tolerance
+        // accommodates IEEE-754 floating-point representation of decimal values.
         && (
+          ((request.resource.data.latitude * 100) % 1 > -0.000001
+            && (request.resource.data.latitude * 100) % 1 < 0.000001)
+          || (request.resource.data.latitude > 0
+            && (request.resource.data.latitude * 100) % 1 > 0.999999)
+          || (request.resource.data.latitude < 0
+            && (request.resource.data.latitude * 100) % 1 < -0.999999)
+        )
+        && (
+          ((request.resource.data.longitude * 100) % 1 > -0.000001
+            && (request.resource.data.longitude * 100) % 1 < 0.000001)
+          || (request.resource.data.longitude > 0
+            && (request.resource.data.longitude * 100) % 1 > 0.999999)
+          || (request.resource.data.longitude < 0
+            && (request.resource.data.longitude * 100) % 1 < -0.999999)
+        )
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      // Active SOS calls are visible to authenticated helpers; inactive records stay private.
+      allow read: if isAdmin()
+        || (isSignedIn() && (
           resource.data.requesterId == request.auth.uid
-          || isAdmin()
-        );
+          || resource.data.status == 'active'
+        ));
+      allow update: if isAdmin()
+        || (isSignedIn()
+          && resource.data.status == 'active'
+          && resource.data.requesterId != request.auth.uid
+          && resource.data.acceptedBy == null
+          && request.resource.data.acceptedBy == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['acceptedBy', 'updatedAt'])
+          && request.resource.data.updatedAt == request.time)
+        || (
+        isSignedIn()
+        && resource.data.requesterId == request.auth.uid
+        && resource.data.status == 'active'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'updatedAt', 'resolvedAt', 'cancelledAt'
+        ])
+        && request.resource.data.status in ['cancelled', 'resolved']
+        && request.resource.data.updatedAt == request.time
+        && (
+          (request.resource.data.status == 'cancelled'
+            && request.resource.data.cancelledAt == request.time
+            && request.resource.data.resolvedAt == resource.data.resolvedAt)
+          || (request.resource.data.status == 'resolved'
+            && request.resource.data.resolvedAt == request.time
+            && request.resource.data.cancelledAt == resource.data.cancelledAt)
+        )
+      );
       allow delete: if isAdmin();
+
+      // Exact GPS coordinates, email, and free-text notes are never exposed with public active SOS.
+      match /privateDetails/{detailId} {
+        allow create: if isSignedIn()
+          && detailId == 'owner'
+          && getAfter(/databases/$(database)/documents/sosRequests/$(sosId)).data.requesterId == request.auth.uid
+          && request.resource.data.keys().hasOnly(['requesterEmail', 'latitude', 'longitude', 'note', 'createdAt'])
+          && request.resource.data.requesterEmail == request.auth.token.email
+          && request.resource.data.latitude is number
+          && request.resource.data.latitude >= -90
+          && request.resource.data.latitude <= 90
+          && request.resource.data.longitude is number
+          && request.resource.data.longitude >= -180
+          && request.resource.data.longitude <= 180
+          && request.resource.data.note is string
+          && request.resource.data.note.size() <= 1000
+          && request.resource.data.createdAt == request.time;
+        allow read: if isAdmin()
+          || (detailId == 'owner' && isSignedIn() && (
+            get(/databases/$(database)/documents/sosRequests/$(sosId)).data.requesterId == request.auth.uid
+            || (get(/databases/$(database)/documents/sosRequests/$(sosId)).data.status == 'active'
+              && get(/databases/$(database)/documents/sosRequests/$(sosId)).data.acceptedBy == request.auth.uid)
+          ));
+        allow update, delete: if isAdmin();
+      }
     }
 
-    // Help requests: authenticated users can create/read; owner can update/delete
+    // Active help requests are discoverable; closed requests are limited to owner/helpers.
     match /helpRequests/{requestId} {
-      allow create: if isSignedIn();
-      allow read: if isSignedIn();
-      allow update: if isSignedIn()
-        && (
-          resource.data.user == request.auth.token.email
-          || isAdmin()
-        );
+      allow create: if isSignedIn()
+        && request.resource.data.keys().hasOnly([
+          'title', 'description', 'ownerId', 'lat', 'lng', 'createdAt',
+          'active', 'helpers', 'resolvedBy', 'resolvedAt', 'publicVisible'
+        ])
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 120
+        && request.resource.data.description is string
+        && request.resource.data.description.size() <= 2000
+        && request.resource.data.active == true
+        && 'publicVisible' in request.resource.data && request.resource.data.publicVisible == true
+        && request.resource.data.helpers is list
+        && request.resource.data.helpers.size() == 0
+        && request.resource.data.resolvedBy == null
+        && request.resource.data.resolvedAt == null
+        && request.resource.data.createdAt == request.time
+        // Coordinates are optional, but must be supplied together to avoid ambiguous partial locations.
+        && (( !('lat' in request.resource.data) && !('lng' in request.resource.data))
+          || ('lat' in request.resource.data && 'lng' in request.resource.data
+            && request.resource.data.lat is number && request.resource.data.lat >= -90 && request.resource.data.lat <= 90
+            && request.resource.data.lng is number && request.resource.data.lng >= -180 && request.resource.data.lng <= 180));
+      // New public help documents contain owner/helper UIDs, never email addresses.
+      // Legacy email fields remain accepted for existing documents until an approved migration.
+      allow read: if isAdmin() || (isSignedIn() && (
+        ('ownerId' in resource.data && resource.data.ownerId == request.auth.uid)
+        || ('email' in request.auth.token && 'user' in resource.data && resource.data.user == request.auth.token.email)
+        || (resource.data.helpers is list && (
+          request.auth.uid in resource.data.helpers
+          || ('email' in request.auth.token && request.auth.token.email in resource.data.helpers)
+        ))
+        || ('active' in resource.data && resource.data.active == true
+          // Public discovery requires an explicit marker; legacy records remain private by default.
+          && (resource.data.keys().hasAll(['publicVisible']) ? resource.data.publicVisible == true : false)
+          && resource.data.helpers is list
+          && resource.data.helpers.size() == 0
+          && resource.data.keys().hasOnly([
+            'id', 'title', 'description', 'ownerId', 'lat', 'lng', 'createdAt',
+            'active', 'helpers', 'resolvedBy', 'resolvedAt', 'updatedAt', 'publicVisible'
+          ]))
+      ));
+      allow update: if isAdmin()
+        || (isSignedIn()
+          && resource.data.active == true
+          && (resource.data.ownerId == request.auth.uid
+            || ('email' in request.auth.token && 'user' in resource.data && resource.data.user == request.auth.token.email))
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['active', 'updatedAt'])
+          && request.resource.data.active == false
+          && request.resource.data.updatedAt == request.time)
+        || (isSignedIn()
+          && resource.data.active == true
+          && resource.data.helpers is list
+          && !(request.auth.uid in resource.data.helpers)
+          && (!('email' in request.auth.token) || !(request.auth.token.email in resource.data.helpers))
+          && resource.data.ownerId != request.auth.uid
+          && (!('email' in request.auth.token) || !('user' in resource.data) || resource.data.user != request.auth.token.email)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['helpers', 'updatedAt'])
+          && request.resource.data.updatedAt == request.time
+          && request.resource.data.helpers is list
+          && request.resource.data.helpers.hasAll(resource.data.helpers)
+          && request.resource.data.helpers.size() == resource.data.helpers.size() + 1
+          && request.auth.uid in request.resource.data.helpers)
+        || (isSignedIn()
+          && resource.data.helpers is list
+          && (request.auth.uid in resource.data.helpers
+            || ('email' in request.auth.token && request.auth.token.email in resource.data.helpers))
+          && resource.data.active == true
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['active', 'resolvedBy', 'resolvedAt', 'updatedAt'])
+          && request.resource.data.active == false
+          && request.resource.data.resolvedBy == request.auth.uid
+          && request.resource.data.resolvedAt == request.time
+          && request.resource.data.updatedAt == request.time);
       allow delete: if isAdmin();
 
-      // Messages subcollection: authenticated users can read/create
+      // Only the request owner or a listed helper can read/send messages in that request.
       match /messages/{messageId} {
-        allow read: if isSignedIn();
-        allow create: if isSignedIn();
-        allow update: if isAdmin();
-        allow delete: if isAdmin();
+        allow read: if isAdmin() || (isSignedIn() && (
+          get(/databases/$(database)/documents/helpRequests/$(requestId)).data.ownerId == request.auth.uid
+          || (request.auth.token.email != null
+            && 'user' in get(/databases/$(database)/documents/helpRequests/$(requestId)).data
+            && 'user' in get(/databases/$(database)/documents/helpRequests/$(requestId)).data
+              && get(/databases/$(database)/documents/helpRequests/$(requestId)).data.user == request.auth.token.email)
+          || (get(/databases/$(database)/documents/helpRequests/$(requestId)).data.helpers is list
+            && (request.auth.uid in get(/databases/$(database)/documents/helpRequests/$(requestId)).data.helpers
+              || (request.auth.token.email != null
+                && request.auth.token.email in get(/databases/$(database)/documents/helpRequests/$(requestId)).data.helpers)))
+        ));
+        allow create: if isAdmin() || (isSignedIn()
+          && get(/databases/$(database)/documents/helpRequests/$(requestId)).data.active == true
+          && request.resource.data.keys().hasOnly(['id', 'from', 'fromName', 'text', 'ts'])
+          && request.resource.data.from == request.auth.uid
+          && request.resource.data.fromName is string
+          && request.resource.data.fromName.size() <= 80
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 2000
+          && request.resource.data.ts == request.time
+          && (
+            get(/databases/$(database)/documents/helpRequests/$(requestId)).data.ownerId == request.auth.uid
+            || (request.auth.token.email != null
+              && 'user' in get(/databases/$(database)/documents/helpRequests/$(requestId)).data
+              && get(/databases/$(database)/documents/helpRequests/$(requestId)).data.user == request.auth.token.email)
+            || (get(/databases/$(database)/documents/helpRequests/$(requestId)).data.helpers is list
+              && (request.auth.uid in get(/databases/$(database)/documents/helpRequests/$(requestId)).data.helpers
+                || (request.auth.token.email != null
+                  && request.auth.token.email in get(/databases/$(database)/documents/helpRequests/$(requestId)).data.helpers)))
+          ));
+        allow update, delete: if isAdmin();
       }
+    }
+
+    // Reports: authenticated members can submit bounded reports; only admins can review/update.
+    match /reports/{reportId} {
+      allow create: if isSignedIn()
+        && request.resource.data.keys().hasOnly([
+          'targetType', 'targetId', 'reason', 'details',
+          'reporterUid', 'reporterEmail', 'status', 'createdAt'
+        ])
+        && request.resource.data.reporterUid == request.auth.uid
+        && request.resource.data.reporterEmail == request.auth.token.email
+        && request.resource.data.targetType in ['post', 'listing', 'user', 'message', 'sos']
+        && request.resource.data.targetId is string
+        && request.resource.data.targetId.size() > 0
+        && request.resource.data.targetId.size() <= 200
+        && request.resource.data.reason is string
+        && request.resource.data.reason.size() > 0
+        && request.resource.data.reason.size() <= 160
+        && request.resource.data.details is string
+        && request.resource.data.details.size() <= 1000
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdAt == request.time;
+      allow read: if isAdmin();
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'resolvedAt', 'resolvedBy'])
+        && request.resource.data.status in ['resolved', 'dismissed']
+        && request.resource.data.resolvedBy == request.auth.uid
+        && request.resource.data.resolvedAt == request.time;
+      allow delete: if isAdmin();
     }
 
     // Products: public read, admin write
@@ -63,62 +314,227 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+    // Businesses: public directory reads only visible records; all writes are admin-only.
+    match /businesses/{businessId} {
+      allow read: if isAdmin() || resource.data.publicVisible == true;
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly([
+          'name', 'category', 'city', 'address', 'phone', 'workingHours',
+          'lat', 'lng', 'photo', 'tier', 'verified', 'description',
+          'publicVisible', 'rating', 'reviewCount', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 120
+        && request.resource.data.category in ['usta', 'lastikci', 'cekici', 'servis', 'magaza', 'benzinlik']
+        && request.resource.data.city is string
+        && request.resource.data.city.size() > 0
+        && request.resource.data.city.size() <= 100
+        && request.resource.data.address is string
+        && request.resource.data.address.size() > 0
+        && request.resource.data.address.size() <= 240
+        && request.resource.data.phone is string
+        && request.resource.data.phone.size() > 0
+        && request.resource.data.phone.size() <= 40
+        && request.resource.data.workingHours is string
+        && request.resource.data.workingHours.size() <= 120
+        && request.resource.data.lat is number
+        && request.resource.data.lat >= -90 && request.resource.data.lat <= 90
+        && request.resource.data.lng is number
+        && request.resource.data.lng >= -180 && request.resource.data.lng <= 180
+        && request.resource.data.tier in ['standard', 'featured', 'premium', 'sponsored']
+        && request.resource.data.verified is bool
+        && request.resource.data.publicVisible is bool
+        && request.resource.data.rating == 0
+        && request.resource.data.reviewCount == 0
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && (!('photo' in request.resource.data) || (request.resource.data.photo is string && request.resource.data.photo.size() <= 2048))
+        && (!('description' in request.resource.data) || (request.resource.data.description is string && request.resource.data.description.size() <= 1500));
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'name', 'category', 'city', 'address', 'phone', 'workingHours',
+          'lat', 'lng', 'photo', 'tier', 'verified', 'description',
+          'publicVisible', 'updatedAt'
+        ])
+        && request.resource.data.updatedAt == request.time
+        && (!('name' in request.resource.data) || (request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 120))
+        && (!('category' in request.resource.data) || request.resource.data.category in ['usta', 'lastikci', 'cekici', 'servis', 'magaza', 'benzinlik'])
+        && (!('city' in request.resource.data) || (request.resource.data.city is string && request.resource.data.city.size() > 0 && request.resource.data.city.size() <= 100))
+        && (!('address' in request.resource.data) || (request.resource.data.address is string && request.resource.data.address.size() > 0 && request.resource.data.address.size() <= 240))
+        && (!('phone' in request.resource.data) || (request.resource.data.phone is string && request.resource.data.phone.size() > 0 && request.resource.data.phone.size() <= 40))
+        && (!('workingHours' in request.resource.data) || (request.resource.data.workingHours is string && request.resource.data.workingHours.size() <= 120))
+        && (!('lat' in request.resource.data) || (request.resource.data.lat is number && request.resource.data.lat >= -90 && request.resource.data.lat <= 90))
+        && (!('lng' in request.resource.data) || (request.resource.data.lng is number && request.resource.data.lng >= -180 && request.resource.data.lng <= 180))
+        && (!('tier' in request.resource.data) || request.resource.data.tier in ['standard', 'featured', 'premium', 'sponsored'])
+        && (!('verified' in request.resource.data) || request.resource.data.verified is bool)
+        && (!('publicVisible' in request.resource.data) || request.resource.data.publicVisible is bool)
+        && (!('photo' in request.resource.data) || (request.resource.data.photo is string && request.resource.data.photo.size() <= 2048))
+        && (!('description' in request.resource.data) || (request.resource.data.description is string && request.resource.data.description.size() <= 1500));
+      allow delete: if isAdmin();
+    }
+
     // Banners: public read, admin write
     match /banners/{bannerId} {
       allow read: if true;
       allow create, update, delete: if isAdmin();
     }
 
-    // Community posts: authenticated users can create; owner can update/delete
+    // Community posts: public read, owner create/edit of content fields, admin moderation.
     match /communityPosts/{postId} {
+      // Public posts must match the approved public schema; owners/admins retain access to legacy records.
+      allow read: if isAdmin()
+        || (isSignedIn() && resource.data.authorId == request.auth.uid)
+        || resource.data.keys().hasOnly([
+          'id', 'authorId', 'authorName', 'authorPhoto',
+          'city', 'content', 'image', 'tag', 'likes', 'comments', 'createdAt'
+        ]);
       allow create: if isSignedIn()
-        && request.resource.data.authorId == request.auth.uid;
-      allow read: if true;
-      allow update: if isSignedIn()
-        && (
-          resource.data.authorId == request.auth.uid
-          || isAdmin()
-        );
-      allow delete: if isSignedIn()
-        && (
-          resource.data.authorId == request.auth.uid
-          || isAdmin()
-        );
+        && request.resource.data.keys().hasOnly([
+          'id', 'authorId', 'authorName', 'authorPhoto',
+          'city', 'content', 'image', 'tag', 'likes', 'comments', 'createdAt'
+        ])
+        && request.resource.data.authorId == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && (!('likes' in request.resource.data) || (request.resource.data.likes is list && request.resource.data.likes.size() == 0))
+        && (!('comments' in request.resource.data) || (request.resource.data.comments is list && request.resource.data.comments.size() == 0))
+        && request.resource.data.content is string
+        && request.resource.data.content.size() > 0
+        && request.resource.data.content.size() <= 5000
+        && request.resource.data.city is string
+        && request.resource.data.city.size() > 0
+        && request.resource.data.city.size() <= 100
+        && request.resource.data.authorName is string
+        && request.resource.data.authorName.size() > 0
+        && request.resource.data.authorName.size() <= 80
+        && request.resource.data.createdAt == request.time
+        && (!('authorPhoto' in request.resource.data) || (request.resource.data.authorPhoto is string && request.resource.data.authorPhoto.size() <= 2048))
+        && (!('image' in request.resource.data) || (request.resource.data.image is string && request.resource.data.image.size() <= 2048))
+        && (!('tag' in request.resource.data) || (request.resource.data.tag is string && request.resource.data.tag.size() <= 80))
+        && (!('likes' in request.resource.data) || (request.resource.data.likes is list && request.resource.data.likes.size() == 0))
+        && (!('comments' in request.resource.data) || (request.resource.data.comments is list && request.resource.data.comments.size() == 0));
+      allow update: if isAdmin()
+        || (isSignedIn()
+          && resource.data.authorId == request.auth.uid
+          && request.resource.data.authorId == resource.data.authorId
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['content', 'city', 'image', 'tag'])
+          && request.resource.data.content is string
+          && request.resource.data.content.size() > 0
+          && request.resource.data.content.size() <= 5000
+          && request.resource.data.city is string
+          && request.resource.data.city.size() > 0
+          && request.resource.data.city.size() <= 100
+          && (!('image' in request.resource.data) || (request.resource.data.image is string && request.resource.data.image.size() <= 2048))
+          && (!('tag' in request.resource.data) || (request.resource.data.tag is string && request.resource.data.tag.size() <= 80)));
+      allow delete: if isAdmin()
+        || (isSignedIn() && resource.data.authorId == request.auth.uid);
     }
 
-    // Events: public read, authenticated create, owner/admin update/delete
+    // Events: public read; only administrators may publish, edit, or remove events.
     match /events/{eventId} {
-      allow read: if true;
-      allow create: if isSignedIn();
-      allow update: if isSignedIn()
-        && (
-          resource.data.organizerId == request.auth.uid
-          || isAdmin()
-        );
+      allow read: if isAdmin()
+        || (isSignedIn() && resource.data.organizerId == request.auth.uid)
+        || resource.data.keys().hasOnly([
+          'organizerId', 'title', 'description', 'city', 'location',
+          'startsAt', 'endsAt', 'image', 'createdAt'
+        ]);
+      allow create: if isAdmin()
+        && request.resource.data.organizerId == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.keys().hasOnly([
+          'organizerId', 'title', 'description', 'city', 'location',
+          'startsAt', 'endsAt', 'image', 'createdAt'
+        ])
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 160
+        && (!('description' in request.resource.data) || (request.resource.data.description is string && request.resource.data.description.size() <= 3000))
+        && (!('city' in request.resource.data) || (request.resource.data.city is string && request.resource.data.city.size() <= 100))
+        && (!('location' in request.resource.data) || (request.resource.data.location is string && request.resource.data.location.size() <= 300))
+        && (!('startsAt' in request.resource.data) || (request.resource.data.startsAt is string && request.resource.data.startsAt.size() <= 80))
+        && (!('endsAt' in request.resource.data) || (request.resource.data.endsAt is string && request.resource.data.endsAt.size() <= 80))
+        && (!('image' in request.resource.data) || (request.resource.data.image is string && request.resource.data.image.size() <= 2048));
+      allow update: if isAdmin()
+        && request.resource.data.organizerId == resource.data.organizerId
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'title', 'description', 'city', 'location', 'startsAt', 'endsAt', 'image'
+        ])
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 160
+        && (!('description' in request.resource.data) || (request.resource.data.description is string && request.resource.data.description.size() <= 3000))
+        && (!('city' in request.resource.data) || (request.resource.data.city is string && request.resource.data.city.size() <= 100))
+        && (!('location' in request.resource.data) || (request.resource.data.location is string && request.resource.data.location.size() <= 300))
+        && (!('startsAt' in request.resource.data) || (request.resource.data.startsAt is string && request.resource.data.startsAt.size() <= 80))
+        && (!('endsAt' in request.resource.data) || (request.resource.data.endsAt is string && request.resource.data.endsAt.size() <= 80))
+        && (!('image' in request.resource.data) || (request.resource.data.image is string && request.resource.data.image.size() <= 2048));
       allow delete: if isAdmin();
     }
 
-    // Listings: public read, authenticated create, owner/admin update/delete
+    // Listings: public reads must not expose seller email; owners/admins can still access legacy records.
     match /listings/{listingId} {
-      allow read: if true;
+      allow read: if isAdmin()
+        || (isSignedIn() && resource.data.sellerId == request.auth.uid)
+        || resource.data.keys().hasOnly([
+          'id', 'title', 'category', 'price', 'city', 'description', 'image',
+          'sellerId', 'sellerName', 'sellerPhone', 'createdAt', 'featured'
+        ]);
       allow create: if isSignedIn()
-        && request.resource.data.sellerId == request.auth.uid;
-      allow update: if isSignedIn()
-        && (
-          resource.data.sellerId == request.auth.uid
-          || isAdmin()
-        );
-      allow delete: if isSignedIn()
-        && (
-          resource.data.sellerId == request.auth.uid
-          || isAdmin()
-        );
+        && request.resource.data.keys().hasOnly([
+          'id', 'title', 'category', 'price', 'city', 'description', 'image',
+          'sellerId', 'sellerName', 'sellerPhone', 'createdAt', 'featured'
+        ])
+        && request.resource.data.sellerId == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 160
+        && request.resource.data.category is string
+        && request.resource.data.category in ['Motosiklet', 'Kask', 'Mont', 'Pantolon', 'Eldiven', 'Lastik', 'Parça', 'Aksesuar', 'Diğer']
+        && request.resource.data.price is number
+        && request.resource.data.price > 0
+        && request.resource.data.description is string
+        && request.resource.data.description.size() > 0
+        && request.resource.data.description.size() <= 5000
+        && request.resource.data.city is string
+        && request.resource.data.city.size() <= 100
+        && (!('image' in request.resource.data) || (request.resource.data.image is string && request.resource.data.image.size() <= 2048))
+        && (!('sellerName' in request.resource.data) || (request.resource.data.sellerName is string && request.resource.data.sellerName.size() <= 80))
+        && (!('sellerPhone' in request.resource.data) || (request.resource.data.sellerPhone is string && request.resource.data.sellerPhone.size() <= 40))
+        && (!('featured' in request.resource.data) || request.resource.data.featured == false);
+      allow update: if isAdmin()
+        || (isSignedIn()
+          && resource.data.sellerId == request.auth.uid
+          && request.resource.data.sellerId == resource.data.sellerId
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'title', 'category', 'price', 'city', 'description', 'image', 'sellerPhone'
+          ])
+          && request.resource.data.title is string
+          && request.resource.data.title.size() > 0
+          && request.resource.data.title.size() <= 160
+          && request.resource.data.category in ['Motosiklet', 'Kask', 'Mont', 'Pantolon', 'Eldiven', 'Lastik', 'Parça', 'Aksesuar', 'Diğer']
+          && request.resource.data.price is number
+          && request.resource.data.price > 0
+          && request.resource.data.description is string
+          && request.resource.data.description.size() > 0
+          && request.resource.data.description.size() <= 5000
+          && request.resource.data.city is string
+          && request.resource.data.city.size() <= 100
+          && (!('image' in request.resource.data) || (request.resource.data.image is string && request.resource.data.image.size() <= 2048))
+          && (!('sellerPhone' in request.resource.data) || (request.resource.data.sellerPhone is string && request.resource.data.sellerPhone.size() <= 40)));
+      allow delete: if isAdmin()
+        || (isSignedIn() && resource.data.sellerId == request.auth.uid);
     }
 
     // Online presence: only the authenticated owner can maintain their minimal heartbeat.
     // Public read is limited to uid + lastSeen fields so the client can display an aggregate count.
     match /presence/{uid} {
-      allow read: if true;
+      // Firestore cannot redact individual fields from a document read; deny malformed legacy records instead.
+      allow read: if isSignedIn()
+        && resource.data.keys().hasOnly(['uid', 'lastSeen'])
+        && resource.data.uid == uid
+        && resource.data.lastSeen is timestamp;
       allow create, update: if isOwner(uid)
         && request.resource.data.keys().hasOnly(['uid', 'lastSeen'])
         && request.resource.data.uid == request.auth.uid
@@ -126,10 +542,10 @@ service cloud.firestore {
       allow delete: if isOwner(uid);
     }
 
-    // Default: deny all writes, allow reads only for public content
+    // Default deny: public access must be granted explicitly by collection rules.
+    // Never make every current and future collection readable through a catch-all.
     match /{document=**} {
-      allow read: if true;
-      allow write: if false;
+      allow read, write: if false;
     }
   }
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Users, MapPin, Hash, Heart, MessageSquare, Plus, Flag, Trash2, Image, Send, X, AlertCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import Header from "@/components/Header";
@@ -26,63 +26,100 @@ export default function CommunityPage() {
   const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(null);
   const [commentText, setCommentText] = useState("");
 
-  const { user } = useAuth();
+  const { user, authReady } = useAuth();
+  const scopeKey = user?.uid || "anonymous";
+  const currentScopeRef = useRef({ scopeKey, authReady });
+  currentScopeRef.current = { scopeKey, authReady };
+  const [cacheForScope, setCacheForScope] = useState("");
 
   useEffect(() => {
-    setPosts(communityService.getPosts(selectedCity));
-  }, [selectedCity]);
+    if (!authReady) return;
+    setPosts([]);
+    
+    setCacheForScope(scopeKey);
+    let disposed = false;
+    let unsubscribe = () => {};
+    const isCurrentScope = () => {
+      const active = currentScopeRef.current;
+      return !disposed && active.authReady && active.scopeKey === scopeKey;
+    };
+    try {
+      unsubscribe = communityService.subscribeRemotePosts((items) => {
+        if (!isCurrentScope()) return;
+        setPosts(items);
+      }, (error) => {
+        if (!isCurrentScope()) return;
+        console.error("community feed failed", error);
+        setPosts([]);
+        toast.error("Topluluk akışı sunucudan alınamadı. Bağlantıyı veya erişim izinlerini kontrol edin.");
+      }, isCurrentScope);
+    } catch (error) {
+      if (isCurrentScope()) {
+        console.error("Community feed unavailable", error);
+        toast.error(error instanceof Error ? error.message : "Topluluk akışı sunucuya bağlanamadı.");
+      }
+    }
+    return () => {
+      disposed = true;
+      unsubscribe();
+    };
+  }, [authReady, scopeKey]);
 
-  const handleCreatePost = () => {
+  const visiblePosts = cacheForScope === scopeKey ? posts.filter((post) => selectedCity === "Tümü" || post.city.toLocaleLowerCase("tr-TR") === selectedCity.toLocaleLowerCase("tr-TR")) : [];
+
+  const handleCreatePost = async () => {
+    if (!authReady || cacheForScope !== scopeKey) return;
+    if (!user) {
+      (window as any).__openAuthModal?.();
+      toast.error("Gönderi oluşturmak için giriş yapın.");
+      return;
+    }
     if (!content.trim()) {
       toast.error("Lütfen bir gönderi metni girin.");
       return;
     }
-
-    communityService.createPost({
-      authorName: user?.displayName || user?.email?.split("@")[0] || "Motorcu Kardeş",
-      authorEmail: user?.email || "anonim@motoguard.tr",
-      city: postCity,
-      content: content.trim(),
-      image: image.trim() || undefined,
-      tag,
-    });
-
-    toast.success("Gönderiniz toplulukta paylaşıldı!");
-    setContent("");
-    setImage("");
-    setIsNewPostOpen(false);
-    setPosts(communityService.getPosts(selectedCity));
-  };
-
-  const handleToggleLike = (postId: string) => {
-    if (!user) {
-      (window as any).__openAuthModal?.();
+    if (content.trim().length > 5000) {
+      toast.error("Gönderi metni en fazla 5.000 karakter olabilir.");
       return;
     }
-    communityService.toggleLike(postId, user.email || "user@motoguard.tr");
-    setPosts(communityService.getPosts(selectedCity));
+    if (image.trim() && (image.trim().length > 2048 || !/^https?:\/\//i.test(image.trim()))) {
+      toast.error("Görsel için geçerli bir HTTP veya HTTPS adresi girin (en fazla 2.048 karakter).");
+      return;
+    }
+
+    try {
+      await communityService.createRemotePost({ authorId: user.uid, authorName: user.displayName || user.email?.split("@")[0] || "Motorcu Kardeş", city: postCity, content: content.trim(), image: image.trim() || undefined, tag });
+      toast.success("Gönderi sunucuya kaydedildi ve topluluk akışına gönderildi.");
+      setContent(""); setImage(""); setIsNewPostOpen(false);
+    } catch (error) {
+      console.error("Community post creation failed", error);
+      toast.error(error instanceof Error ? error.message : "Gönderi sunucuya kaydedilemedi.");
+    }
   };
 
-  const handleDeletePost = (postId: string) => {
-    communityService.deletePost(postId);
-    toast.info("Gönderi silindi.");
-    setPosts(communityService.getPosts(selectedCity));
+  const handleToggleLike = () => { toast.info("Beğeni özelliği mevcut Firestore kuralları desteklemediği için şimdilik kapalı."); };
+
+  const handleDeletePost = async (postId: string) => {
+    if (!authReady || cacheForScope !== scopeKey || !user) return;
+    const target = posts.find((post) => post.id === postId);
+    if (!target || target.authorId !== user.uid) { toast.error("Yalnızca kendi sunucu gönderinizi silebilirsiniz."); return; }
+    try { await communityService.deleteRemotePost(postId, user.uid); toast.success("Gönderi sunucudan silindi."); }
+    catch (error) { console.error("Community post deletion failed", error); toast.error("Gönderi sunucudan silinemedi. Erişim iznini veya bağlantıyı kontrol edin."); }
   };
 
-  const handleAddComment = (postId: string) => {
-    if (!commentText.trim()) return;
-    communityService.addComment(postId, {
-      authorName: user?.displayName || user?.email?.split("@")[0] || "Motorcu Kardeş",
-      authorEmail: user?.email || "anonim@motoguard.tr",
-      content: commentText.trim(),
-    });
-    setCommentText("");
-    setPosts(communityService.getPosts(selectedCity));
-  };
+  const handleAddComment = () => { toast.info("Yorum özelliği mevcut Firestore güvenlik kurallarıyla henüz sunucuya kaydedilemiyor; sahte kayıt yapılmadı."); };
 
   return (
-    <div className="min-h-screen bg-asphalt pb-8">
+    <div className="min-h-screen bg-asphalt-light pb-8 page-surface-light">
       <Header />
+
+      <div className="px-4 pt-3 max-w-lg mx-auto">
+        <Card className="bg-amber-500/10 border-amber-500/30 p-3 rounded-xl">
+          <p className="text-[11px] text-amber-200 leading-relaxed">
+            Gönderiler Firebase üzerinden canlı okunur ve sunucuya kaydedilir. Beğeni ve yorumlar mevcut güvenlik kuralları desteklemediği için henüz kapalıdır.
+          </p>
+        </Card>
+      </div>
 
       {/* Main Tabs */}
       <div className="px-4 pt-4 max-w-lg mx-auto flex items-center justify-between">
@@ -105,7 +142,7 @@ export default function CommunityPage() {
                 : "bg-card-gradient border-border text-muted-foreground"
             }`}
           >
-            👥 81 İl Grupları
+            👥 Şehir Grupları
           </button>
         </div>
 
@@ -149,10 +186,10 @@ export default function CommunityPage() {
       {/* Feed Content */}
       {activeTab === "feed" && (
         <div className="px-4 pt-3 space-y-4 max-w-lg mx-auto">
-          {posts.length > 0 ? (
-            posts.map((post) => {
-              const isLiked = user?.email ? post.likes.includes(user.email) : false;
-              const isOwner = user?.email === post.authorEmail;
+          {visiblePosts.length > 0 ? (
+            visiblePosts.map((post) => {
+              const isLiked = false;
+              const isOwner = user?.uid === post.authorId;
 
               return (
                 <Card key={post.id} className="bg-card-gradient border-border p-4 rounded-xl space-y-3">
@@ -207,7 +244,9 @@ export default function CommunityPage() {
                   {/* Actions */}
                   <div className="flex items-center gap-6 pt-2 border-t border-border/50 text-xs">
                     <button
-                      onClick={() => handleToggleLike(post.id)}
+                      disabled
+                      title="Beğeni sunucu entegrasyonu bekliyor"
+                      onClick={() => handleToggleLike()}
                       className={`flex items-center gap-1.5 font-bold transition-all ${
                         isLiked ? "text-primary" : "text-muted-foreground hover:text-foreground"
                       }`}
@@ -217,6 +256,8 @@ export default function CommunityPage() {
                     </button>
 
                     <button
+                      disabled
+                      title="Yorum sunucu entegrasyonu bekliyor"
                       onClick={() => setActiveCommentPostId(activeCommentPostId === post.id ? null : post.id)}
                       className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground font-semibold"
                     >
@@ -246,14 +287,17 @@ export default function CommunityPage() {
 
                       <div className="flex gap-2">
                         <input
+                          disabled
+                          maxLength={1000}
                           value={commentText}
                           onChange={(e) => setCommentText(e.target.value)}
-                          onKeyDown={(e) => e.key === "Enter" && handleAddComment(post.id)}
+                          onKeyDown={(e) => e.key === "Enter" && handleAddComment()}
                           placeholder="Yorumunuzu yazın..."
                           className="flex-1 bg-card border border-border rounded-xl px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary"
                         />
                         <button
-                          onClick={() => handleAddComment(post.id)}
+                          disabled
+                          onClick={() => handleAddComment()}
                           className="bg-primary text-white p-2 rounded-xl active:scale-95 transition-all"
                         >
                           <Send className="w-4 h-4" />
@@ -286,12 +330,12 @@ export default function CommunityPage() {
                   </div>
                   <div>
                     <p className="font-bold text-white text-xs uppercase">{prov}</p>
-                    <p className="text-[10px] text-muted-foreground">Canlı Moto Grubu</p>
+                    <p className="text-[10px] text-muted-foreground">Şehir grubu · sunucu entegrasyonu bekleniyor</p>
                   </div>
                 </div>
                 <div className="mt-3 flex items-center justify-between pt-2 border-t border-border/50 text-[10px]">
                   <span className="text-primary font-semibold">Gruba Katıl →</span>
-                  <span className="text-green-400 font-bold">🟢 Aktif</span>
+                  <span className="text-amber-300 font-semibold">Yerel katılım</span>
                 </div>
               </Card>
             </Link>
@@ -345,6 +389,7 @@ export default function CommunityPage() {
                 <label className="text-[10px] font-bold text-muted-foreground uppercase block mb-1">Mesajınız</label>
                 <textarea
                   rows={4}
+                  maxLength={5000}
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   placeholder="Sürüş fikri, rota paylaşımı veya tavsiye yazabilirsiniz..."
@@ -355,6 +400,8 @@ export default function CommunityPage() {
               <div>
                 <label className="text-[10px] font-bold text-muted-foreground uppercase block mb-1">Görsel URL (Opsiyonel)</label>
                 <input
+                  type="url"
+                  maxLength={2048}
                   value={image}
                   onChange={(e) => setImage(e.target.value)}
                   placeholder="https://gorsel-linki.com/foto.jpg"

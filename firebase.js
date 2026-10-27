@@ -1,6 +1,9 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, getDocs, limit, doc, setDoc, getDoc, updateDoc, deleteDoc, where, Timestamp } from "firebase/firestore";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut, onAuthStateChanged, getIdTokenResult } from "firebase/auth";
+import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, getDocs, doc, setDoc, getDoc, updateDoc, deleteDoc, where, Timestamp, writeBatch } from "firebase/firestore";
+import { isCurrentSOSAuthSession, validateSOSRequestInput, validateSOSStatusUpdatePatch, validateUserProfilePatch, validateUserProfileCreation, validateProductInput, validateProductPatch, validateBannerInput, validateBannerPatch, validateBusinessInput, validateBusinessPatch, validateAdminDocumentId } from "./client/src/services/sosInputValidation";
+import { acquireSOSCreationLock, releaseSOSCreationLock } from "./client/src/services/sosCreateLock";
+import { validateHelpMessageInput, validateHelpRequestInput, validateHelpRequestUpdatePatch } from "./client/src/services/helpMessageValidation";
 
 // Read config from Vite environment variables
 const firebaseConfig = {
@@ -31,6 +34,31 @@ if (hasFirebaseConfig) {
 }
 
 export { auth, db };
+
+/** Read the current Firebase Auth UID without exposing the Auth instance to UI modules.
+ * @returns {string | null}
+ */
+export function getCurrentAuthUid() {
+  return auth?.currentUser?.uid ?? null;
+}
+
+/** Defense in depth for admin-only client operations; Firestore rules remain authoritative. */
+async function hasAdminClaim() {
+  const user = auth?.currentUser;
+  if (!user) return false;
+  try {
+    const token = await getIdTokenResult(user);
+    if (token.claims.admin === true) return true;
+
+    // A recently granted custom claim may be missing from the cached ID token.
+    // Refresh only after a cached negative result; Firestore rules remain authoritative.
+    const refreshedToken = await getIdTokenResult(user, true);
+    return refreshedToken.claims.admin === true;
+  } catch (error) {
+    console.warn("Admin claim check failed", error);
+    return false;
+  }
+}
 
 // Online member presence (authenticated members only).
 // Presence records contain no profile details; stale sessions expire after 2 minutes.
@@ -77,7 +105,8 @@ export function subscribeOnlineMembers(uid, onCount) {
     stopped = true;
     clearInterval(refreshTimer);
     stopSnapshot();
-    void deleteDoc(presenceRef).catch(() => {});
+    // Do not delete the shared UID presence document here: another tab/device
+    // may still be active. The lastSeen cutoff naturally expires stale sessions.
   };
 }
 
@@ -114,7 +143,7 @@ export function onAuthStateChangedListener(callback) {
  * This does NOT overwrite an existing profile.
  */
 export async function createUserProfile(uid, email, extra = {}) {
-  if (!db || !uid) return null;
+  if (!db || validateUserProfileCreation(uid, email, extra, auth?.currentUser?.uid, auth?.currentUser?.email)) return null;
   try {
     const ref = doc(db, "users", uid);
     const snap = await getDoc(ref);
@@ -159,7 +188,9 @@ export async function getUserProfile(uid) {
 }
 
 export async function updateUserProfile(uid, patch) {
-  if (!db || !uid) return null;
+  // Only the authenticated owner may update explicitly editable profile fields.
+  // Firestore rules remain authoritative; this rejects over-broad writes before network I/O.
+  if (!db || !uid || auth?.currentUser?.uid !== uid || validateUserProfilePatch(patch)) return false;
   try {
     const ref = doc(db, "users", uid);
     await updateDoc(ref, { ...patch, updatedAt: serverTimestamp() });
@@ -175,26 +206,48 @@ export async function updateUserProfile(uid, patch) {
  * (rate limit / duplicate active SOS control).
  */
 export async function createSOSRequest(data) {
-  if (!db) return null;
+  if (!db) return { id: null, error: "firebase_unavailable" };
+
+  // Capture one identity snapshot so a mid-flight account switch cannot mix identities.
+  const authenticatedUser = auth?.currentUser;
+  const authenticatedUid = authenticatedUser?.uid;
+  const authenticatedEmail = authenticatedUser?.email || "";
+
+  // Treat client validation as defense in depth; Firestore rules remain authoritative.
+  const inputError = validateSOSRequestInput(authenticatedUid, data || {});
+  if (inputError) return { id: null, error: inputError };
+  if (!acquireSOSCreationLock(authenticatedUid)) {
+    return { id: null, error: "creation_in_progress" };
+  }
+
   try {
     // Prevent multiple active SOS by same user
-    const activeQ = query(
+    // Query by requester only so duplicate protection does not depend on
+    // an undeclared requesterId + status composite index.
+    const requesterQ = query(
       collection(db, "sosRequests"),
-      where("requesterId", "==", data.requesterId),
-      where("status", "==", "active")
+      where("requesterId", "==", data.requesterId)
     );
-    const activeSnap = await getDocs(activeQ);
-    if (!activeSnap.empty) {
+    const requesterSnap = await getDocs(requesterQ);
+    if (!isCurrentSOSAuthSession(authenticatedUid, auth?.currentUser?.uid)) {
+      return { id: null, error: "auth_changed" };
+    }
+    const hasActiveRequest = requesterSnap.docs.some(
+      (item) => item.data()?.status === "active"
+    );
+    if (hasActiveRequest) {
       return { id: null, error: "active_duplicate" };
     }
+    const batch = writeBatch(db);
+    const sosRef = doc(collection(db, "sosRequests"));
     const now = serverTimestamp();
+    // Public active SOS documents expose only an approximate location (~1 km grid).
+    // Exact coordinates, contact email and free-text notes stay in an owner-only subdocument.
     const payload = {
       requesterId: data.requesterId,
-      requesterEmail: data.requesterEmail || "",
-      helpType: data.helpType || "other",
-      latitude: data.latitude || 0,
-      longitude: data.longitude || 0,
-      note: data.note || "",
+      helpType: data.helpType,
+      latitude: Math.round(data.latitude * 100) / 100,
+      longitude: Math.round(data.longitude * 100) / 100,
       status: "active",
       acceptedBy: null,
       createdAt: now,
@@ -202,19 +255,61 @@ export async function createSOSRequest(data) {
       resolvedAt: null,
       cancelledAt: null,
     };
-    const ref = await addDoc(collection(db, "sosRequests"), payload);
-    return { id: ref.id, error: null };
+    batch.set(sosRef, payload);
+    batch.set(doc(db, "sosRequests", sosRef.id, "privateDetails", "owner"), {
+      requesterEmail: authenticatedEmail,
+      latitude: data.latitude,
+      longitude: data.longitude,
+      note: typeof data.note === "string" ? data.note : "",
+      createdAt: now,
+    });
+    // Recheck immediately before the write; Firestore rules also validate request.auth.
+    if (!isCurrentSOSAuthSession(authenticatedUid, auth?.currentUser?.uid)) {
+      return { id: null, error: "auth_changed" };
+    }
+    await batch.commit();
+    return { id: sosRef.id, error: null };
   } catch (e) {
     console.error("createSOSRequest error", e);
     return { id: null, error: "network" };
+  } finally {
+    releaseSOSCreationLock(authenticatedUid);
   }
 }
 
-export async function updateSOSRequest(id, patch) {
-  if (!db || !id) return null;
+export async function acceptSOSRequest(id) {
+  if (!db || !auth?.currentUser?.uid || !id) return false;
+  try {
+    await updateDoc(doc(db, "sosRequests", id), {
+      acceptedBy: auth.currentUser.uid,
+      updatedAt: serverTimestamp(),
+    });
+    return true;
+  } catch (e) {
+    console.error("acceptSOSRequest error", e);
+    return false;
+  }
+}
+
+export async function updateSOSRequest(id, patch, expectedUid = auth?.currentUser?.uid) {
+  // Only owner terminal transitions are supported by this client API.
+  // Firestore rules remain authoritative, but reject malformed/over-broad writes early.
+  if (
+    !db ||
+    typeof expectedUid !== "string" ||
+    !expectedUid ||
+    auth?.currentUser?.uid !== expectedUid ||
+    !id ||
+    !validateSOSStatusUpdatePatch(patch)
+  ) return false;
   try {
     const ref = doc(db, "sosRequests", id);
-    await updateDoc(ref, { ...patch, updatedAt: serverTimestamp() });
+    const safePatch = { status: patch.status, updatedAt: serverTimestamp() };
+    if (patch.status === "resolved") safePatch.resolvedAt = serverTimestamp();
+    if (patch.status === "cancelled") safePatch.cancelledAt = serverTimestamp();
+    // Recheck immediately before the write; Firestore rules remain authoritative.
+    if (auth?.currentUser?.uid !== expectedUid) return false;
+    await updateDoc(ref, safePatch);
     return true;
   } catch (e) {
     console.error("updateSOSRequest error", e);
@@ -222,19 +317,93 @@ export async function updateSOSRequest(id, patch) {
   }
 }
 
+/**
+ * Restore only the caller's active public SOS record after a refresh.
+ * @returns {Promise<({id: string, latitude?: number, longitude?: number, helpType?: string, acceptedBy?: string | null, createdAt?: {toMillis?: () => number} | Date | string | null} | null)>}
+ */
+export async function getMyActiveSOSRequest(uid) {
+  if (!db || !uid || auth?.currentUser?.uid !== uid) return null;
+  try {
+    // Query by owner only; filter active status client-side to avoid a new composite index.
+    const q = query(
+      collection(db, "sosRequests"),
+      where("requesterId", "==", uid)
+    );
+    const snap = await getDocs(q);
+    if (auth?.currentUser?.uid !== uid) return null;
+    const active = snap.docs
+      .map((item) => ({ ...item.data(), id: item.id }))
+      .filter((item) => item.status === "active")
+      .sort((a, b) => {
+        const time = (value) => value?.toMillis?.() ?? (typeof value === "string" ? Date.parse(value) : 0);
+        return time(b.createdAt) - time(a.createdAt);
+      });
+    return active[0] || null;
+  } catch (error) {
+    console.error("getMyActiveSOSRequest error", error);
+    throw error;
+  }
+}
+
 export async function getActiveSOSRequests() {
   if (!db) return [];
   try {
+    // Filter on the single indexed status field, then sort client-side.
+    // This avoids requiring an undeclared composite index for status + createdAt.
     const q = query(
       collection(db, "sosRequests"),
-      where("status", "==", "active"),
-      orderBy("createdAt", "desc")
+      where("status", "==", "active")
     );
     const snap = await getDocs(q);
-    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    return snap.docs
+      .map((d) => ({ ...d.data(), id: d.id }))
+      .sort((a, b) => {
+        const time = (value) => value?.toMillis?.() ?? (typeof value === "string" ? Date.parse(value) : 0);
+        return time(b.createdAt) - time(a.createdAt);
+      });
   } catch (e) {
     console.error("getActiveSOSRequests error", e);
     return [];
+  }
+}
+
+/**
+ * Subscribe to public active SOS documents for live map discovery.
+ * Only fields stored on the public parent document are emitted; private
+ * owner details remain in the privateDetails subcollection.
+ */
+export function subscribeActiveSOSRequests(onUpdate, onError) {
+  if (!db) {
+    console.info("subscribeActiveSOSRequests: Firestore not configured");
+    return () => {};
+  }
+  try {
+    // Use the single-field status index; sort timestamps in memory so the
+    // live map does not depend on an undeclared composite Firestore index.
+    const q = query(
+      collection(db, "sosRequests"),
+      where("status", "==", "active")
+    );
+    return onSnapshot(
+      q,
+      (snap) => {
+        const activeRequests = snap.docs
+          .map((d) => ({ ...d.data(), id: d.id }))
+          .sort((a, b) => {
+            const time = (value) => value?.toMillis?.() ?? (typeof value === "string" ? Date.parse(value) : 0);
+            return time(b.createdAt) - time(a.createdAt);
+          });
+        onUpdate(activeRequests, { fromCache: snap.metadata.fromCache });
+      },
+      (error) => {
+        console.error("subscribeActiveSOSRequests error", error);
+        if (typeof onError === "function") onError(error);
+      }
+    );
+  } catch (error) {
+    console.error("subscribeActiveSOSRequests setup error", error);
+    if (typeof onError === "function") onError(error);
+    return () => {};
   }
 }
 
@@ -245,16 +414,65 @@ export function subscribeHelpRequestsRealtime(onUpdate) {
     return () => {};
   }
 
+  const currentUser = auth?.currentUser;
+  const uid = currentUser?.uid || null;
+  const email = currentUser?.email || null;
+  const sources = new Map();
+  const unsubscribers = [];
+
+  // Public discovery only includes unclaimed requests. Separate authenticated
+  // queries keep each owner's and accepted helper's conversations available.
+  const publish = () => {
+    const merged = new Map();
+    for (const sourceName of ["public", "owner", "helperUid", "legacyOwner", "helperEmail"]) {
+      for (const [id, item] of sources.get(sourceName) || []) merged.set(id, item);
+    }
+    const toMillis = (value) => value && typeof value.toMillis === "function"
+      ? value.toMillis()
+      : typeof value === "number" ? value : 0;
+    onUpdate(Array.from(merged.values()).sort(
+      (a, b) => toMillis(b.createdAt) - toMillis(a.createdAt)
+    ));
+  };
+
+  const listen = (sourceName, q) => {
+    sources.set(sourceName, new Map());
+    try {
+      const stop = onSnapshot(q, (snap) => {
+        sources.set(sourceName, new Map(
+          snap.docs.map((d) => [d.id, { ...d.data(), id: d.id }])
+        ));
+        publish();
+      }, (error) => {
+        console.warn(`Help request ${sourceName} subscription unavailable`, error);
+      });
+      unsubscribers.push(stop);
+    } catch (error) {
+      console.warn(`Help request ${sourceName} subscription unavailable`, error);
+    }
+  };
+
   try {
-    const q = query(collection(db, "helpRequests"), orderBy("createdAt", "desc"));
-    return onSnapshot(q, (snap) => {
-      const arr = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      onUpdate(arr);
-    });
-  } catch (e) {
-    console.error("subscribeHelpRequestsRealtime error", e);
-    return () => {};
+    listen("public", query(
+      collection(db, "helpRequests"),
+      where("active", "==", true),
+      where("publicVisible", "==", true),
+      where("helpers", "==", []),
+      orderBy("createdAt", "desc")
+    ));
+    if (uid) {
+      listen("owner", query(collection(db, "helpRequests"), where("ownerId", "==", uid)));
+      listen("helperUid", query(collection(db, "helpRequests"), where("helpers", "array-contains", uid)));
+    }
+    if (email) {
+      listen("legacyOwner", query(collection(db, "helpRequests"), where("user", "==", email)));
+      listen("helperEmail", query(collection(db, "helpRequests"), where("helpers", "array-contains", email)));
+    }
+  } catch (error) {
+    console.error("subscribeHelpRequestsRealtime error", error);
   }
+
+  return () => unsubscribers.forEach((stop) => stop());
 }
 
 export async function createHelpRequestRealtime(data) {
@@ -262,7 +480,36 @@ export async function createHelpRequestRealtime(data) {
     console.info("createHelpRequestRealtime: Firestore not configured, skipping realtime write");
     return null;
   }
-  return addDoc(collection(db, "helpRequests"), { ...data, createdAt: serverTimestamp(), active: true });
+
+  // Reject unauthenticated or mismatched owners before any network write.
+  const authenticatedUid = auth?.currentUser?.uid;
+  if (validateHelpRequestInput(data, authenticatedUid)) return null;
+
+  const id = data.id;
+  const documentData = {
+    title: data.title.trim(),
+    description: data.description,
+    ownerId: authenticatedUid,
+    createdAt: serverTimestamp(),
+    active: true,
+    helpers: [],
+    resolvedBy: null,
+    resolvedAt: null,
+    publicVisible: true,
+  };
+  if (data.lat !== undefined && data.lat !== null) {
+    documentData.lat = data.lat;
+    documentData.lng = data.lng;
+  }
+
+  // Preserve the caller's ID so the nested messages path stays aligned.
+  if (id) {
+    await setDoc(doc(db, "helpRequests", id), documentData);
+    return { id };
+  }
+
+  const created = await addDoc(collection(db, "helpRequests"), documentData);
+  return { id: created.id };
 }
 
 export function subscribeMessagesRealtime(requestId, onUpdate) {
@@ -274,7 +521,7 @@ export function subscribeMessagesRealtime(requestId, onUpdate) {
   try {
     const q = query(collection(db, "helpRequests", requestId, "messages"), orderBy("ts", "asc"));
     return onSnapshot(q, (snap) => {
-      const arr = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const arr = snap.docs.map((d) => ({ ...d.data(), id: d.id }));
       onUpdate(arr);
     });
   } catch (e) {
@@ -288,14 +535,36 @@ export async function sendMessageRealtime(requestId, msg) {
     console.info("sendMessageRealtime: Firestore not configured, skipping realtime write");
     return null;
   }
-  return addDoc(collection(db, "helpRequests", requestId, "messages"), { ...msg, ts: serverTimestamp() });
+
+  // Never trust a caller-supplied sender UID or arbitrary message fields.
+  const authenticatedUid = auth?.currentUser?.uid;
+  if (!authenticatedUid || !msg || validateHelpMessageInput({
+    requestId,
+    text: msg.text,
+    from: authenticatedUid,
+    fromName: msg.fromName,
+  })) return null;
+
+  return addDoc(collection(db, "helpRequests", requestId, "messages"), {
+    from: authenticatedUid,
+    fromName: typeof msg.fromName === "string" ? msg.fromName.trim() : "",
+    text: msg.text.trim(),
+    ts: serverTimestamp(),
+  });
 }
 
 export function updateHelpRequestRealtime(id, patch) {
   if (!db) return null;
+  const authenticatedUid = auth?.currentUser?.uid;
+  if (validateHelpRequestUpdatePatch(id, patch, authenticatedUid)) return null;
   try {
     const dref = doc(db, "helpRequests", id);
-    return updateDoc(dref, patch);
+    const safePatch = { ...patch, updatedAt: serverTimestamp() };
+    // Firestore rules require server-generated resolution timestamps.
+    if (patch.active === false && patch.resolvedBy === authenticatedUid) {
+      safePatch.resolvedAt = serverTimestamp();
+    }
+    return updateDoc(dref, safePatch);
   } catch (e) {
     console.error("updateHelpRequestRealtime error", e);
     return null;
@@ -311,7 +580,7 @@ export function subscribeProductsRealtime(onUpdate) {
   try {
     const q = query(collection(db, "products"), orderBy("createdAt", "desc"));
     return onSnapshot(q, (snap) => {
-      const arr = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const arr = snap.docs.map((d) => ({ ...d.data(), id: d.id }));
       onUpdate(arr);
     });
   } catch (e) {
@@ -321,18 +590,28 @@ export function subscribeProductsRealtime(onUpdate) {
 }
 
 export async function createProductRealtime(data) {
-  if (!db) {
-    console.info("createProductRealtime: Firestore not configured, skipping");
+  if (!db || !(await hasAdminClaim()) || !validateProductInput(data)) return null;
+  const payload = {
+    name: data.name.trim(),
+    price: data.price,
+    stock: data.stock,
+    ...(data.image !== undefined ? { image: data.image } : {}),
+    ...(data.description !== undefined ? { description: data.description } : {}),
+    createdAt: serverTimestamp(),
+  };
+  try {
+    return await addDoc(collection(db, "products"), payload);
+  } catch (e) {
+    console.error("createProductRealtime error", e);
     return null;
   }
-  return addDoc(collection(db, "products"), { ...data, createdAt: serverTimestamp() });
 }
 
 export async function updateProductRealtime(id, patch) {
-  if (!db) return null;
+  if (!db || !(await hasAdminClaim()) || !validateProductPatch(id, patch)) return null;
   try {
     const dref = doc(db, "products", id);
-    return updateDoc(dref, patch);
+    return await updateDoc(dref, patch);
   } catch (e) {
     console.error("updateProductRealtime error", e);
     return null;
@@ -340,40 +619,61 @@ export async function updateProductRealtime(id, patch) {
 }
 
 export async function deleteProductRealtime(id) {
-  if (!db) return null;
+  if (!db || !(await hasAdminClaim()) || !validateAdminDocumentId(id)) return null;
   try {
     const dref = doc(db, "products", id);
-    return deleteDoc(dref);
+    return await deleteDoc(dref);
   } catch (e) {
     console.error("deleteProductRealtime error", e);
     return null;
   }
 }
 
-export function subscribeBannersRealtime(onUpdate) {
-  if (!db) return () => {};
+export function subscribeBannersRealtime(onUpdate, onError = () => {}) {
+  if (!db) {
+    onError(new Error("firebase_not_configured"));
+    return () => {};
+  }
   try {
     const q = query(collection(db, "banners"), orderBy("createdAt", "desc"));
     return onSnapshot(q, (snap) => {
-      const arr = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const arr = snap.docs.map((d) => ({ ...d.data(), id: d.id }));
       onUpdate(arr);
+    }, (error) => {
+      console.error("subscribeBannersRealtime snapshot error", error);
+      onError(error);
     });
   } catch (e) {
     console.error("subscribeBannersRealtime error", e);
+    onError(e);
     return () => {};
   }
 }
 
 export async function createBannerRealtime(data) {
-  if (!db) return null;
-  return addDoc(collection(db, "banners"), { ...data, createdAt: serverTimestamp() });
+  if (!db || !(await hasAdminClaim()) || !validateBannerInput(data)) return null;
+  const payload = {
+    title: data.title.trim(),
+    active: data.active,
+    ...(data.subtitle !== undefined ? { subtitle: data.subtitle.trim() } : {}),
+    ...(data.sponsorName !== undefined ? { sponsorName: data.sponsorName.trim() } : {}),
+    ...(data.image !== undefined ? { image: data.image.trim() } : {}),
+    ...(data.link !== undefined ? { link: data.link.trim() } : {}),
+    createdAt: serverTimestamp(),
+  };
+  try {
+    return await addDoc(collection(db, "banners"), payload);
+  } catch (e) {
+    console.error("createBannerRealtime error", e);
+    return null;
+  }
 }
 
 export async function updateBannerRealtime(id, patch) {
-  if (!db) return null;
+  if (!db || !(await hasAdminClaim()) || !validateBannerPatch(id, patch)) return null;
   try {
     const dref = doc(db, "banners", id);
-    return updateDoc(dref, patch);
+    return await updateDoc(dref, patch);
   } catch (e) {
     console.error("updateBannerRealtime error", e);
     return null;
@@ -381,51 +681,166 @@ export async function updateBannerRealtime(id, patch) {
 }
 
 export async function deleteBannerRealtime(id) {
-  if (!db) return null;
+  if (!db || !(await hasAdminClaim()) || !validateAdminDocumentId(id)) return null;
   try {
     const dref = doc(db, "banners", id);
-    return deleteDoc(dref);
+    return await deleteDoc(dref);
   } catch (e) {
     console.error("deleteBannerRealtime error", e);
     return null;
   }
 }
 
-// Client-side seed helper: create initial products and banners if collections empty.
-// NOTE: This is for development only. In production, seeding should not run automatically.
-export async function createInitialSeed() {
+
+// Public business directory: records are persisted in Firestore; writes are admin-only.
+export function subscribeBusinessesRealtime(onUpdate, onError = () => {}) {
   if (!db) {
-    console.info("createInitialSeed: Firestore not configured, skipping seed.");
-    return;
+    onError(new Error("firebase_not_configured"));
+    return () => {};
   }
   try {
-    const prodQuery = query(collection(db, "products"), limit(1));
-    const prodSnap = await getDocs(prodQuery);
-    const banQuery = query(collection(db, "banners"), limit(1));
-    const banSnap = await getDocs(banQuery);
+    const q = query(collection(db, "businesses"), where("publicVisible", "==", true));
+    return onSnapshot(q, (snap) => {
+      const items = snap.docs.map((d) => ({ ...d.data(), id: d.id }));
+      onUpdate(items);
+    }, (error) => {
+      console.error("subscribeBusinessesRealtime snapshot error", error);
+      onError(error);
+    });
+  } catch (error) {
+    console.error("subscribeBusinessesRealtime error", error);
+    onError(error);
+    return () => {};
+  }
+}
 
-    if (prodSnap.empty) {
-      const sampleProducts = [
-        { name: "Shoei NXR2 Kask", price: 4500, stock: 5, description: "Full-face kask, M beden", image: "" },
-        { name: "Alpinestars Mont", price: 2800, stock: 8, description: "Su geçirmez touring mont", image: "" },
-      ];
-      for (const p of sampleProducts) {
-        await addDoc(collection(db, "products"), { ...p, createdAt: serverTimestamp() });
-      }
-      console.info("Seeded sample products");
-    }
+export async function createBusinessRealtime(data) {
+  if (!db || !(await hasAdminClaim()) || !validateBusinessInput(data)) return null;
+  const payload = {
+    name: data.name.trim(),
+    category: data.category,
+    city: data.city.trim(),
+    address: data.address.trim(),
+    phone: data.phone.trim(),
+    workingHours: data.workingHours.trim(),
+    lat: data.lat,
+    lng: data.lng,
+    tier: data.tier,
+    verified: data.verified,
+    publicVisible: data.publicVisible,
+    rating: 0,
+    reviewCount: 0,
+    ...(data.photo !== undefined ? { photo: data.photo.trim() } : {}),
+    ...(data.description !== undefined ? { description: data.description.trim() } : {}),
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+  try {
+    return await addDoc(collection(db, "businesses"), payload);
+  } catch (error) {
+    console.error("createBusinessRealtime error", error);
+    return null;
+  }
+}
 
-    if (banSnap.empty) {
-      const sampleBanners = [
-        { title: "Sponsor: MegaMotos", image: "", link: "https://example.com", active: true },
-        { title: "Kampanya: Kask %20 İndirim", image: "", link: "https://example.com/promo", active: true },
-      ];
-      for (const b of sampleBanners) {
-        await addDoc(collection(db, "banners"), { ...b, createdAt: serverTimestamp() });
-      }
-      console.info("Seeded sample banners");
-    }
-  } catch (e) {
-    console.error("createInitialSeed error", e);
+export async function updateBusinessRealtime(id, patch) {
+  if (!db || !(await hasAdminClaim()) || !validateBusinessPatch(id, patch)) return null;
+  const safePatch = { ...patch, updatedAt: serverTimestamp() };
+  try {
+    return await updateDoc(doc(db, "businesses", id), safePatch);
+  } catch (error) {
+    console.error("updateBusinessRealtime error", error);
+    return null;
+  }
+}
+
+export async function deleteBusinessRealtime(id) {
+  if (!db || !(await hasAdminClaim()) || !validateAdminDocumentId(id)) return null;
+  try {
+    await deleteDoc(doc(db, "businesses", id));
+    return true;
+  } catch (error) {
+    console.error("deleteBusinessRealtime error", error);
+    return null;
+  }
+}
+
+// Persistent user reports. Firestore rules permit creation by signed-in users
+// and reading/status changes only by admins.
+export async function submitReportRealtime(report) {
+  if (!db || !auth?.currentUser?.uid) {
+    return { ok: false, error: "auth_required" };
+  }
+  const targetTypes = ["post", "listing", "user", "message", "sos"];
+  if (!report || !targetTypes.includes(report.targetType) ||
+      typeof report.targetId !== "string" || !report.targetId.trim() ||
+      report.targetId.length > 200 ||
+      typeof report.reason !== "string" || !report.reason.trim() ||
+      report.reason.length > 160 ||
+      typeof report.details !== "string" || report.details.length > 1000) {
+    return { ok: false, error: "invalid_report" };
+  }
+  try {
+    const user = auth.currentUser;
+    const ref = await addDoc(collection(db, "reports"), {
+      targetType: report.targetType,
+      targetId: report.targetId.trim(),
+      reason: report.reason.trim(),
+      details: report.details.trim(),
+      reporterUid: user.uid,
+      reporterEmail: user.email || "",
+      status: "pending",
+      createdAt: serverTimestamp(),
+    });
+    return { ok: true, id: ref.id };
+  } catch (error) {
+    console.error("submitReportRealtime error", error);
+    return { ok: false, error: "write_failed" };
+  }
+}
+
+export async function subscribeReportsRealtime(onUpdate, onError = () => {}) {
+  if (!db || !(await hasAdminClaim())) {
+    onError(new Error("admin_or_firebase_required"));
+    return () => {};
+  }
+  try {
+    return onSnapshot(
+      query(collection(db, "reports"), orderBy("createdAt", "desc")),
+      (snapshot) => onUpdate(snapshot.docs.map((item) => {
+        const data = item.data();
+        const createdAt = data.createdAt?.toDate?.();
+        return {
+          id: item.id,
+          targetType: data.targetType,
+          targetId: data.targetId,
+          reason: data.reason,
+          details: data.details || "",
+          reportedBy: data.reporterEmail || data.reporterUid,
+          status: data.status,
+          createdAt: createdAt ? createdAt.toLocaleString("tr-TR") : "Yeni",
+        };
+      })),
+      onError
+    );
+  } catch (error) {
+    onError(error);
+    return () => {};
+  }
+}
+
+export async function resolveReportRealtime(id, status) {
+  if (!db || !(await hasAdminClaim()) || !validateAdminDocumentId(id) ||
+      !["resolved", "dismissed"].includes(status)) return false;
+  try {
+    await updateDoc(doc(db, "reports", id), {
+      status,
+      resolvedAt: serverTimestamp(),
+      resolvedBy: auth.currentUser.uid,
+    });
+    return true;
+  } catch (error) {
+    console.error("resolveReportRealtime error", error);
+    return false;
   }
 }

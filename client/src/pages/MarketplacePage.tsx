@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Search, ShoppingBag, Plus, Tag, ShieldAlert, Phone, MessageSquare, Flag, X, AlertCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -28,7 +28,11 @@ export default function MarketplacePage() {
   const [image, setImage] = useState("");
   const [phone, setPhone] = useState("");
 
-  const { user } = useAuth();
+  const { user, authReady } = useAuth();
+  const scopeKey = user?.uid || "anonymous";
+  const currentScopeRef = useRef({ scopeKey, authReady });
+  currentScopeRef.current = { scopeKey, authReady };
+  const [cacheForScope, setCacheForScope] = useState("");
   const [, setLocation] = useLocation();
 
   const categories: string[] = [
@@ -45,48 +49,89 @@ export default function MarketplacePage() {
   ];
 
   useEffect(() => {
-    setListings(marketplaceService.getListings(selectedCategory, searchQuery, selectedCity));
-  }, [selectedCategory, searchQuery, selectedCity]);
+    if (!authReady) return;
+    setListings([]);
+    setSelectedListing(null);
+    setCacheForScope(scopeKey);
+    let disposed = false;
+    let unsubscribe = () => {};
+    const isCurrentScope = () => {
+      const active = currentScopeRef.current;
+      return !disposed && active.authReady && active.scopeKey === scopeKey;
+    };
+    try {
+      unsubscribe = marketplaceService.subscribeRemoteListings((items) => {
+        if (!isCurrentScope()) return;
+        setListings(items);
+      }, (error) => {
+        if (!isCurrentScope()) return;
+        console.error("marketplace subscription failed", error);
+        setListings([]);
+        toast.error("İlanlar sunucudan alınamadı. Bağlantıyı veya erişim izinlerini kontrol edin.");
+      }, isCurrentScope);
+    } catch (error) {
+      if (isCurrentScope()) {
+        console.error("Marketplace unavailable", error);
+        toast.error(error instanceof Error ? error.message : "Pazar yeri sunucuya bağlanamadı.");
+      }
+    }
+    return () => {
+      disposed = true;
+      unsubscribe();
+    };
+  }, [authReady, scopeKey]);
 
-  const handleCreateListing = () => {
+  const visibleListings = cacheForScope === scopeKey ? listings.filter((item) =>
+    (selectedCategory === "Tümü" || item.category === selectedCategory) &&
+    (selectedCity === "Tümü" || item.city.toLocaleLowerCase("tr-TR") === selectedCity.toLocaleLowerCase("tr-TR")) &&
+    (!searchQuery.trim() || item.title.toLocaleLowerCase("tr-TR").includes(searchQuery.toLocaleLowerCase("tr-TR")) || item.description.toLocaleLowerCase("tr-TR").includes(searchQuery.toLocaleLowerCase("tr-TR")))
+  ) : [];
+
+  const handleCreateListing = async () => {
+    if (!authReady || cacheForScope !== scopeKey) return;
+    const numericPrice = Number(price);
     if (!title.trim() || !price || !description.trim()) {
       toast.error("Lütfen başlık, fiyat ve açıklama alanlarını doldurun.");
       return;
     }
+    if (!Number.isFinite(numericPrice) || numericPrice <= 0) {
+      toast.error("Fiyat sıfırdan büyük geçerli bir sayı olmalıdır.");
+      return;
+    }
+    if (title.trim().length > 120 || description.trim().length > 2000) {
+      toast.error("Başlık en fazla 120, açıklama en fazla 2000 karakter olabilir.");
+      return;
+    }
 
-    marketplaceService.createListing({
-      title: title.trim(),
-      category,
-      price: Number(price),
-      city,
-      description: description.trim(),
-      image: image.trim() || undefined,
-      sellerName: user?.displayName || user?.email?.split("@")[0] || "Motorcu İlan Sahibi",
-      sellerEmail: user?.email || "anonim@motoguard.tr",
-      sellerPhone: phone.trim() || undefined,
-    });
-
-    toast.success("İlanınız başarıyla yayınlandı!");
-    setTitle("");
-    setPrice("");
-    setDescription("");
-    setImage("");
-    setPhone("");
-    setIsNewListingOpen(false);
-    setListings(marketplaceService.getListings(selectedCategory, searchQuery, selectedCity));
+    if (!user) { (window as any).__openAuthModal?.(); toast.error("İlan vermek için giriş yapın."); return; }
+    try {
+      await marketplaceService.createRemoteListing({
+        sellerId: user.uid,
+        title: title.trim(), category, price: numericPrice, city, description: description.trim(),
+        image: image.trim() || undefined,
+        sellerName: user.displayName || user.email?.split("@")[0] || "Motorcu İlan Sahibi",
+        sellerPhone: phone.trim() || undefined,
+      });
+      toast.success("İlan sunucuya kaydedildi ve pazar yerine yayınlandı.");
+      setTitle(""); setPrice(""); setDescription(""); setImage(""); setPhone(""); setIsNewListingOpen(false);
+    } catch (error) {
+      console.error("Marketplace listing creation failed", error);
+      toast.error(error instanceof Error ? error.message : "İlan sunucuya kaydedilemedi.");
+    }
   };
 
   return (
-    <div className="min-h-screen bg-asphalt pb-8">
+    <div className="min-h-screen bg-asphalt-light pb-8 page-surface-light">
       <Header />
 
       {/* Title & Action */}
       <div className="px-4 pt-4 max-w-lg mx-auto flex items-center justify-between">
         <div>
-          <h1 className="font-display text-2xl font-extrabold text-white uppercase tracking-wider">
+          <h1 className="font-display text-2xl font-extrabold text-foreground uppercase tracking-wider">
             İkinci El Pazar
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">Motosiklet ve ekipman alım/satım dayanışması</p>
+          <p className="text-[11px] text-amber-300 mt-1">İlanlar Firebase üzerinden canlı okunur ve sunucuya kaydedilir. İşlemler başarısız olursa uygulama hata bildirir; sahte kayıt oluşturmaz.</p>
         </div>
 
         <button
@@ -144,9 +189,9 @@ export default function MarketplacePage() {
 
       {/* Listings Grid */}
       <div className="px-4 pt-3 max-w-lg mx-auto">
-        {listings.length > 0 ? (
+        {visibleListings.length > 0 ? (
           <div className="grid grid-cols-2 gap-3">
-            {listings.map((item) => (
+            {visibleListings.map((item) => (
               <Card
                 key={item.id}
                 onClick={() => setSelectedListing(item)}
@@ -205,7 +250,7 @@ export default function MarketplacePage() {
                 <input
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Örn: Shoei NXR2 Kask - M Beden"
+                  placeholder="Örn: Motosiklet kaskı" maxLength={120}
                   className="w-full bg-card border border-border rounded-xl p-2.5 text-xs text-foreground focus:outline-none focus:border-primary"
                 />
               </div>
@@ -302,7 +347,7 @@ export default function MarketplacePage() {
       )}
 
       {/* Listing Detail Modal */}
-      {selectedListing && (
+      {cacheForScope === scopeKey && selectedListing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in">
           <Card className="w-full max-w-md bg-card-gradient border-border p-5 rounded-2xl shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-border pb-3">
@@ -354,6 +399,21 @@ export default function MarketplacePage() {
                 </a>
               )}
 
+              {user?.uid === selectedListing.sellerId && (
+                <button
+                  onClick={async () => {
+                    try {
+                      await marketplaceService.deleteRemoteListing(selectedListing.id, user.uid);
+                      setSelectedListing(null);
+                      toast.success("İlan sunucudan silindi.");
+                    } catch (error) {
+                      console.error("Marketplace listing deletion failed", error);
+                      toast.error("İlan silinemedi. Bağlantıyı veya erişim iznini kontrol edin.");
+                    }
+                  }}
+                  className="w-full border border-destructive/40 text-destructive hover:bg-destructive/10 font-semibold text-xs py-2.5 rounded-xl"
+                >İlanımı Sil</button>
+              )}
               <button
                 onClick={() => setReportTargetId(selectedListing.id)}
                 className="w-full border border-destructive/40 text-destructive hover:bg-destructive/10 font-semibold text-xs py-2.5 rounded-xl flex items-center justify-center gap-1.5"
