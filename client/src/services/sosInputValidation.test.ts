@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isCurrentSOSAuthSession, isSameSOSAuthScope, validateSOSRequestInput, validateSOSStatusUpdatePatch, validateUserProfilePatch, validateUserProfileCreation, validateProductInput, validateProductPatch, validateBannerInput, validateBannerPatch, validateAdminDocumentId } from "./sosInputValidation";
+import { isCurrentSOSAuthSession, isSameSOSAuthScope, validateSOSRequestInput, validateSOSStatusUpdatePatch, validateUserProfilePatch, validateUserProfileCreation, validateProductInput, validateProductPatch, validateBannerInput, validateBannerPatch, validateBusinessInput, validateBusinessPatch, validateAdminDocumentId } from "./sosInputValidation";
 
 const validInput = {
   requesterId: "authenticated-rider",
@@ -283,6 +283,34 @@ describe("admin product and banner input validation", () => {
     expect(validateBannerPatch("banner/other", { title: "Campaign" })).toBe(false);
     expect(validateBannerPatch("banner-1", { createdAt: new Date() })).toBe(false);
     expect(validateBannerPatch("banner-1", { active: false })).toBe(true);
+  });
+
+  it("accepts a complete bounded business directory record", () => {
+    expect(validateBusinessInput({
+      name: "Örnek Servis", category: "servis", city: "İzmir", address: "Konak",
+      phone: "02320000000", workingHours: "09:00-18:00", lat: 38.4237, lng: 27.1428,
+      tier: "standard", verified: false, publicVisible: true,
+      photo: "https://example.test/shop.png", description: "Motosiklet servisi",
+    })).toBe(true);
+    expect(validateBusinessPatch("business-1", { tier: "sponsored" })).toBe(true);
+  });
+
+  it.each([
+    { name: "x", category: "unknown", city: "İzmir", address: "Konak", phone: "1", workingHours: "all day", lat: 38, lng: 27, tier: "standard", verified: false, publicVisible: true },
+    { name: "x", category: "usta", city: "İzmir", address: "Konak", phone: "1", workingHours: "all day", lat: 91, lng: 27, tier: "standard", verified: false, publicVisible: true },
+    { name: "x", category: "usta", city: "İzmir", address: "Konak", phone: "1", workingHours: "all day", lat: 38, lng: 181, tier: "standard", verified: false, publicVisible: true },
+    { name: "x", category: "usta", city: "İzmir", address: "Konak", phone: "1", workingHours: "all day", lat: 38, lng: 27, tier: "standard", verified: "true", publicVisible: true },
+    { name: "x", category: "usta", city: "İzmir", address: "Konak", phone: "1", workingHours: "all day", lat: 38, lng: 27, tier: "standard", verified: false, publicVisible: true, ownerEmail: "private@example.test" },
+    { name: "x", category: "usta", city: "İzmir", address: "Konak", phone: "1", workingHours: "all day", lat: 38, lng: 27, tier: "standard", verified: false, publicVisible: true, photo: "javascript:alert(1)" },
+  ])("rejects invalid or unsafe business payloads: %s", (value) => {
+    expect(validateBusinessInput(value)).toBe(false);
+  });
+
+  it("rejects empty, protected, and malformed business patches", () => {
+    expect(validateBusinessPatch("business-1", {})).toBe(false);
+    expect(validateBusinessPatch("../other", { tier: "sponsored" })).toBe(false);
+    expect(validateBusinessPatch("business-1", { rating: 5 })).toBe(false);
+    expect(validateBusinessPatch("business-1", { tier: "unknown" })).toBe(false);
   });
 
   it("validates document IDs before delete operations", () => {
