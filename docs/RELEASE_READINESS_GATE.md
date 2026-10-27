@@ -86,3 +86,14 @@ This verifies only the listed automated checks on the stated commit. It does **n
 - Protected assets remain unchanged: `client/src/pages/Home.tsx` SHA `a45976c8085709adce1a6186e4a72865d440c654`; `firestore.rules` and `firestore.prod.rules` remain byte-identical at SHA `c6741aead88452ed7f794323e75fb3f4f581da43`.
 - PR #3 remains open and unmerged. No production deployment, production rules publication, or production-data operation was performed.
 - Release decision remains **BLOCKED**. The active-guard helper is still not wired to an authenticated endpoint or the client, the client cross-device create race remains unresolved, and the dedicated non-production Firebase/runtime isolation and full SOS schema/lifecycle integration are not verified. Durable persistence, privacy and end-to-end acceptance blockers listed above also remain open.
+
+## Latest exact-head verification (2026-10-27, SOS client integration audit)
+
+- Current branch head verified: `6258ed237c237dbbf9d107333d937b3b74c2655e` (`docs: map SOS client integration and release gates`).
+- Safe CI completed successfully for this exact SHA: [push run 40485192236](https://github.com/serkansirinoglu-ship-it/motosos1/actions/runs/40485192236) and [PR run 40485199724](https://github.com/serkansirinoglu-ship-it/motosos1/actions/runs/40485199724).
+- Verified checks include frozen-lockfile dependency install, TypeScript, unit tests, production build without deployment, Firestore rules static audit and strict gate, rules-file parity, isolated Firestore Emulator authorization/SOS transaction tests, and successful job completion.
+- Protected assets remain unchanged: `client/src/pages/Home.tsx` SHA `a45976c8085709adce1a6186e4a72865d440c654`; `firestore.rules` and `firestore.prod.rules` remain byte-identical at SHA `c6741aead88452ed7f794323e75fb3f4f581da43`.
+- PR #3 remains open and unmerged; no production deployment, production rules publication, or production-data operation was performed.
+- Release decision remains **BLOCKED**. The SOS transaction helper remains a non-production proof of concept, is not wired to the authenticated client/backend lifecycle, and does not close the client cross-device creation race. A dedicated non-production Firebase/runtime mapping, full public/private schema integration, server-authoritative accept/cancel/resolve paths, two-account end-to-end acceptance, durable persistence, privacy/legacy-record checks, and Production configuration/health evidence remain outstanding.
+
+This exact-head CI result establishes only that the listed automated checks passed. It does not establish full product or deployment readiness and does not authorize production release.
