@@ -259,6 +259,23 @@ describe("admin product and banner input validation", () => {
     expect(validateBannerInput(value)).toBe(false);
   });
 
+  it("accepts persistent banner subtitle and sponsor metadata within limits", () => {
+    expect(validateBannerInput({
+      title: "Campaign", active: true, subtitle: "Seasonal campaign",
+      sponsorName: "Moto Sponsor", image: "https://example.test/banner.png",
+      link: "https://example.test/campaign",
+    })).toBe(true);
+    expect(validateBannerPatch("banner-1", { sponsorName: "Updated sponsor", subtitle: "Updated copy" })).toBe(true);
+  });
+
+  it.each([
+    { title: "Campaign", active: true, subtitle: "x".repeat(301) },
+    { title: "Campaign", active: true, sponsorName: "x".repeat(121) },
+    { title: "Campaign", active: true, sponsorEmail: "attacker@example.test" },
+  ])("rejects malformed or unapproved banner metadata: %s", (value) => {
+    expect(validateBannerInput(value)).toBe(false);
+  });
+
   it("rejects invalid IDs and protected or empty patches", () => {
     expect(validateProductPatch("../other", { name: "Helmet" })).toBe(false);
     expect(validateProductPatch("product-1", {})).toBe(false);
