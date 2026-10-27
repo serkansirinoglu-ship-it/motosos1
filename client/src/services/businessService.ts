@@ -82,7 +82,7 @@ class BusinessService {
           publicVisible: item.publicVisible === true,
         }));
         for (const callback of this.listeners) callback([...this.businesses]);
-      }, onError);
+      }, () => onError(new Error("business_subscription_failed")));
     }
     return () => {
       this.listeners.delete(listener);
