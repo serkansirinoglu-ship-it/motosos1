@@ -22,7 +22,13 @@ async function createOrGetActiveSOS(db, FieldValue, uid) {
         const currentRef = db.collection("sosRequests").doc(guard.sosId);
         const currentSnap = await tx.get(currentRef);
         const current = currentSnap.data();
-        if (currentSnap.exists && current?.requesterId === uid && current?.status === "active") {
+        if (currentSnap.exists && current?.status === "active") {
+          if (current?.requesterId !== uid) {
+            // A guard pointing at another owner's active SOS is an integrity
+            // violation. Fail closed instead of replacing the guard and orphaning
+            // an active record that the transaction cannot safely reconcile.
+            throw new Error("active SOS guard points to a different owner");
+          }
           return { created: false, id: currentRef.id };
         }
       }
