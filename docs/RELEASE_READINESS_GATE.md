@@ -46,7 +46,7 @@ For each checklist item, record the tested commit SHA, test command/scenario, re
 
 ## Current verified boundary
 
-At the latest checkpoint, commit `52d6c899a75d232b5338b19aea5e228b0a6ad9d2` passed Safe CI run [40466186268](https://github.com/serkansirinoglu-ship-it/motosos1/actions/runs/40466186268): TypeScript, unit tests, production build without deployment, static Firestore audit, strict rules gate, rules-file parity, isolated emulator authorization tests, and the protected-home-page guard.
+At the latest checkpoint, commit `2e5ee07e85ecb6d326f019ec3169dff9b5278a9f` passed Safe CI run [40468111866](https://github.com/serkansirinoglu-ship-it/motosos1/actions/runs/40468111866): TypeScript, unit tests, production build without deployment, static Firestore audit, strict rules gate, rules-file parity, isolated emulator authorization tests, and the protected-home-page guard. This commit only refreshes this release-gate evidence; the Vercel output-directory change itself remains from `52d6c899a75d232b5338b19aea5e228b0a6ad9d2`.
 
 The Vercel projects were checked against this exact commit and no matching deployment was found. The most recent observed READY deployments belong to older commits, so the `vercel.json` output-directory change has not yet been validated by a Preview deployment. Do not treat an older READY deployment as evidence for the current head.
 
