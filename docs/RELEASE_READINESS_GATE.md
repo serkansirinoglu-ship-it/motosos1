@@ -46,6 +46,12 @@ For each checklist item, record the tested commit SHA, test command/scenario, re
 
 ## Current verified boundary
 
-As of the audit checkpoint, CI passed for commit `d5170f6d29313c39918e77e054b258885e662ece` (including TypeScript, unit tests, production build without deployment, static Firestore checks, rules equality/protection checks, and emulator authorization tests). This validates those automated checks only. It does **not** resolve the persistence, cross-account cache, legacy-record privacy, or complete end-to-end blockers above.
+At the latest checkpoint, commit `52d6c899a75d232b5338b19aea5e228b0a6ad9d2` passed Safe CI run [40466186268](https://github.com/serkansirinoglu-ship-it/motosos1/actions/runs/40466186268): TypeScript, unit tests, production build without deployment, static Firestore audit, strict rules gate, rules-file parity, isolated emulator authorization tests, and the protected-home-page guard.
+
+The Vercel projects were checked against this exact commit and no matching deployment was found. The most recent observed READY deployments belong to older commits, so the `vercel.json` output-directory change has not yet been validated by a Preview deployment. Do not treat an older READY deployment as evidence for the current head.
+
+The SOS active-guard module remains a non-production transaction proof of concept, not an authenticated endpoint and not wired into the client. Cross-device active-SOS uniqueness therefore remains unresolved. Durable persistence gaps, cross-account cache checks, legacy-record privacy, and complete end-to-end acceptance also remain open.
+
+This verifies only the listed automated checks on the stated commit. It does **not** establish full product or deployment readiness.
 
 **Until every blocker has implementation and recorded verification, the release decision remains BLOCKED.** No production deployment or production Firestore rules publication is authorized by this document.
