@@ -36,6 +36,9 @@ async function run() {
   let staleUid = null;
   let staleGuardRef = null;
   let recoveredId = null;
+  let otherUid = null;
+  let otherGuardRef = null;
+  let otherSOSId = null;
 
   try {
     await assert.rejects(() => create(""), TypeError,
@@ -62,6 +65,20 @@ async function run() {
     const retry = await create(uid);
     assert.equal(retry.created, false, "retry must return existing active SOS");
     assert.equal(retry.id, activeId);
+
+    // A second authenticated owner must have an independent active SOS lock.
+    otherUid = `emulator-sos-other-user-${randomUUID()}`;
+    otherGuardRef = db.collection("activeSOSLocks").doc(otherUid);
+    const other = await create(otherUid);
+    otherSOSId = other.id;
+    assert.equal(other.created, true, "another user may create their own active SOS");
+    assert.notEqual(other.id, activeId, "different users must not share an SOS ID");
+    assert.equal((await otherGuardRef.get()).data()?.sosId, other.id,
+      "each user must own a separate active guard");
+    assert.equal(await close(otherUid, activeId, "cancelled"), false,
+      "another user must not close the first user's SOS");
+    assert.equal((await sosCollection.doc(activeId).get()).data()?.status, "active",
+      "cross-user close must leave the original SOS active");
 
     assert.equal(await close(`${uid}-not-owner`, activeId, "resolved"), false,
       "a different owner must not close another user's SOS");
@@ -107,6 +124,8 @@ async function run() {
       if (recoveredId) await sosCollection.doc(recoveredId).delete().catch(() => {});
       await staleGuardRef.delete().catch(() => {});
     }
+    if (otherGuardRef) await otherGuardRef.delete().catch(() => {});
+    if (otherSOSId) await sosCollection.doc(otherSOSId).delete().catch(() => {});
     await deleteApp(app);
   }
 }
