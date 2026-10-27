@@ -8,7 +8,7 @@ import { useMessages } from "@/contexts/MessageContext";
 import Header from "@/components/Header";
 import EmergencyWarning from "@/components/EmergencyWarning";
 import { sosService, SOSHelpCategory, CATEGORY_LABELS, STATUS_LABELS, SOSStatus } from "@/services/sosService";
-import { auth, createSOSRequest, updateSOSRequest, subscribeActiveSOSRequests } from "../../../firebase";
+import { getCurrentAuthUid, createSOSRequest, updateSOSRequest, subscribeActiveSOSRequests } from "../../../firebase";
 import { isSameSOSAuthScope } from "@/services/sosInputValidation";
 
 export default function SOSPage() {
@@ -86,7 +86,7 @@ export default function SOSPage() {
         // Geolocation may resolve after sign-out or account switching. Do not
         // create even a local SOS under the identity that initiated the request.
         if (
-          !isSameSOSAuthScope(initiatingUid, auth?.currentUser?.uid) ||
+          !isSameSOSAuthScope(initiatingUid, getCurrentAuthUid()) ||
           !isSameSOSAuthScope(initiatingUid, currentUserUidRef.current)
         ) {
           setSubmitting(false);
@@ -139,7 +139,7 @@ export default function SOSPage() {
               longitude: lng,
             });
             const scopeStillCurrent =
-              isSameSOSAuthScope(initiatingUid, auth?.currentUser?.uid) &&
+              isSameSOSAuthScope(initiatingUid, getCurrentAuthUid()) &&
               isSameSOSAuthScope(initiatingUid, currentUserUidRef.current);
             if (!scopeStillCurrent && res?.error !== "active_duplicate") {
               sosService.updateStatus(localReq.id, "iptal_edildi");

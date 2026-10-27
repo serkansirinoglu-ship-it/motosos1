@@ -34,6 +34,13 @@ if (hasFirebaseConfig) {
 
 export { auth, db };
 
+/** Read the current Firebase Auth UID without exposing the Auth instance to UI modules.
+ * @returns {string | null}
+ */
+export function getCurrentAuthUid() {
+  return auth?.currentUser?.uid ?? null;
+}
+
 /** Defense in depth for admin-only client operations; Firestore rules remain authoritative. */
 async function hasAdminClaim() {
   const user = auth?.currentUser;
