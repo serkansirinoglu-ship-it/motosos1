@@ -314,6 +314,66 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+    // Businesses: public directory reads only visible records; all writes are admin-only.
+    match /businesses/{businessId} {
+      allow read: if isAdmin() || resource.data.publicVisible == true;
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly([
+          'name', 'category', 'city', 'address', 'phone', 'workingHours',
+          'lat', 'lng', 'photo', 'tier', 'verified', 'description',
+          'publicVisible', 'rating', 'reviewCount', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 120
+        && request.resource.data.category in ['usta', 'lastikci', 'cekici', 'servis', 'magaza', 'benzinlik']
+        && request.resource.data.city is string
+        && request.resource.data.city.size() > 0
+        && request.resource.data.city.size() <= 100
+        && request.resource.data.address is string
+        && request.resource.data.address.size() > 0
+        && request.resource.data.address.size() <= 240
+        && request.resource.data.phone is string
+        && request.resource.data.phone.size() > 0
+        && request.resource.data.phone.size() <= 40
+        && request.resource.data.workingHours is string
+        && request.resource.data.workingHours.size() <= 120
+        && request.resource.data.lat is number
+        && request.resource.data.lat >= -90 && request.resource.data.lat <= 90
+        && request.resource.data.lng is number
+        && request.resource.data.lng >= -180 && request.resource.data.lng <= 180
+        && request.resource.data.tier in ['standard', 'featured', 'premium', 'sponsored']
+        && request.resource.data.verified is bool
+        && request.resource.data.publicVisible is bool
+        && request.resource.data.rating == 0
+        && request.resource.data.reviewCount == 0
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && (!('photo' in request.resource.data) || (request.resource.data.photo is string && request.resource.data.photo.size() <= 2048))
+        && (!('description' in request.resource.data) || (request.resource.data.description is string && request.resource.data.description.size() <= 1500));
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'name', 'category', 'city', 'address', 'phone', 'workingHours',
+          'lat', 'lng', 'photo', 'tier', 'verified', 'description',
+          'publicVisible', 'updatedAt'
+        ])
+        && request.resource.data.updatedAt == request.time
+        && (!('name' in request.resource.data) || (request.resource.data.name is string && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 120))
+        && (!('category' in request.resource.data) || request.resource.data.category in ['usta', 'lastikci', 'cekici', 'servis', 'magaza', 'benzinlik'])
+        && (!('city' in request.resource.data) || (request.resource.data.city is string && request.resource.data.city.size() > 0 && request.resource.data.city.size() <= 100))
+        && (!('address' in request.resource.data) || (request.resource.data.address is string && request.resource.data.address.size() > 0 && request.resource.data.address.size() <= 240))
+        && (!('phone' in request.resource.data) || (request.resource.data.phone is string && request.resource.data.phone.size() > 0 && request.resource.data.phone.size() <= 40))
+        && (!('workingHours' in request.resource.data) || (request.resource.data.workingHours is string && request.resource.data.workingHours.size() <= 120))
+        && (!('lat' in request.resource.data) || (request.resource.data.lat is number && request.resource.data.lat >= -90 && request.resource.data.lat <= 90))
+        && (!('lng' in request.resource.data) || (request.resource.data.lng is number && request.resource.data.lng >= -180 && request.resource.data.lng <= 180))
+        && (!('tier' in request.resource.data) || request.resource.data.tier in ['standard', 'featured', 'premium', 'sponsored'])
+        && (!('verified' in request.resource.data) || request.resource.data.verified is bool)
+        && (!('publicVisible' in request.resource.data) || request.resource.data.publicVisible is bool)
+        && (!('photo' in request.resource.data) || (request.resource.data.photo is string && request.resource.data.photo.size() <= 2048))
+        && (!('description' in request.resource.data) || (request.resource.data.description is string && request.resource.data.description.size() <= 1500));
+      allow delete: if isAdmin();
+    }
+
     // Banners: public read, admin write
     match /banners/{bannerId} {
       allow read: if true;
