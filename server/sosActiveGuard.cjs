@@ -61,7 +61,19 @@ async function closeActiveSOS(db, FieldValue, uid, sosId, status) {
     const sos = sosSnap.data();
     if (!sosSnap.exists || sos?.requesterId !== uid || sos?.status !== "active") return false;
 
-    tx.update(sosRef, { status, updatedAt: FieldValue.serverTimestamp() });
+    // Keep terminal timestamps aligned with the existing Firestore lifecycle schema.
+    // Admin SDK bypasses rules, so this consistency must be enforced by the server primitive.
+    const terminalPatch = {
+      status,
+      updatedAt: FieldValue.serverTimestamp(),
+      cancelledAt: status === "cancelled"
+        ? FieldValue.serverTimestamp()
+        : (sos.cancelledAt ?? null),
+      resolvedAt: status === "resolved"
+        ? FieldValue.serverTimestamp()
+        : (sos.resolvedAt ?? null),
+    };
+    tx.update(sosRef, terminalPatch);
     if (guardSnap.exists && guardSnap.data()?.sosId === sosId) tx.delete(guardRef);
     return true;
   });
