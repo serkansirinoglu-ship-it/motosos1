@@ -89,6 +89,11 @@ async function run() {
 
     assert.equal(await close(uid, activeId, "cancelled"), true);
     assert.equal((await guardRef.get()).exists, false, "closing the guarded SOS clears the guard");
+    const cancelledRecord = (await sosCollection.doc(activeId).get()).data();
+    assert.equal(cancelledRecord?.status, "cancelled");
+    assert.ok(cancelledRecord?.cancelledAt, "cancelled SOS must record cancelledAt");
+    assert.equal(cancelledRecord?.resolvedAt ?? null, null,
+      "cancellation must not populate resolvedAt");
 
     const next = await create(uid);
     assert.equal(next.created, true, "new SOS is allowed after terminal close");
@@ -99,6 +104,11 @@ async function run() {
     const newerGuardTarget = "newer-guard-owner-marker";
     await guardRef.set({ sosId: newerGuardTarget });
     assert.equal(await close(uid, next.id, "resolved"), true);
+    const resolvedRecord = (await sosCollection.doc(next.id).get()).data();
+    assert.equal(resolvedRecord?.status, "resolved");
+    assert.ok(resolvedRecord?.resolvedAt, "resolved SOS must record resolvedAt");
+    assert.equal(resolvedRecord?.cancelledAt ?? null, null,
+      "resolution must not populate cancelledAt");
     assert.equal((await guardRef.get()).data()?.sosId, newerGuardTarget,
       "closing an older SOS must not clear a guard owned by another SOS");
     await guardRef.delete();
