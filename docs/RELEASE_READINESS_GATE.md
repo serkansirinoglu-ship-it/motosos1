@@ -76,3 +76,13 @@ This verifies only the listed automated checks on the stated commit. It does **n
 - Protected asset verification at this head: `client/src/pages/Home.tsx` SHA `a45976c8085709adce1a6186e4a72865d440c654`; `firestore.rules` and `firestore.prod.rules` both SHA `c6741aead88452ed7f794323e75fb3f4f581da43` and byte-identical.
 - PR #3 remains open and unmerged. No production deployment, rules publication, or production-data operation was performed.
 - Remaining release blockers are unchanged: dedicated non-production Firebase/runtime isolation, authenticated endpoint and complete SOS schema/lifecycle integration, cross-device uniqueness in the actual client path, durable feature persistence, privacy checks, end-to-end acceptance, and Production configuration/health evidence.
+
+
+## Latest exact-head verification (2026-10-27, SOS active-guard ownership)
+
+- Current branch head verified: `f4f91e7ea2f761faf3ee09fbf0a49a0eb1987ffa` (`test(sos): cover mismatched active guard ownership`).
+- Safe CI completed successfully for this exact SHA: [PR run 40480546260](https://github.com/serkansirinoglu-ship-it/motosos1/actions/runs/40480546260) and [push run 40480540812](https://github.com/serkansirinoglu-ship-it/motosos1/actions/runs/40480540812). The job completed TypeScript check, unit tests, build without deployment, Firestore static audit and strict gate, rules parity, and isolated Firestore Emulator authorization/SOS transaction tests.
+- SOS active-guard helper now fails closed when a guard points to an active SOS owned by a different UID. Emulator regression coverage asserts the mismatched guard remains intact and no additional SOS is created for the other UID.
+- Protected assets remain unchanged: `client/src/pages/Home.tsx` SHA `a45976c8085709adce1a6186e4a72865d440c654`; `firestore.rules` and `firestore.prod.rules` remain byte-identical at SHA `c6741aead88452ed7f794323e75fb3f4f581da43`.
+- PR #3 remains open and unmerged. No production deployment, production rules publication, or production-data operation was performed.
+- Release decision remains **BLOCKED**. The active-guard helper is still not wired to an authenticated endpoint or the client, the client cross-device create race remains unresolved, and the dedicated non-production Firebase/runtime isolation and full SOS schema/lifecycle integration are not verified. Durable persistence, privacy and end-to-end acceptance blockers listed above also remain open.
