@@ -256,20 +256,26 @@ export default function AdminPanel() {
                   <p className="text-xs font-bold text-white">Neden: {r.reason}</p>
                   {r.details && <p className="text-xs text-muted-foreground bg-card p-2 rounded-lg">{r.details}</p>}
                   <p className="text-[10px] text-muted-foreground">Raporlayan: {r.reportedBy}</p>
-                  <div className="flex gap-2 pt-2 border-t border-border">
-                    <button
-                      onClick={() => handleResolveReport(r.id, "resolved")}
-                      className="flex-1 bg-green-600 text-white font-bold text-xs py-2 rounded-xl"
-                    >
-                      Şikâyeti Çözüldü İşaretle
-                    </button>
-                    <button
-                      onClick={() => handleResolveReport(r.id, "dismissed")}
-                      className="flex-1 border border-border text-muted-foreground text-xs py-2 rounded-xl"
-                    >
-                      Reddet
-                    </button>
-                  </div>
+                  {r.status === "pending" ? (
+                    <div className="flex gap-2 pt-2 border-t border-border">
+                      <button
+                        onClick={() => handleResolveReport(r.id, "resolved")}
+                        className="flex-1 bg-green-600 text-white font-bold text-xs py-2 rounded-xl"
+                      >
+                        Şikâyeti Çözüldü İşaretle
+                      </button>
+                      <button
+                        onClick={() => handleResolveReport(r.id, "dismissed")}
+                        className="flex-1 border border-border text-muted-foreground text-xs py-2 rounded-xl"
+                      >
+                        Reddet
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="border-t border-border pt-2 text-xs text-muted-foreground">
+                      Durum: {r.status === "resolved" ? "Çözüldü" : "Reddedildi"}
+                    </p>
+                  )}
                 </Card>
               ))
             ) : (
