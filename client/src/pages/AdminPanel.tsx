@@ -7,7 +7,7 @@ import { ReportItem } from "@/services/moderationService";
 import { subscribeReportsRealtime, resolveReportRealtime, subscribeBannersRealtime, createBannerRealtime, deleteBannerRealtime } from "../../../firebase";
 import { communityService, CommunityPost } from "@/services/communityService";
 import { marketplaceService, ListingItem } from "@/services/marketplaceService";
-import { businessService, BusinessProfile } from "@/services/businessService";
+import { businessService, BusinessProfile, BusinessCategory } from "@/services/businessService";
 import { sosService, SOSRequestItem } from "@/services/sosService";
 import type { AdBanner } from "@/services/adService";
 import { toast } from "sonner";
@@ -32,6 +32,17 @@ export default function AdminPanel() {
   const [bannerImg, setBannerImg] = useState("");
   const [bannerLink, setBannerLink] = useState("");
   const [sponsorName, setSponsorName] = useState("");
+  const [isNewBusinessOpen, setIsNewBusinessOpen] = useState(false);
+  const [businessName, setBusinessName] = useState("");
+  const [businessCategory, setBusinessCategory] = useState<BusinessCategory>("usta");
+  const [businessCity, setBusinessCity] = useState("");
+  const [businessAddress, setBusinessAddress] = useState("");
+  const [businessPhone, setBusinessPhone] = useState("");
+  const [businessHours, setBusinessHours] = useState("09:00-18:00");
+  const [businessLat, setBusinessLat] = useState("");
+  const [businessLng, setBusinessLng] = useState("");
+  const [businessPhoto, setBusinessPhoto] = useState("");
+  const [businessDescription, setBusinessDescription] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -60,6 +71,7 @@ export default function AdminPanel() {
     let unsubscribePosts: (() => void) | undefined;
     let unsubscribeListings: (() => void) | undefined;
     let unsubscribeBanners: (() => void) | undefined;
+    let unsubscribeBusinesses: (() => void) | undefined;
     void subscribeReportsRealtime(
       (items: ReportItem[]) => { if (!cancelled) setReports(items); },
       () => { if (!cancelled) toast.error("Şikâyetler sunucudan alınamadı. Firebase bağlantısını ve yönetici yetkisini kontrol edin."); },
@@ -105,7 +117,10 @@ export default function AdminPanel() {
     } catch {
       toast.error("Reklamlar sunucuya bağlanamadı.");
     }
-    setBusinesses(businessService.getBusinesses());
+    unsubscribeBusinesses = businessService.subscribe(
+      () => { if (!cancelled) setBusinesses(businessService.getBusinesses()); },
+      () => { if (!cancelled) toast.error("İşletmeler Firestore üzerinden alınamadı."); },
+    );
     setActiveSOS(sosService.getActiveRequests());
     return () => {
       cancelled = true;
@@ -113,6 +128,7 @@ export default function AdminPanel() {
       unsubscribePosts?.();
       unsubscribeListings?.();
       unsubscribeBanners?.();
+      unsubscribeBusinesses?.();
     };
   }, [adminAccess]);
 
@@ -143,14 +159,24 @@ export default function AdminPanel() {
     }
   };
 
-  const handleToggleTier = (bizId: string, currentTier: BusinessProfile["tier"]) => {
+  const handleToggleTier = async (bizId: string, currentTier: BusinessProfile["tier"]) => {
     const nextTier: BusinessProfile["tier"] = currentTier === "sponsored" ? "standard" : "sponsored";
-    if (!businessService.updateTier(bizId, nextTier)) {
-      toast.error("İşletme bu oturumun listesinde bulunamadı; işlem yapılmadı.");
+    if (!(await businessService.updateTier(bizId, nextTier))) {
+      toast.error("İşletme sponsor durumu sunucuda güncellenemedi.");
       return;
     }
-    toast.info(`İşletme tier'ı bu oturumda '${nextTier}' olarak değiştirildi; kalıcı sunucu kaydı güncellenmedi.`);
-    setBusinesses(businessService.getBusinesses());
+    toast.success("İşletme sunucuda güncellendi: " + nextTier);
+  };
+
+  const handleCreateBusiness = async () => {
+    const lat = Number(businessLat); const lng = Number(businessLng);
+    if (!businessName.trim() || !businessCity.trim() || !businessAddress.trim() || !businessPhone.trim() || !businessHours.trim() || businessLat.trim() === "" || businessLng.trim() === "" || !Number.isFinite(lat) || !Number.isFinite(lng)) {
+      toast.error("İşletme adı, şehir, adres, telefon, çalışma saatleri ve geçerli koordinatlar zorunludur."); return;
+    }
+    const created = await businessService.createBusiness({ name: businessName.trim(), category: businessCategory, city: businessCity.trim(), address: businessAddress.trim(), phone: businessPhone.trim(), workingHours: businessHours.trim(), lat, lng, photo: businessPhoto.trim() || undefined, description: businessDescription.trim() || undefined, tier: "standard", verified: false, publicVisible: true });
+    if (!created) { toast.error("İşletme Firestore'a kaydedilemedi. Yönetici yetkisini ve Firebase bağlantısını kontrol edin."); return; }
+    toast.success("İşletme kalıcı olarak Firestore'a kaydedildi.");
+    setBusinessName(""); setBusinessCity(""); setBusinessAddress(""); setBusinessPhone(""); setBusinessHours("09:00-18:00"); setBusinessLat(""); setBusinessLng(""); setBusinessPhoto(""); setBusinessDescription(""); setBusinessCategory("usta"); setIsNewBusinessOpen(false);
   };
 
   const handleCreateBanner = async () => {
@@ -225,7 +251,7 @@ export default function AdminPanel() {
       <div className="px-4 pt-3 max-w-lg mx-auto">
         <Card className="bg-amber-500/10 border-amber-500/30 p-3 rounded-xl">
           <p className="text-[11px] text-amber-200 leading-relaxed">
-            Not: Gönderiler ve ilanlar Firestore üzerinden yönetilir. İşletme ve reklam yönetimi ise hâlen oturum içi hizmetler kullanıyor; bu işlemler kalıcı sunucu yönetimi değildir.
+            Gönderiler, ilanlar, işletmeler ve reklamlar Firestore üzerinden yönetilir. İşletme yazma işlemleri yalnızca yönetici yetkisiyle yapılır.
           </p>
         </Card>
       </div>
@@ -280,7 +306,7 @@ export default function AdminPanel() {
             <Card className="bg-card-gradient border-border p-4 rounded-xl space-y-2">
               <h3 className="font-display font-bold text-white text-xs uppercase">Sistem Durumu</h3>
               <p className="text-xs text-muted-foreground">
-                Gönderi ve ilan sayıları Firestore'dan gerçek zamanlı gelir. İşletme verileri hâlen oturum içidir; işletme değişiklikleri kalıcı sunucu kaydı oluşturmaz.
+                Gönderi, ilan ve işletme verileri Firestore'dan gerçek zamanlı gelir.
               </p>
             </Card>
           </div>
@@ -376,6 +402,10 @@ export default function AdminPanel() {
         {/* Business Management */}
         {activeTab === "businesses" && (
           <div className="mt-4 space-y-3">
+            <button onClick={() => setIsNewBusinessOpen(true)} className="w-full bg-primary text-white font-bold text-xs py-3 rounded-xl flex items-center justify-center gap-1.5">
+              <Plus className="w-4 h-4" /> Yeni İşletme Kaydı Ekle
+            </button>
+            {businesses.length === 0 && <Card className="bg-card-gradient border-border p-5 rounded-xl text-center"><p className="text-xs text-muted-foreground">Firestore'da görünür işletme kaydı yok. Gerçek işletme bilgilerini ekleyerek rehberi doldurun.</p></Card>}
             {businesses.map((b) => (
               <Card key={b.id} className="bg-card-gradient border-border p-4 rounded-xl flex items-center justify-between">
                 <div>
@@ -420,6 +450,26 @@ export default function AdminPanel() {
           </div>
         )}
       </div>
+
+      {/* New Business Modal */}
+      {isNewBusinessOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md">
+          <Card className="w-full max-w-md max-h-[90vh] overflow-y-auto bg-card-gradient border-border p-5 rounded-2xl shadow-2xl space-y-3">
+            <div className="flex items-center justify-between border-b border-border pb-3"><h3 className="font-display font-bold text-white uppercase text-base">Firestore'a İşletme Ekle</h3><button onClick={() => setIsNewBusinessOpen(false)} className="p-1 rounded-lg hover:bg-muted text-muted-foreground"><X className="w-5 h-5" /></button></div>
+            <input placeholder="İşletme adı *" value={businessName} onChange={(e) => setBusinessName(e.target.value)} className="w-full bg-card border border-border rounded-xl p-2.5 text-xs text-foreground" />
+            <select value={businessCategory} onChange={(e) => setBusinessCategory(e.target.value as BusinessCategory)} className="w-full bg-card border border-border rounded-xl p-2.5 text-xs text-foreground"><option value="usta">Usta / Servis</option><option value="lastikci">Lastikçi</option><option value="cekici">Çekici</option><option value="benzinlik">Benzinlik</option><option value="magaza">Mağaza</option><option value="servis">Servis</option></select>
+            <input placeholder="Şehir *" value={businessCity} onChange={(e) => setBusinessCity(e.target.value)} className="w-full bg-card border border-border rounded-xl p-2.5 text-xs text-foreground" />
+            <input placeholder="Açık adres *" value={businessAddress} onChange={(e) => setBusinessAddress(e.target.value)} className="w-full bg-card border border-border rounded-xl p-2.5 text-xs text-foreground" />
+            <input placeholder="Telefon *" value={businessPhone} onChange={(e) => setBusinessPhone(e.target.value)} className="w-full bg-card border border-border rounded-xl p-2.5 text-xs text-foreground" />
+            <input placeholder="Çalışma saatleri *" value={businessHours} onChange={(e) => setBusinessHours(e.target.value)} className="w-full bg-card border border-border rounded-xl p-2.5 text-xs text-foreground" />
+            <div className="grid grid-cols-2 gap-2"><input type="number" step="any" placeholder="Enlem *" value={businessLat} onChange={(e) => setBusinessLat(e.target.value)} className="w-full bg-card border border-border rounded-xl p-2.5 text-xs text-foreground" /><input type="number" step="any" placeholder="Boylam *" value={businessLng} onChange={(e) => setBusinessLng(e.target.value)} className="w-full bg-card border border-border rounded-xl p-2.5 text-xs text-foreground" /></div>
+            <input placeholder="Fotoğraf URL (isteğe bağlı)" value={businessPhoto} onChange={(e) => setBusinessPhoto(e.target.value)} className="w-full bg-card border border-border rounded-xl p-2.5 text-xs text-foreground" />
+            <textarea placeholder="Açıklama (isteğe bağlı)" value={businessDescription} onChange={(e) => setBusinessDescription(e.target.value)} className="w-full bg-card border border-border rounded-xl p-2.5 text-xs text-foreground" rows={3} />
+            <p className="text-[10px] text-muted-foreground">Yeni kayıtlar doğrulanmamış olarak başlar. Yalnızca gerçek ve kontrol edilmiş işletme bilgileri girin.</p>
+            <div className="flex gap-2 pt-2"><button onClick={() => setIsNewBusinessOpen(false)} className="flex-1 py-2.5 rounded-xl border border-border text-xs text-muted-foreground">İptal</button><button onClick={handleCreateBusiness} className="flex-1 py-2.5 rounded-xl bg-primary text-white font-bold text-xs">Sunucuya Kaydet</button></div>
+          </Card>
+        </div>
+      )}
 
       {/* New Banner Modal */}
       {isNewBannerOpen && (
