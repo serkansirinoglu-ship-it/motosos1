@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import Header from "@/components/Header";
 import { useAuth } from "@/contexts/AuthContext";
 import { ReportItem } from "@/services/moderationService";
-import { subscribeReportsRealtime, resolveReportRealtime } from "../../../firebase";
+import { subscribeReportsRealtime, resolveReportRealtime, subscribeBannersRealtime, createBannerRealtime, deleteBannerRealtime } from "../../../firebase";
 import { communityService, CommunityPost } from "@/services/communityService";
 import { marketplaceService, ListingItem } from "@/services/marketplaceService";
 import { businessService, BusinessProfile } from "@/services/businessService";
@@ -59,6 +59,7 @@ export default function AdminPanel() {
     let unsubscribeReports: (() => void) | undefined;
     let unsubscribePosts: (() => void) | undefined;
     let unsubscribeListings: (() => void) | undefined;
+    let unsubscribeBanners: (() => void) | undefined;
     void subscribeReportsRealtime(
       (items: ReportItem[]) => { if (!cancelled) setReports(items); },
       () => { if (!cancelled) toast.error("Şikâyetler sunucudan alınamadı. Firebase bağlantısını ve yönetici yetkisini kontrol edin."); },
@@ -84,14 +85,34 @@ export default function AdminPanel() {
     } catch {
       toast.error("Pazar ilanları sunucuya bağlanamadı.");
     }
+    try {
+      unsubscribeBanners = subscribeBannersRealtime(
+        (items) => {
+          if (cancelled) return;
+          setBanners(items.map((item: Record<string, unknown>) => ({
+            id: String(item.id || ""),
+            title: String(item.title || ""),
+            subtitle: typeof item.subtitle === "string" ? item.subtitle : undefined,
+            sponsorName: typeof item.sponsorName === "string" ? item.sponsorName : undefined,
+            image: typeof item.image === "string" ? item.image : undefined,
+            link: typeof item.link === "string" ? item.link : undefined,
+            active: item.active === true,
+            type: "banner" as const,
+          })));
+        },
+        () => { if (!cancelled) toast.error("Reklamlar Firestore üzerinden alınamadı. Bağlantı ve yönetici yetkisini kontrol edin."); },
+      );
+    } catch {
+      toast.error("Reklamlar sunucuya bağlanamadı.");
+    }
     setBusinesses(businessService.getBusinesses());
-    setBanners(adService.getBanners());
     setActiveSOS(sosService.getActiveRequests());
     return () => {
       cancelled = true;
       unsubscribeReports?.();
       unsubscribePosts?.();
       unsubscribeListings?.();
+      unsubscribeBanners?.();
     };
   }, [adminAccess]);
 
@@ -132,37 +153,39 @@ export default function AdminPanel() {
     setBusinesses(businessService.getBusinesses());
   };
 
-  const handleCreateBanner = () => {
+  const handleCreateBanner = async () => {
     if (!bannerTitle.trim()) {
       toast.error("Lütfen reklam başlığı girin.");
       return;
     }
-    adService.registerBanner({
+    const created = await createBannerRealtime({
       title: bannerTitle.trim(),
       subtitle: bannerSub.trim() || undefined,
       image: bannerImg.trim() || undefined,
       link: bannerLink.trim() || undefined,
-      sponsorName: sponsorName.trim() || "Sponsor",
+      sponsorName: sponsorName.trim() || undefined,
       active: true,
-      type: "banner",
     });
-    toast.info("Banner bu oturum için oluşturuldu; reklam sunucusuna kaydedilmedi ve yayınlanmadı.");
+    if (!created) {
+      toast.error("Reklam sunucuya kaydedilemedi. Yönetici yetkisini ve Firebase bağlantısını kontrol edin.");
+      return;
+    }
+    toast.success("Reklam Firestore'a kaydedildi.");
     setBannerTitle("");
     setBannerSub("");
     setBannerImg("");
     setBannerLink("");
     setSponsorName("");
     setIsNewBannerOpen(false);
-    setBanners(adService.getBanners());
   };
 
-  const handleRemoveBanner = (id: string) => {
-    if (!adService.removeBanner(id)) {
-      toast.error("Banner bu oturumun listesinde bulunamadı; işlem yapılmadı.");
+  const handleRemoveBanner = async (id: string) => {
+    const deleted = await deleteBannerRealtime(id);
+    if (!deleted) {
+      toast.error("Reklam sunucudan silinemedi. Yönetici yetkisini ve Firebase bağlantısını kontrol edin.");
       return;
     }
-    toast.info("Banner bu oturumun yerel listesinden kaldırıldı; sunucu kaydı değiştirilmedi.");
-    setBanners(adService.getBanners());
+    toast.success("Reklam Firestore üzerinden silindi.");
   };
 
   if (adminAccess === "checking") {
@@ -257,7 +280,7 @@ export default function AdminPanel() {
             <Card className="bg-card-gradient border-border p-4 rounded-xl space-y-2">
               <h3 className="font-display font-bold text-white text-xs uppercase">Sistem Durumu</h3>
               <p className="text-xs text-muted-foreground">
-                Gönderi ve ilan sayıları Firestore'dan gerçek zamanlı gelir. İşletme ve reklam verileri hâlen oturum içidir; bu bölümlerdeki değişiklikler kalıcı sunucu kaydı oluşturmaz.
+                Gönderi ve ilan sayıları Firestore'dan gerçek zamanlı gelir. İşletme verileri hâlen oturum içidir; işletme değişiklikleri kalıcı sunucu kaydı oluşturmaz.
               </p>
             </Card>
           </div>
@@ -439,7 +462,7 @@ export default function AdminPanel() {
                 İptal
               </button>
               <button onClick={handleCreateBanner} className="flex-1 py-2.5 rounded-xl bg-primary text-white font-bold text-xs">
-                Oturumda Kaydet
+                Sunucuya Kaydet
               </button>
             </div>
           </Card>
