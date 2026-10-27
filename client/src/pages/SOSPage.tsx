@@ -8,7 +8,7 @@ import { useMessages } from "@/contexts/MessageContext";
 import Header from "@/components/Header";
 import EmergencyWarning from "@/components/EmergencyWarning";
 import { sosService, SOSHelpCategory, CATEGORY_LABELS, STATUS_LABELS, SOSStatus } from "@/services/sosService";
-import { getCurrentAuthUid, createSOSRequest, updateSOSRequest, subscribeActiveSOSRequests } from "../../../firebase";
+import { getCurrentAuthUid, createSOSRequest, updateSOSRequest, getMyActiveSOSRequest, subscribeActiveSOSRequests } from "../../../firebase";
 import { isSameSOSAuthScope } from "@/services/sosInputValidation";
 
 export default function SOSPage() {
@@ -26,13 +26,65 @@ export default function SOSPage() {
   const finishingRef = useRef(false);
   const [nearbyServices, setNearbyServices] = useState<Array<{ key: string; label: string; searchUrl: string; directionsUrl: string }>>([]);
 
-  const { user } = useAuth();
+  const { user, authReady } = useAuth();
   const currentUserUidRef = useRef<string | null>(user?.uid ?? null);
   currentUserUidRef.current = user?.uid ?? null;
+  const sosActiveRef = useRef(sosActive);
+  sosActiveRef.current = sosActive;
+  const sosIdRef = useRef(sosId);
+  sosIdRef.current = sosId;
+  const restoreStartedForUidRef = useRef<string | null>(null);
   const { createHelpRequest } = useMessages();
   const isSOSOwnerScopeCurrent = () =>
     isSameSOSAuthScope(sosOwnerUid, getCurrentAuthUid()) &&
     isSameSOSAuthScope(sosOwnerUid, currentUserUidRef.current);
+
+  // Restore an authenticated rider's active remote SOS after a page refresh.
+  // Only public parent fields are read; exact coordinates/contact details remain private.
+  useEffect(() => {
+    const uid = user?.uid;
+    if (!authReady || !uid || restoreStartedForUidRef.current === uid) return;
+    restoreStartedForUidRef.current = uid;
+    let cancelled = false;
+
+    void getMyActiveSOSRequest(uid).then((request) => {
+      if (
+        cancelled ||
+        !request ||
+        currentUserUidRef.current !== uid ||
+        getCurrentAuthUid() !== uid ||
+        sosActiveRef.current ||
+        submittingRef.current ||
+        sosIdRef.current
+      ) return;
+
+      const latitude = request.latitude;
+      const longitude = request.longitude;
+      setSosOwnerUid(uid);
+      setSosId(request.id);
+      setLocalSosId(null);
+      setSelectedCategory(
+        request.helpType && request.helpType in CATEGORY_LABELS
+          ? request.helpType as SOSHelpCategory
+          : "diger"
+      );
+      setStatus(request.acceptedBy ? "yanit_geliyor" : "bekleniyor");
+      setPosition(
+        typeof latitude === "number" && Number.isFinite(latitude) &&
+        typeof longitude === "number" && Number.isFinite(longitude)
+          ? { lat: latitude, lng: longitude }
+          : null
+      );
+      setSosActive(true);
+      toast.info("Aktif SOS çağrınız geri yüklendi. Haritada gösterilen konum yaklaşık konum olabilir.");
+    }).catch((error) => {
+      console.warn("Could not restore active SOS", error);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authReady, user?.uid]);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;

@@ -311,6 +311,30 @@ export async function updateSOSRequest(id, patch, expectedUid = auth?.currentUse
   }
 }
 
+export async function getMyActiveSOSRequest(uid) {
+  if (!db || !uid || auth?.currentUser?.uid !== uid) return null;
+  try {
+    // Query by owner only; filter active status client-side to avoid a new composite index.
+    const q = query(
+      collection(db, "sosRequests"),
+      where("requesterId", "==", uid)
+    );
+    const snap = await getDocs(q);
+    if (auth?.currentUser?.uid !== uid) return null;
+    const active = snap.docs
+      .map((item) => ({ ...item.data(), id: item.id }))
+      .filter((item) => item.status === "active")
+      .sort((a, b) => {
+        const time = (value) => value?.toMillis?.() ?? (typeof value === "string" ? Date.parse(value) : 0);
+        return time(b.createdAt) - time(a.createdAt);
+      });
+    return active[0] || null;
+  } catch (error) {
+    console.error("getMyActiveSOSRequest error", error);
+    return null;
+  }
+}
+
 export async function getActiveSOSRequests() {
   if (!db) return [];
   try {
