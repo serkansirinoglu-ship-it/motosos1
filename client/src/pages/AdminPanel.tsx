@@ -202,7 +202,7 @@ export default function AdminPanel() {
       <div className="px-4 pt-3 max-w-lg mx-auto">
         <Card className="bg-amber-500/10 border-amber-500/30 p-3 rounded-xl">
           <p className="text-[11px] text-amber-200 leading-relaxed">
-            Not: Topluluk, pazar, işletme ve reklam yönetiminin bir bölümü hâlen oturum içi hizmetler kullanıyor. Bu işlemler kalıcı sunucu yönetimi olarak değerlendirilmemelidir.
+            Not: Gönderiler ve ilanlar Firestore üzerinden yönetilir. İşletme ve reklam yönetimi ise hâlen oturum içi hizmetler kullanıyor; bu işlemler kalıcı sunucu yönetimi değildir.
           </p>
         </Card>
       </div>
@@ -257,7 +257,7 @@ export default function AdminPanel() {
             <Card className="bg-card-gradient border-border p-4 rounded-xl space-y-2">
               <h3 className="font-display font-bold text-white text-xs uppercase">Sistem Durumu</h3>
               <p className="text-xs text-muted-foreground">
-                Paneldeki listeler oturum içi servislerden gelir; kalıcı sunucu moderasyonu ve içerik yönetimi henüz bağlı değildir.
+                Gönderi ve ilan sayıları Firestore'dan gerçek zamanlı gelir. İşletme ve reklam verileri hâlen oturum içidir; bu bölümlerdeki değişiklikler kalıcı sunucu kaydı oluşturmaz.
               </p>
             </Card>
           </div>
