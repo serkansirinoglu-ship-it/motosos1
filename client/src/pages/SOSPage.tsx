@@ -107,6 +107,25 @@ export default function SOSPage() {
     };
   }, [sosActive]);
 
+  // Never keep a previous account's SOS visible or manageable after auth changes.
+  // The remote request is not cancelled; its owner can manage it after signing back in.
+  useEffect(() => {
+    const hasSOSContext = Boolean(sosActive || sosId || localSosId);
+    if (!hasSOSContext || isSameSOSAuthScope(sosOwnerUid, user?.uid)) return;
+
+    if (localSosId) sosService.removeRequest(localSosId);
+    setSosActive(false);
+    setSosId(null);
+    setSosOwnerUid(null);
+    setLocalSosId(null);
+    setPosition(null);
+    setNearbyServices([]);
+    setElapsed(0);
+    setSelectedCategory(null);
+    setStatus("bekleniyor");
+    toast.info("Oturum değiştiği için önceki SOS bu ekrandan kaldırıldı. Sunucuya kaydedilmiş çağrı varsa sahibi olan hesapla yeniden giriş yaparak yönetin.");
+  }, [user?.uid, sosOwnerUid, sosActive, sosId, localSosId]);
+
   // Keep the requester-facing status in sync when another rider accepts the SOS.
   // The subscription returns public active SOS fields only, never private GPS details.
   useEffect(() => {
@@ -223,12 +242,13 @@ export default function SOSPage() {
               setSubmitting(false);
               submittingRef.current = false;
               if (res?.id) {
-                // The server confirmed creation before the account switch. Keep
-                // the remote SOS visible; do not start legacy chat sync as the new user.
-                setSosOwnerUid(initiatingUid);
-                setSosId(res.id);
-                setStatus("bekleniyor");
-                setSosActive(true);
+                // The server confirmed creation before the account switch. Do not
+                // attach that SOS to the newly authenticated user's visible UI.
+                setSosId(null);
+                setSosOwnerUid(null);
+                setSosActive(false);
+                setSelectedCategory(null);
+                setElapsed(0);
                 toast.error("SOS sunucuya kaydedildi ancak oturum değişti. Çağrıyı yönetmek için ilk hesaba yeniden giriş yapın. Acil tehlikede 112’yi arayın.");
               } else {
                 setSosId(null);
