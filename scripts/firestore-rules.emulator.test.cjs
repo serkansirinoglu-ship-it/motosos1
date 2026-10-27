@@ -93,6 +93,18 @@ async function main() {
       await setDoc(doc(db, "internalPrivate", "secret"), { value: "not public" });
       await setDoc(doc(db, "products", "public-product"), { name: "Public catalog fixture" });
       await setDoc(doc(db, "banners", "public-banner"), { title: "Public banner fixture" });
+      await setDoc(doc(db, "businesses", "public-business"), {
+        name: "Public service fixture", category: "servis", city: "İzmir", address: "Konak",
+        phone: "02320000000", workingHours: "09:00-18:00", lat: 38.4237, lng: 27.1428,
+        tier: "standard", verified: false, publicVisible: true, rating: 0, reviewCount: 0,
+        createdAt: new Date(), updatedAt: new Date(),
+      });
+      await setDoc(doc(db, "businesses", "hidden-business"), {
+        name: "Hidden service fixture", category: "servis", city: "İzmir", address: "Konak",
+        phone: "02320000001", workingHours: "09:00-18:00", lat: 38.4237, lng: 27.1428,
+        tier: "standard", verified: false, publicVisible: false, rating: 0, reviewCount: 0,
+        createdAt: new Date(), updatedAt: new Date(),
+      });
       await setDoc(doc(db, "communityPosts", "public-post"), { authorId: "owner", authorName: "Owner", city: "İzmir", content: "Public post fixture", likes: [], comments: [], createdAt: new Date() });
       await setDoc(doc(db, "communityPosts", "legacy-email-post"), { authorId: "owner", authorName: "Owner", authorEmail: "legacy@example.test", city: "İzmir", content: "Legacy email-bearing post", likes: [], comments: [], createdAt: new Date() });
       await setDoc(doc(db, "events", "public-event"), { organizerId: "owner", title: "Public event fixture" });
@@ -472,6 +484,23 @@ async function main() {
     console.log("PASS: default-deny prevents anonymous reads of private/unmatched documents");
     await assertSucceeds(getDoc(doc(anonymous, "products", "public-product")));
     await assertSucceeds(getDoc(doc(anonymous, "banners", "public-banner")));
+    await assertSucceeds(getDoc(doc(anonymous, "businesses", "public-business")));
+    await assertFails(getDoc(doc(anonymous, "businesses", "hidden-business")));
+    await assertSucceeds(getDoc(doc(admin, "businesses", "hidden-business")));
+    await assertFails(setDoc(doc(outsider, "businesses", "unauthorized-business"), {
+      name: "Unauthorized", category: "servis", city: "İzmir", address: "Konak", phone: "1",
+      workingHours: "all day", lat: 38, lng: 27, tier: "standard", verified: false,
+      publicVisible: true, rating: 0, reviewCount: 0, createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+    }));
+    await assertSucceeds(setDoc(doc(admin, "businesses", "admin-created-business"), {
+      name: "Admin-created", category: "usta", city: "İzmir", address: "Karşıyaka", phone: "2",
+      workingHours: "09:00-18:00", lat: 38.45, lng: 27.1, tier: "standard", verified: false,
+      publicVisible: true, rating: 0, reviewCount: 0, createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+    }));
+    await assertSucceeds(updateDoc(doc(admin, "businesses", "public-business"), { tier: "sponsored", updatedAt: serverTimestamp() }));
+    await assertFails(updateDoc(doc(outsider, "businesses", "public-business"), { tier: "sponsored", updatedAt: serverTimestamp() }));
+    await assertFails(updateDoc(doc(admin, "businesses", "public-business"), { rating: 5, updatedAt: serverTimestamp() }));
+    console.log("PASS: business directory exposes only visible records and restricts creation/tier changes to admins");
     await assertSucceeds(getDoc(doc(anonymous, "communityPosts", "public-post")));
     await assertFails(getDoc(doc(anonymous, "communityPosts", "legacy-email-post")));
     await assertSucceeds(getDoc(doc(owner, "communityPosts", "legacy-email-post")));
