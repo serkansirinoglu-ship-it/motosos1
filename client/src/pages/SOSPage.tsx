@@ -294,16 +294,67 @@ export default function SOSPage() {
               toast.error("Bu hesap için başka bir SOS oluşturma işlemi sürüyor. Sonucu kontrol edip yeniden deneyin.");
               return;
             } else if (res?.error === "active_duplicate") {
-              // Keep the local UI consistent with the server-side duplicate guard.
+              // Remove this attempt's local placeholder, then restore the authoritative
+              // active SOS if it still exists. Never turn a duplicate into a local-only SOS.
               sosService.updateStatus(localReq.id, "iptal_edildi");
               setLocalSosId(null);
               setSosOwnerUid(null);
               setSosId(null);
               setPosition(null);
               setNearbyServices([]);
+              setElapsed(0);
+              setSelectedCategory(null);
+              setStatus("bekleniyor");
               setSubmitting(false);
               submittingRef.current = false;
-              toast.error("Zaten aktif bir SOS çağrınız var. Yeni çağrı açmadan önce mevcut çağrınızı kontrol edin.");
+
+              let existingRequest = null;
+              const authScopeStillCurrent =
+                Boolean(initiatingUid) &&
+                isSameSOSAuthScope(initiatingUid, getCurrentAuthUid()) &&
+                isSameSOSAuthScope(initiatingUid, currentUserUidRef.current);
+              if (authScopeStillCurrent) {
+                try {
+                  existingRequest = await getMyActiveSOSRequest(initiatingUid);
+                } catch (error) {
+                  console.warn("Could not restore existing active SOS after duplicate rejection", error);
+                }
+              }
+
+              const canRestoreExistingRequest =
+                existingRequest &&
+                isSameSOSAuthScope(initiatingUid, getCurrentAuthUid()) &&
+                isSameSOSAuthScope(initiatingUid, currentUserUidRef.current);
+              if (canRestoreExistingRequest) {
+                const existingLat = existingRequest.latitude;
+                const existingLng = existingRequest.longitude;
+                const hasValidPosition =
+                  typeof existingLat === "number" && Number.isFinite(existingLat) &&
+                  existingLat >= -90 && existingLat <= 90 &&
+                  typeof existingLng === "number" && Number.isFinite(existingLng) &&
+                  existingLng >= -180 && existingLng <= 180;
+                setSosOwnerUid(initiatingUid);
+                setSosId(existingRequest.id);
+                setSelectedCategory(
+                  existingRequest.helpType && existingRequest.helpType in CATEGORY_LABELS
+                    ? existingRequest.helpType as SOSHelpCategory
+                    : "diger"
+                );
+                setStatus(existingRequest.acceptedBy ? "yanit_geliyor" : "bekleniyor");
+                setPosition(hasValidPosition ? { lat: existingLat, lng: existingLng } : null);
+                setNearbyServices(
+                  hasValidPosition ? buildNearbyServiceLinks(existingLat, existingLng) : []
+                );
+                setElapsed(getElapsedSOSSeconds(existingRequest.createdAt));
+                setSosActive(true);
+                toast.info("Mevcut aktif SOS çağrınız geri yüklendi.");
+              } else {
+                toast.error(
+                  authScopeStillCurrent
+                    ? "Zaten aktif bir SOS çağrınız var veya durum henüz doğrulanamadı. Yeni çağrı açmadan önce aktif SOS kaydınızı yeniden kontrol edin."
+                    : "Oturumunuz değiştiği için mevcut SOS geri yüklenmedi. İlk hesabınıza yeniden giriş yapıp çağrınızı kontrol edin."
+                );
+              }
               return;
             } else {
               console.warn("SOS was not persisted to Firebase", res?.error || "Firebase unavailable");
