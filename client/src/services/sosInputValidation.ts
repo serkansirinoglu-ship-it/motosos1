@@ -227,6 +227,42 @@ export function validateBannerPatch(id: unknown, patch: unknown): boolean {
     isPlainRecord(patch) && validBannerFields(patch, false);
 }
 
+
+const BUSINESS_FIELDS = ["name", "category", "city", "address", "phone", "workingHours", "lat", "lng", "photo", "tier", "verified", "description", "publicVisible"] as const;
+const BUSINESS_CATEGORIES = ["usta", "lastikci", "cekici", "servis", "magaza", "benzinlik"] as const;
+const BUSINESS_TIERS = ["standard", "featured", "premium", "sponsored"] as const;
+
+function validBusinessFields(value: Record<string, unknown>, requireAll: boolean): boolean {
+  if (!hasOnlyFields(value, BUSINESS_FIELDS)) return false;
+  if (requireAll && ["name", "category", "city", "address", "phone", "workingHours", "lat", "lng", "tier", "verified", "publicVisible"].some((key) => !(key in value))) return false;
+  if ("name" in value && (typeof value.name !== "string" || !value.name.trim() || value.name.length > 120)) return false;
+  if ("category" in value && !(BUSINESS_CATEGORIES as readonly unknown[]).includes(value.category)) return false;
+  if ("city" in value && (typeof value.city !== "string" || !value.city.trim() || value.city.length > 100)) return false;
+  if ("address" in value && (typeof value.address !== "string" || !value.address.trim() || value.address.length > 240)) return false;
+  if ("phone" in value && (typeof value.phone !== "string" || !value.phone.trim() || value.phone.length > 40)) return false;
+  if ("workingHours" in value && (typeof value.workingHours !== "string" || value.workingHours.length > 120)) return false;
+  if ("lat" in value && (typeof value.lat !== "number" || !Number.isFinite(value.lat) || value.lat < -90 || value.lat > 90)) return false;
+  if ("lng" in value && (typeof value.lng !== "number" || !Number.isFinite(value.lng) || value.lng < -180 || value.lng > 180)) return false;
+  if ("photo" in value && !validOptionalText(value.photo, 2048)) return false;
+  if ("photo" in value && typeof value.photo === "string" && value.photo !== "") {
+    try { const url = new URL(value.photo); if (url.protocol !== "https:" && url.protocol !== "http:") return false; } catch { return false; }
+  }
+  if ("tier" in value && !(BUSINESS_TIERS as readonly unknown[]).includes(value.tier)) return false;
+  if ("verified" in value && typeof value.verified !== "boolean") return false;
+  if ("publicVisible" in value && typeof value.publicVisible !== "boolean") return false;
+  if ("description" in value && !validOptionalText(value.description, 1500)) return false;
+  return true;
+}
+
+export function validateBusinessInput(value: unknown): boolean {
+  return isPlainRecord(value) && validBusinessFields(value, true);
+}
+
+export function validateBusinessPatch(id: unknown, patch: unknown): boolean {
+  return typeof id === "string" && id.length > 0 && id.length <= 128 && !id.includes("/") &&
+    isPlainRecord(patch) && validBusinessFields(patch, false);
+}
+
 export function validateAdminDocumentId(id: unknown): boolean {
   return typeof id === "string" && id.length > 0 && id.length <= 128 && !id.includes("/");
 }
