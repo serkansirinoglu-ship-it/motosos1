@@ -115,6 +115,15 @@ describe("SOSService in-memory request lifecycle", () => {
     },
   );
 
+  it("removes a local placeholder when its remote SOS is no longer active", () => {
+    const created = sosService.createRequest(request);
+
+    expect(sosService.removeRequest(created.id)).toBe(true);
+    expect(sosService.getAllRequests().some((item) => item.id === created.id)).toBe(false);
+    expect(sosService.getActiveRequests().some((item) => item.id === created.id)).toBe(false);
+    expect(sosService.removeRequest(created.id)).toBe(false);
+  });
+
   it("returns false when asked to update a missing request", () => {
     expect(sosService.updateStatus("missing-sos-id", "iptal_edildi")).toBe(false);
   });

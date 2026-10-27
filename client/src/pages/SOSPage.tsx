@@ -109,10 +109,28 @@ export default function SOSPage() {
     if (!sosId) return;
     let active = true;
     const unsubscribe = subscribeActiveSOSRequests(
-      (requests: Array<{ id: string; acceptedBy?: string | null }>) => {
+      (requests: Array<{ id: string; acceptedBy?: string | null }>, metadata?: { fromCache?: boolean }) => {
         if (!active) return;
         const current = requests.find((request: { id: string; acceptedBy?: string | null }) => request.id === sosId);
-        if (!current) return;
+        if (!current) {
+          // Do not clear state from a cache-only snapshot: a restored SOS may not
+          // yet be present in this device's cache. Wait for the server snapshot.
+          if (metadata?.fromCache !== false || !sosActiveRef.current || sosIdRef.current !== sosId) return;
+          // This query contains active SOS records only. A server-confirmed snapshot
+          // omitting our known ID means it is no longer active.
+          if (localSosId) sosService.removeRequest(localSosId);
+          setSosActive(false);
+          setSosId(null);
+          setSosOwnerUid(null);
+          setLocalSosId(null);
+          setPosition(null);
+          setNearbyServices([]);
+          setElapsed(0);
+          setSelectedCategory(null);
+          setStatus("bekleniyor");
+          toast.info("Sunucu aktif çağrılar listesinde bu SOS artık görünmüyor. Ekrandaki aktif durum kapatıldı; ayrıntılı son durum doğrulanmadı.");
+          return;
+        }
         setStatus(current.acceptedBy ? "yanit_geliyor" : "bekleniyor");
       },
       (error: unknown) => {

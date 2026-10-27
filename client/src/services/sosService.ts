@@ -56,6 +56,14 @@ class SOSService {
     return [...this.activeRequests];
   }
 
+  /** Remove a local placeholder after its authoritative remote SOS is no longer active. */
+  public removeRequest(id: string): boolean {
+    const index = this.activeRequests.findIndex((request) => request.id === id);
+    if (index < 0) return false;
+    this.activeRequests.splice(index, 1);
+    return true;
+  }
+
   public createRequest(data: Omit<SOSRequestItem, 'id' | 'status' | 'helpersCount' | 'createdAt'>): SOSRequestItem {
     const newItem: SOSRequestItem = {
       ...data,

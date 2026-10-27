@@ -380,14 +380,15 @@ export function subscribeActiveSOSRequests(onUpdate, onError) {
     );
     return onSnapshot(
       q,
-      (snap) => onUpdate(
-        snap.docs
+      (snap) => {
+        const activeRequests = snap.docs
           .map((d) => ({ ...d.data(), id: d.id }))
           .sort((a, b) => {
             const time = (value) => value?.toMillis?.() ?? (typeof value === "string" ? Date.parse(value) : 0);
             return time(b.createdAt) - time(a.createdAt);
-          })
-      ),
+          });
+        onUpdate(activeRequests, { fromCache: snap.metadata.fromCache });
+      },
       (error) => {
         console.error("subscribeActiveSOSRequests error", error);
         if (typeof onError === "function") onError(error);
