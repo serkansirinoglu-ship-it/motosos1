@@ -94,6 +94,18 @@ class CommunityService {
     return postRef.id;
   }
 
+  /** Admin moderation deletion; the refreshed Firebase token and Firestore rules both enforce admin access. */
+  public async deleteRemotePostAsAdmin(postId: string): Promise<void> {
+    const user = communityAuth?.currentUser;
+    if (!communityDb || !user) throw new Error("Yönetici oturumu veya Firebase bağlantısı gerekli.");
+    if (typeof postId !== "string" || !postId.trim() || postId.includes("/") || postId.length > 1500) {
+      throw new Error("Gönderi kimliği geçersiz.");
+    }
+    const token = await user.getIdTokenResult(true);
+    if (token.claims.admin !== true) throw new Error("Yönetici yetkisi doğrulanamadı.");
+    await deleteDoc(doc(communityDb, "communityPosts", postId));
+  }
+
   /** Firestore rules are the final authority for owner-only deletion. */
   public async deleteRemotePost(postId: string, authorId: string): Promise<void> {
     if (!communityDb || !communityAuth?.currentUser?.uid) throw new Error("Gönderi silmek için giriş yapın.");
