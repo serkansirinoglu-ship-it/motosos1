@@ -17,6 +17,7 @@ export default function SOSPage() {
   const [elapsed, setElapsed] = useState(0);
   const [position, setPosition] = useState<{ lat: number; lng: number } | null>(null);
   const [sosId, setSosId] = useState<string | null>(null); // Firebase document ID, when persisted
+  const [sosOwnerUid, setSosOwnerUid] = useState<string | null>(null);
   const [localSosId, setLocalSosId] = useState<string | null>(null);
   const [status, setStatus] = useState<SOSStatus>("bekleniyor");
   const [submitting, setSubmitting] = useState(false);
@@ -29,6 +30,9 @@ export default function SOSPage() {
   const currentUserUidRef = useRef<string | null>(user?.uid ?? null);
   currentUserUidRef.current = user?.uid ?? null;
   const { createHelpRequest } = useMessages();
+  const sosOwnerScopeCurrent =
+    isSameSOSAuthScope(sosOwnerUid, getCurrentAuthUid()) &&
+    isSameSOSAuthScope(sosOwnerUid, currentUserUidRef.current);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -124,6 +128,7 @@ export default function SOSPage() {
         });
 
         setLocalSosId(localReq.id);
+        setSosOwnerUid(initiatingUid);
         setSosId(null);
         setStatus("bekleniyor");
         let firebaseSaved = false;
@@ -151,6 +156,7 @@ export default function SOSPage() {
               if (res?.id) {
                 // The server confirmed creation before the account switch. Keep
                 // the remote SOS visible; do not start legacy chat sync as the new user.
+                setSosOwnerUid(initiatingUid);
                 setSosId(res.id);
                 setStatus("bekleniyor");
                 setSosActive(true);
@@ -169,6 +175,7 @@ export default function SOSPage() {
               // authenticated identity changed. Remove the local placeholder too.
               sosService.updateStatus(localReq.id, "iptal_edildi");
               setLocalSosId(null);
+              setSosOwnerUid(null);
               setSosId(null);
               setPosition(null);
               setNearbyServices([]);
@@ -180,6 +187,7 @@ export default function SOSPage() {
               // Keep the local UI consistent with the server-side duplicate guard.
               sosService.updateStatus(localReq.id, "iptal_edildi");
               setLocalSosId(null);
+              setSosOwnerUid(null);
               setSosId(null);
               setSubmitting(false);
               submittingRef.current = false;
@@ -249,15 +257,25 @@ export default function SOSPage() {
     if (finishingRef.current) return;
     finishingRef.current = true;
     setFinishing(true);
+    if (!sosOwnerScopeCurrent) {
+      toast.error("Bu SOS farklı bir oturumda oluşturuldu. İptal etmek için çağrıyı oluşturan hesaba yeniden giriş yapın. Acil tehlikede 112’yi arayın.");
+      finishingRef.current = false;
+      setFinishing(false);
+      return;
+    }
     if (sosId) {
       let remoteUpdated = false;
       try {
-        remoteUpdated = (await updateSOSRequest(sosId, { status: "cancelled" })) === true;
+        remoteUpdated = (await updateSOSRequest(sosId, { status: "cancelled" }, sosOwnerUid)) === true;
       } catch (error) {
         console.error("Firebase SOS cancellation failed", error);
       }
       if (!remoteUpdated) {
-        toast.error("Sunucu çağrısı iptal edilemedi. Çağrı aktif tutuldu; bağlantınızı kontrol edip yeniden deneyin.");
+        toast.error(
+          !sosOwnerScopeCurrent
+            ? "Oturum değişti. Çağrının durumu doğrulanamadı; ilk hesabınıza dönerek kontrol edin. Acil tehlikede 112’yi arayın."
+            : "Sunucu çağrısı iptal edilemedi. Çağrı aktif tutuldu; bağlantınızı kontrol edip yeniden deneyin."
+        );
         finishingRef.current = false;
         setFinishing(false);
         return;
@@ -267,6 +285,7 @@ export default function SOSPage() {
     if (localSosId) sosService.updateStatus(localSosId, "iptal_edildi");
     setSosActive(false);
     setSosId(null);
+    setSosOwnerUid(null);
     setLocalSosId(null);
     setElapsed(0);
     setSelectedCategory(null);
@@ -279,15 +298,25 @@ export default function SOSPage() {
     if (finishingRef.current) return;
     finishingRef.current = true;
     setFinishing(true);
+    if (!sosOwnerScopeCurrent) {
+      toast.error("Bu SOS farklı bir oturumda oluşturuldu. Tamamlamak için çağrıyı oluşturan hesaba yeniden giriş yapın. Acil tehlikede 112’yi arayın.");
+      finishingRef.current = false;
+      setFinishing(false);
+      return;
+    }
     if (sosId) {
       let remoteUpdated = false;
       try {
-        remoteUpdated = (await updateSOSRequest(sosId, { status: "resolved" })) === true;
+        remoteUpdated = (await updateSOSRequest(sosId, { status: "resolved" }, sosOwnerUid)) === true;
       } catch (error) {
         console.error("Firebase SOS completion failed", error);
       }
       if (!remoteUpdated) {
-        toast.error("Sunucu çağrısı tamamlandı olarak işaretlenemedi. Çağrı aktif tutuldu; bağlantınızı kontrol edip yeniden deneyin.");
+        toast.error(
+          !sosOwnerScopeCurrent
+            ? "Oturum değişti. Çağrının durumu doğrulanamadı; ilk hesabınıza dönerek kontrol edin. Acil tehlikede 112’yi arayın."
+            : "Sunucu çağrısı tamamlandı olarak işaretlenemedi. Çağrı aktif tutuldu; bağlantınızı kontrol edip yeniden deneyin."
+        );
         finishingRef.current = false;
         setFinishing(false);
         return;
@@ -297,6 +326,7 @@ export default function SOSPage() {
     if (localSosId) sosService.updateStatus(localSosId, "tamamlandi");
     setSosActive(false);
     setSosId(null);
+    setSosOwnerUid(null);
     setLocalSosId(null);
     setElapsed(0);
     setSelectedCategory(null);
@@ -336,6 +366,11 @@ export default function SOSPage() {
           {!sosId && (
             <p role="status" className="w-full mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs leading-relaxed text-amber-200">
               Bu çağrı yalnızca bu oturumda kayıtlı. Sunucuya kaydedildiği ve diğer sürücülere ulaştığı doğrulanmadı. Acil tehlikede 112’yi arayın.
+            </p>
+          )}
+          {!sosOwnerScopeCurrent && (
+            <p role="alert" className="w-full mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs leading-relaxed text-amber-200">
+              Oturum değişti. Bu çağrıyı yanlış hesapla değiştirmemek için iptal ve tamamlama kilitlendi. Çağrıyı oluşturan hesaba yeniden giriş yapın. Acil tehlikede 112’yi arayın.
             </p>
           )}
 
@@ -396,7 +431,7 @@ export default function SOSPage() {
           <div className="w-full mt-6 flex gap-3">
             <Button
               onClick={handleResolve}
-              disabled={finishing}
+              disabled={finishing || !sosOwnerScopeCurrent}
               className="flex-1 h-12 bg-green-600 hover:bg-green-700 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-green-600/30"
             >
               <Check className="w-4 h-4 mr-1.5" />
@@ -404,7 +439,7 @@ export default function SOSPage() {
             </Button>
             <Button
               onClick={handleCancel}
-              disabled={finishing}
+              disabled={finishing || !sosOwnerScopeCurrent}
               variant="outline"
               className="flex-1 h-12 border-destructive text-destructive hover:bg-destructive/10 font-bold text-xs uppercase tracking-wider rounded-xl"
             >

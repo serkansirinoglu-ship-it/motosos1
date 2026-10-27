@@ -285,15 +285,24 @@ export async function acceptSOSRequest(id) {
   }
 }
 
-export async function updateSOSRequest(id, patch) {
+export async function updateSOSRequest(id, patch, expectedUid = auth?.currentUser?.uid) {
   // Only owner terminal transitions are supported by this client API.
   // Firestore rules remain authoritative, but reject malformed/over-broad writes early.
-  if (!db || !auth?.currentUser?.uid || !id || !validateSOSStatusUpdatePatch(patch)) return false;
+  if (
+    !db ||
+    typeof expectedUid !== "string" ||
+    !expectedUid ||
+    auth?.currentUser?.uid !== expectedUid ||
+    !id ||
+    !validateSOSStatusUpdatePatch(patch)
+  ) return false;
   try {
     const ref = doc(db, "sosRequests", id);
     const safePatch = { status: patch.status, updatedAt: serverTimestamp() };
     if (patch.status === "resolved") safePatch.resolvedAt = serverTimestamp();
     if (patch.status === "cancelled") safePatch.cancelledAt = serverTimestamp();
+    // Recheck immediately before the write; Firestore rules remain authoritative.
+    if (auth?.currentUser?.uid !== expectedUid) return false;
     await updateDoc(ref, safePatch);
     return true;
   } catch (e) {
