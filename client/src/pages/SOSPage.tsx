@@ -299,6 +299,8 @@ export default function SOSPage() {
               setLocalSosId(null);
               setSosOwnerUid(null);
               setSosId(null);
+              setPosition(null);
+              setNearbyServices([]);
               setSubmitting(false);
               submittingRef.current = false;
               toast.error("Zaten aktif bir SOS çağrınız var. Yeni çağrı açmadan önce mevcut çağrınızı kontrol edin.");
