@@ -55,16 +55,24 @@ export default function AdminPanel() {
 
   useEffect(() => {
     if (adminAccess !== "allowed") return;
+    let cancelled = false;
     let unsubscribeReports: (() => void) | undefined;
     void subscribeReportsRealtime(
-      (items) => setReports(items),
-      () => toast.error("Şikâyetler sunucudan alınamadı. Firebase bağlantısını ve yönetici yetkisini kontrol edin."),
-    ).then((unsubscribe) => { unsubscribeReports = unsubscribe; });
+      (items) => { if (!cancelled) setReports(items); },
+      () => { if (!cancelled) toast.error("Şikâyetler sunucudan alınamadı. Firebase bağlantısını ve yönetici yetkisini kontrol edin."); },
+    ).then((unsubscribe) => {
+      if (cancelled) unsubscribe();
+      else unsubscribeReports = unsubscribe;
+    });
     setPosts(communityService.getPosts());
     setListings(marketplaceService.getListings());
     setBusinesses(businessService.getBusinesses());
     setBanners(adService.getBanners());
     setActiveSOS(sosService.getActiveRequests());
+    return () => {
+      cancelled = true;
+      unsubscribeReports?.();
+    };
   }, [adminAccess]);
 
   const handleResolveReport = async (id: string, action: "resolved" | "dismissed") => {
