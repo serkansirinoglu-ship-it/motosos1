@@ -2,6 +2,7 @@ import { initializeApp } from "firebase/app";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut as firebaseSignOut, onAuthStateChanged, getIdTokenResult } from "firebase/auth";
 import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, getDocs, doc, setDoc, getDoc, updateDoc, deleteDoc, where, Timestamp, writeBatch } from "firebase/firestore";
 import { isCurrentSOSAuthSession, validateSOSRequestInput, validateSOSStatusUpdatePatch, validateUserProfilePatch, validateUserProfileCreation, validateProductInput, validateProductPatch, validateBannerInput, validateBannerPatch, validateAdminDocumentId } from "./client/src/services/sosInputValidation";
+import { acquireSOSCreationLock, releaseSOSCreationLock } from "./client/src/services/sosCreateLock";
 import { validateHelpMessageInput, validateHelpRequestInput, validateHelpRequestUpdatePatch } from "./client/src/services/helpMessageValidation";
 
 // Read config from Vite environment variables
@@ -215,6 +216,9 @@ export async function createSOSRequest(data) {
   // Treat client validation as defense in depth; Firestore rules remain authoritative.
   const inputError = validateSOSRequestInput(authenticatedUid, data || {});
   if (inputError) return { id: null, error: inputError };
+  if (!acquireSOSCreationLock(authenticatedUid)) {
+    return { id: null, error: "creation_in_progress" };
+  }
 
   try {
     // Prevent multiple active SOS by same user
@@ -268,6 +272,8 @@ export async function createSOSRequest(data) {
   } catch (e) {
     console.error("createSOSRequest error", e);
     return { id: null, error: "network" };
+  } finally {
+    releaseSOSCreationLock(authenticatedUid);
   }
 }
 

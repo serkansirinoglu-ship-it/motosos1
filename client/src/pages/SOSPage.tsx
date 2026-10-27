@@ -280,6 +280,19 @@ export default function SOSPage() {
               submittingRef.current = false;
               toast.error("Oturumunuz değiştiği için SOS sunucuya kaydedilmedi. Yeni oturumda yeniden deneyin.");
               return;
+            } else if (res?.error === "creation_in_progress") {
+              // Another SOS creation for this account is already running in this app runtime.
+              // Remove this attempt's local placeholder instead of showing a false active SOS.
+              sosService.updateStatus(localReq.id, "iptal_edildi");
+              setLocalSosId(null);
+              setSosOwnerUid(null);
+              setSosId(null);
+              setPosition(null);
+              setNearbyServices([]);
+              setSubmitting(false);
+              submittingRef.current = false;
+              toast.error("Bu hesap için başka bir SOS oluşturma işlemi sürüyor. Sonucu kontrol edip yeniden deneyin.");
+              return;
             } else if (res?.error === "active_duplicate") {
               // Keep the local UI consistent with the server-side duplicate guard.
               sosService.updateStatus(localReq.id, "iptal_edildi");
