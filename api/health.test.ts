@@ -37,7 +37,7 @@ afterEach(() => {
 describe("preview-only health endpoint", () => {
   it.each([undefined, "production", "development"])(
     "returns 404 outside Preview (VERCEL_ENV=%s)",
-    (environment) => {
+    (environment: string | undefined) => {
       if (environment === undefined) {
         vi.stubEnv("VERCEL_ENV", "");
       } else {
