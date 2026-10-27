@@ -53,3 +53,16 @@ Reviewed the current branch without touching production resources:
 **Do not add a production-facing SOS endpoint yet.** First decide and document the supported backend execution target (for example, a properly configured serverless function or managed backend service), its identity verification method, secret storage, App Check strategy, rate limits, logging policy, and deployment owner. Then implement the endpoint behind a non-production-only configuration with emulator-backed transaction/concurrency tests. A generic Express route in the current SPA server is not assumed to work as a Vercel function.
 
 No Firebase Admin dependency, endpoint, secret, hosting configuration, Firestore rule, or production deployment was changed as part of this feasibility audit.
+
+
+## Non-production transaction proof of concept
+
+Safe CI now includes `scripts/sos-active-guard.emulator.test.cjs`, which runs only when `FIRESTORE_EMULATOR_HOST` is set and the project ID begins with `demo-`. It uses the Admin SDK only against the isolated emulator and verifies:
+
+- six simultaneous create attempts resolve to one active SOS ID;
+- retries return the existing active request;
+- terminal close clears only the matching guard;
+- a new active request can be created after close;
+- a guard pointing to a missing SOS document can be recovered.
+
+This is a transaction-pattern proof of concept, not a production endpoint. The Admin SDK bypasses Firestore Security Rules, so it does not validate endpoint authentication or authorization. The client is not wired to this code; the cross-device issue remains unresolved until a supported server runtime, authenticated endpoint, dependency/secret management, lifecycle integration, and deployment plan are implemented and reviewed.
