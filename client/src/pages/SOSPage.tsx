@@ -394,6 +394,8 @@ export default function SOSPage() {
     setSosId(null);
     setSosOwnerUid(null);
     setLocalSosId(null);
+    setPosition(null);
+    setNearbyServices([]);
     setElapsed(0);
     setSelectedCategory(null);
     finishingRef.current = false;
@@ -445,6 +447,8 @@ export default function SOSPage() {
     setSosId(null);
     setSosOwnerUid(null);
     setLocalSosId(null);
+    setPosition(null);
+    setNearbyServices([]);
     setElapsed(0);
     setSelectedCategory(null);
     finishingRef.current = false;
