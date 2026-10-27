@@ -44,9 +44,18 @@ This document is a release gate, not a claim that the product is production-read
 
 For each checklist item, record the tested commit SHA, test command/scenario, result, and CI run or review evidence. Re-run the full suite against the exact release candidate after the final code change. A source build alone is not acceptance evidence.
 
+## Vercel configuration audit (2026-10-27)
+
+Read-only project metadata and environment-variable names were inspected; secret values were not decrypted or inspected.
+
+- The `motoguard` project reports 26 environment-variable records. Names include payment-provider settings, admin bootstrap settings, a persistence flag, and database/Neon settings. The metadata includes both production-only and production/preview-targeted records. This is not proof that every variable is populated or that the application consumes it correctly.
+- The separate `motosos1` project reports no project environment-variable records in the Vercel environment listing. Its project metadata identifies Vite and SSO protection for non-custom domains; the `motoguard` project reports no framework selection and no SSO protection. These are configuration differences to resolve before choosing a backend deployment target.
+- No matching deployment exists for current audit head `37cd81a998b806d0a68c2a58aff5b690320f9a4b` in either project. No deployment was created by this audit. An older READY deployment is not evidence for the current commit.
+- The current repository contains no `api/` or `functions/` directory, and `server/index.ts` only serves the SPA. Do not add a production-facing SOS endpoint until the intended Vercel project/runtime, non-production Firebase project, and server-side secret/identity configuration are explicitly mapped and validated.
+
 ## Current verified boundary
 
-At the latest checkpoint, commit `2e5ee07e85ecb6d326f019ec3169dff9b5278a9f` passed Safe CI run [40468111866](https://github.com/serkansirinoglu-ship-it/motosos1/actions/runs/40468111866): TypeScript, unit tests, production build without deployment, static Firestore audit, strict rules gate, rules-file parity, isolated emulator authorization tests, and the protected-home-page guard. This commit only refreshes this release-gate evidence; the Vercel output-directory change itself remains from `52d6c899a75d232b5338b19aea5e228b0a6ad9d2`.
+Commit `37cd81a998b806d0a68c2a58aff5b690320f9a4b` passed Safe CI run [40468754889](https://github.com/serkansirinoglu-ship-it/motosos1/actions/runs/40468754889): TypeScript, unit tests, production build without deployment, static Firestore audit, strict rules gate, rules-file parity, isolated emulator authorization tests, and the protected-home-page guard. The Vercel output-directory change itself remains from `52d6c899a75d232b5338b19aea5e228b0a6ad9d2`.
 
 The Vercel projects were checked against this exact commit and no matching deployment was found. The most recent observed READY deployments belong to older commits, so the `vercel.json` output-directory change has not yet been validated by a Preview deployment. Do not treat an older READY deployment as evidence for the current head.
 
