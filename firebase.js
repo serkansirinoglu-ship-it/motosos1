@@ -313,7 +313,7 @@ export async function updateSOSRequest(id, patch, expectedUid = auth?.currentUse
 
 /**
  * Restore only the caller's active public SOS record after a refresh.
- * @returns {Promise<({id: string, latitude?: number, longitude?: number, helpType?: string, acceptedBy?: string | null} | null)>}
+ * @returns {Promise<({id: string, latitude?: number, longitude?: number, helpType?: string, acceptedBy?: string | null, createdAt?: {toMillis?: () => number} | Date | string | null} | null)>}
  */
 export async function getMyActiveSOSRequest(uid) {
   if (!db || !uid || auth?.currentUser?.uid !== uid) return null;

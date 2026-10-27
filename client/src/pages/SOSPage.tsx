@@ -11,6 +11,7 @@ import { sosService, SOSHelpCategory, CATEGORY_LABELS, STATUS_LABELS, SOSStatus 
 import { getCurrentAuthUid, createSOSRequest, updateSOSRequest, getMyActiveSOSRequest, subscribeActiveSOSRequests } from "../../../firebase";
 import { isSameSOSAuthScope } from "@/services/sosInputValidation";
 import { buildNearbyServiceLinks } from "@/services/nearbyServices";
+import { getElapsedSOSSeconds } from "@/services/sosTiming";
 
 export default function SOSPage() {
   const [sosActive, setSosActive] = useState(false);
@@ -81,6 +82,7 @@ export default function SOSPage() {
         longitude >= -180 && longitude <= 180;
       setPosition(hasValidPosition ? { lat: latitude, lng: longitude } : null);
       setNearbyServices(hasValidPosition ? buildNearbyServiceLinks(latitude, longitude) : []);
+      setElapsed(getElapsedSOSSeconds(request.createdAt));
       setSosActive(true);
       toast.info("Aktif SOS çağrınız geri yüklendi. Haritada gösterilen konum yaklaşık konum olabilir.");
     }).catch((error) => {
