@@ -57,6 +57,8 @@ export default function AdminPanel() {
     if (adminAccess !== "allowed") return;
     let cancelled = false;
     let unsubscribeReports: (() => void) | undefined;
+    let unsubscribePosts: (() => void) | undefined;
+    let unsubscribeListings: (() => void) | undefined;
     void subscribeReportsRealtime(
       (items: ReportItem[]) => { if (!cancelled) setReports(items); },
       () => { if (!cancelled) toast.error("Şikâyetler sunucudan alınamadı. Firebase bağlantısını ve yönetici yetkisini kontrol edin."); },
@@ -64,14 +66,32 @@ export default function AdminPanel() {
       if (cancelled) unsubscribe();
       else unsubscribeReports = unsubscribe;
     });
-    setPosts(communityService.getPosts());
-    setListings(marketplaceService.getListings());
+    try {
+      unsubscribePosts = communityService.subscribeRemotePosts(
+        (items) => { if (!cancelled) setPosts(items); },
+        () => { if (!cancelled) toast.error("Topluluk gönderileri Firestore üzerinden alınamadı. Bağlantı ve yönetici yetkisini kontrol edin."); },
+        () => !cancelled,
+      );
+    } catch {
+      toast.error("Topluluk gönderileri sunucuya bağlanamadı.");
+    }
+    try {
+      unsubscribeListings = marketplaceService.subscribeRemoteListings(
+        (items) => { if (!cancelled) setListings(items); },
+        () => { if (!cancelled) toast.error("Pazar ilanları Firestore üzerinden alınamadı. Bağlantı ve yönetici yetkisini kontrol edin."); },
+        () => !cancelled,
+      );
+    } catch {
+      toast.error("Pazar ilanları sunucuya bağlanamadı.");
+    }
     setBusinesses(businessService.getBusinesses());
     setBanners(adService.getBanners());
     setActiveSOS(sosService.getActiveRequests());
     return () => {
       cancelled = true;
       unsubscribeReports?.();
+      unsubscribePosts?.();
+      unsubscribeListings?.();
     };
   }, [adminAccess]);
 
@@ -84,22 +104,22 @@ export default function AdminPanel() {
     toast.success(action === "resolved" ? "Şikâyet sunucuda çözüldü olarak işaretlendi." : "Şikâyet sunucuda reddedildi olarak işaretlendi.");
   };
 
-  const handleDeletePost = (id: string) => {
-    if (!communityService.deletePost(id)) {
-      toast.error("Gönderi bu oturumun listesinde bulunamadı; işlem yapılmadı.");
-      return;
+  const handleDeletePost = async (id: string) => {
+    try {
+      await communityService.deleteRemotePostAsAdmin(id);
+      toast.success("Gönderi Firestore üzerinden silindi.");
+    } catch {
+      toast.error("Gönderi sunucudan silinemedi. Yönetici yetkisini ve Firebase bağlantısını kontrol edin.");
     }
-    toast.info("Gönderi yalnızca bu oturumun yerel verisinden kaldırıldı; sunucudaki içerik silinmedi.");
-    setPosts(communityService.getPosts());
   };
 
-  const handleDeleteListing = (id: string) => {
-    if (!marketplaceService.deleteListing(id)) {
-      toast.error("İlan bu oturumun listesinde bulunamadı; işlem yapılmadı.");
-      return;
+  const handleDeleteListing = async (id: string) => {
+    try {
+      await marketplaceService.deleteRemoteListingAsAdmin(id);
+      toast.success("İlan Firestore üzerinden silindi.");
+    } catch {
+      toast.error("İlan sunucudan silinemedi. Yönetici yetkisini ve Firebase bağlantısını kontrol edin.");
     }
-    toast.info("İlan yalnızca bu oturumun yerel verisinden kaldırıldı; sunucudaki ilan silinmedi.");
-    setListings(marketplaceService.getListings());
   };
 
   const handleToggleTier = (bizId: string, currentTier: BusinessProfile["tier"]) => {
