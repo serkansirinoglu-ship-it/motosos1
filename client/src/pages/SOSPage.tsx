@@ -305,8 +305,6 @@ export default function SOSPage() {
               setElapsed(0);
               setSelectedCategory(null);
               setStatus("bekleniyor");
-              setSubmitting(false);
-              submittingRef.current = false;
 
               let existingRequest = null;
               const authScopeStillCurrent =
@@ -355,6 +353,9 @@ export default function SOSPage() {
                     : "Oturumunuz değiştiği için mevcut SOS geri yüklenmedi. İlk hesabınıza yeniden giriş yapıp çağrınızı kontrol edin."
                 );
               }
+              // Keep the submit lock until the authoritative active SOS lookup finishes.
+              setSubmitting(false);
+              submittingRef.current = false;
               return;
             } else {
               console.warn("SOS was not persisted to Firebase", res?.error || "Firebase unavailable");
