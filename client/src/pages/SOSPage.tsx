@@ -26,6 +26,8 @@ export default function SOSPage() {
   const submittingRef = useRef(false);
   const [finishing, setFinishing] = useState(false);
   const finishingRef = useRef(false);
+  // Invalidates in-flight close operations when the authenticated SOS scope changes.
+  const finishOperationRef = useRef(0);
   const [nearbyServices, setNearbyServices] = useState<Array<{ key: string; label: string; searchUrl: string; directionsUrl: string }>>([]);
 
   const { user, authReady } = useAuth();
@@ -112,6 +114,12 @@ export default function SOSPage() {
   useEffect(() => {
     const hasSOSContext = Boolean(sosActive || sosId || localSosId);
     if (!hasSOSContext || isSameSOSAuthScope(sosOwnerUid, user?.uid)) return;
+
+    // Release the UI lock for the next account and prevent an old promise from
+    // unlocking or otherwise mutating a newer account's close operation.
+    finishOperationRef.current += 1;
+    finishingRef.current = false;
+    setFinishing(false);
 
     if (localSosId) sosService.removeRequest(localSosId);
     setSosActive(false);
@@ -345,6 +353,7 @@ export default function SOSPage() {
   const handleCancel = async () => {
     if (finishingRef.current) return;
     finishingRef.current = true;
+    const operationId = ++finishOperationRef.current;
     setFinishing(true);
     if (!isSOSOwnerScopeCurrent()) {
       toast.error("Bu SOS farklı bir oturumda oluşturuldu. İptal etmek için çağrıyı oluşturan hesaba yeniden giriş yapın. Acil tehlikede 112’yi arayın.");
@@ -359,6 +368,7 @@ export default function SOSPage() {
       } catch (error) {
         console.error("Firebase SOS cancellation failed", error);
       }
+      if (operationId !== finishOperationRef.current) return;
       if (!remoteUpdated) {
         toast.error(
           !isSOSOwnerScopeCurrent()
@@ -394,6 +404,7 @@ export default function SOSPage() {
   const handleResolve = async () => {
     if (finishingRef.current) return;
     finishingRef.current = true;
+    const operationId = ++finishOperationRef.current;
     setFinishing(true);
     if (!isSOSOwnerScopeCurrent()) {
       toast.error("Bu SOS farklı bir oturumda oluşturuldu. Tamamlamak için çağrıyı oluşturan hesaba yeniden giriş yapın. Acil tehlikede 112’yi arayın.");
@@ -408,6 +419,7 @@ export default function SOSPage() {
       } catch (error) {
         console.error("Firebase SOS completion failed", error);
       }
+      if (operationId !== finishOperationRef.current) return;
       if (!remoteUpdated) {
         toast.error(
           !isSOSOwnerScopeCurrent()
