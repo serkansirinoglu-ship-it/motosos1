@@ -67,3 +67,12 @@ Durable persistence gaps, cross-account cache/privacy checks, legacy-record priv
 This verifies only the listed automated checks on the stated commit. It does **not** establish full product or deployment readiness.
 
 **Until every blocker has implementation and recorded verification, the release decision remains BLOCKED.** No production deployment or production Firestore rules publication is authorized by this document.
+
+
+## Latest exact-head verification (2026-10-27)
+
+- Current branch head: `720b51f07fea60bccae7af78184ca8b4d6764347` (documentation-only update).
+- Safe CI run [40479379218](https://github.com/serkansirinoglu-ship-it/motosos1/actions/runs/40479379218) completed with conclusion `success` for that exact head. The job is `Typecheck, tests and build (no deployment)`; this remains CI evidence only, not release acceptance.
+- Protected asset verification at this head: `client/src/pages/Home.tsx` SHA `a45976c8085709adce1a6186e4a72865d440c654`; `firestore.rules` and `firestore.prod.rules` both SHA `c6741aead88452ed7f794323e75fb3f4f581da43` and byte-identical.
+- PR #3 remains open and unmerged. No production deployment, rules publication, or production-data operation was performed.
+- Remaining release blockers are unchanged: dedicated non-production Firebase/runtime isolation, authenticated endpoint and complete SOS schema/lifecycle integration, cross-device uniqueness in the actual client path, durable feature persistence, privacy checks, end-to-end acceptance, and Production configuration/health evidence.
