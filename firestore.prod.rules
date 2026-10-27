@@ -430,16 +430,15 @@ service cloud.firestore {
         || (isSignedIn() && resource.data.authorId == request.auth.uid);
     }
 
-    // Events: public read; organizer identity and creation timestamp cannot be rewritten.
+    // Events: public read; only administrators may publish, edit, or remove events.
     match /events/{eventId} {
-      // Public events must contain only approved public fields; organizers/admins can review legacy records.
       allow read: if isAdmin()
         || (isSignedIn() && resource.data.organizerId == request.auth.uid)
         || resource.data.keys().hasOnly([
           'organizerId', 'title', 'description', 'city', 'location',
           'startsAt', 'endsAt', 'image', 'createdAt'
         ]);
-      allow create: if isSignedIn()
+      allow create: if isAdmin()
         && request.resource.data.organizerId == request.auth.uid
         && request.resource.data.createdAt == request.time
         && request.resource.data.keys().hasOnly([
@@ -452,21 +451,24 @@ service cloud.firestore {
         && (!('description' in request.resource.data) || (request.resource.data.description is string && request.resource.data.description.size() <= 3000))
         && (!('city' in request.resource.data) || (request.resource.data.city is string && request.resource.data.city.size() <= 100))
         && (!('location' in request.resource.data) || (request.resource.data.location is string && request.resource.data.location.size() <= 300))
+        && (!('startsAt' in request.resource.data) || (request.resource.data.startsAt is string && request.resource.data.startsAt.size() <= 80))
+        && (!('endsAt' in request.resource.data) || (request.resource.data.endsAt is string && request.resource.data.endsAt.size() <= 80))
         && (!('image' in request.resource.data) || (request.resource.data.image is string && request.resource.data.image.size() <= 2048));
       allow update: if isAdmin()
-        || (isSignedIn()
-          && resource.data.organizerId == request.auth.uid
-          && request.resource.data.organizerId == resource.data.organizerId
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'title', 'description', 'city', 'location', 'startsAt', 'endsAt', 'image'
-          ])
-          && request.resource.data.title is string
-          && request.resource.data.title.size() > 0
-          && request.resource.data.title.size() <= 160
-          && (!('description' in request.resource.data) || (request.resource.data.description is string && request.resource.data.description.size() <= 3000))
-          && (!('city' in request.resource.data) || (request.resource.data.city is string && request.resource.data.city.size() <= 100))
-          && (!('location' in request.resource.data) || (request.resource.data.location is string && request.resource.data.location.size() <= 300))
-          && (!('image' in request.resource.data) || (request.resource.data.image is string && request.resource.data.image.size() <= 2048)));
+        && request.resource.data.organizerId == resource.data.organizerId
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'title', 'description', 'city', 'location', 'startsAt', 'endsAt', 'image'
+        ])
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 160
+        && (!('description' in request.resource.data) || (request.resource.data.description is string && request.resource.data.description.size() <= 3000))
+        && (!('city' in request.resource.data) || (request.resource.data.city is string && request.resource.data.city.size() <= 100))
+        && (!('location' in request.resource.data) || (request.resource.data.location is string && request.resource.data.location.size() <= 300))
+        && (!('startsAt' in request.resource.data) || (request.resource.data.startsAt is string && request.resource.data.startsAt.size() <= 80))
+        && (!('endsAt' in request.resource.data) || (request.resource.data.endsAt is string && request.resource.data.endsAt.size() <= 80))
+        && (!('image' in request.resource.data) || (request.resource.data.image is string && request.resource.data.image.size() <= 2048));
       allow delete: if isAdmin();
     }
 
