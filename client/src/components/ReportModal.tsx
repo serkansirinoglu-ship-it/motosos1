@@ -17,7 +17,6 @@ export default function ReportModal({
   onClose,
   targetType,
   targetId,
-  reporterEmail = "anonim@motoguard.tr",
 }: ReportModalProps) {
   const [reason, setReason] = useState("");
   const [details, setDetails] = useState("");
