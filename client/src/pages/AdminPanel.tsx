@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ShieldCheck, Users, ShoppingBag, Flag, AlertTriangle, Image as ImageIcon, BarChart3, Wrench, Trash2, CheckCircle, Ban, X, Plus } from "lucide-react";
+import { ShieldCheck, Users, ShoppingBag, Flag, AlertTriangle, Image as ImageIcon, BarChart3, Wrench, Trash2, CheckCircle, Ban, X, Plus, CalendarDays } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import Header from "@/components/Header";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,12 +10,13 @@ import { marketplaceService, ListingItem } from "@/services/marketplaceService";
 import { businessService, BusinessProfile, BusinessCategory } from "@/services/businessService";
 import { sosService, SOSRequestItem } from "@/services/sosService";
 import type { AdBanner } from "@/services/adService";
+import { subscribeMotoGuardEvents, createMotoGuardEvent, deleteMotoGuardEvent, type MotoGuardEvent } from "@/services/eventsService";
 import { toast } from "sonner";
 
 export default function AdminPanel() {
   const { user } = useAuth();
   const [adminAccess, setAdminAccess] = useState<"checking" | "allowed" | "denied">("checking");
-  const [activeTab, setActiveTab] = useState<"stats" | "reports" | "users" | "posts" | "listings" | "businesses" | "banners">("stats");
+  const [activeTab, setActiveTab] = useState<"stats" | "reports" | "users" | "posts" | "listings" | "businesses" | "banners" | "events">("stats");
 
   // Admin Data state
   const [reports, setReports] = useState<ReportItem[]>([]);
@@ -24,6 +25,15 @@ export default function AdminPanel() {
   const [businesses, setBusinesses] = useState<BusinessProfile[]>([]);
   const [banners, setBanners] = useState<AdBanner[]>([]);
   const [activeSOS, setActiveSOS] = useState<SOSRequestItem[]>([]);
+  const [events, setEvents] = useState<MotoGuardEvent[]>([]);
+  const [isNewEventOpen, setIsNewEventOpen] = useState(false);
+  const [eventTitle, setEventTitle] = useState("");
+  const [eventDescription, setEventDescription] = useState("");
+  const [eventCity, setEventCity] = useState("");
+  const [eventLocation, setEventLocation] = useState("");
+  const [eventStartsAt, setEventStartsAt] = useState("");
+  const [eventEndsAt, setEventEndsAt] = useState("");
+  const [eventImage, setEventImage] = useState("");
 
   // Banner form state
   const [isNewBannerOpen, setIsNewBannerOpen] = useState(false);
@@ -72,6 +82,7 @@ export default function AdminPanel() {
     let unsubscribeListings: (() => void) | undefined;
     let unsubscribeBanners: (() => void) | undefined;
     let unsubscribeBusinesses: (() => void) | undefined;
+    let unsubscribeEvents: (() => void) | undefined;
     void subscribeReportsRealtime(
       (items: ReportItem[]) => { if (!cancelled) setReports(items); },
       () => { if (!cancelled) toast.error("Şikâyetler sunucudan alınamadı. Firebase bağlantısını ve yönetici yetkisini kontrol edin."); },
@@ -117,6 +128,14 @@ export default function AdminPanel() {
     } catch {
       toast.error("Reklamlar sunucuya bağlanamadı.");
     }
+    try {
+      unsubscribeEvents = subscribeMotoGuardEvents(
+        (items) => { if (!cancelled) setEvents(items); },
+        () => { if (!cancelled) toast.error("Etkinlikler Firestore üzerinden alınamadı."); },
+      );
+    } catch {
+      if (!cancelled) toast.error("Etkinlikler sunucuya bağlanamadı.");
+    }
     unsubscribeBusinesses = businessService.subscribe(
       () => { if (!cancelled) setBusinesses(businessService.getBusinesses()); },
       () => { if (!cancelled) toast.error("İşletmeler Firestore üzerinden alınamadı."); },
@@ -129,6 +148,7 @@ export default function AdminPanel() {
       unsubscribeListings?.();
       unsubscribeBanners?.();
       unsubscribeBusinesses?.();
+      unsubscribeEvents?.();
     };
   }, [adminAccess]);
 
@@ -179,6 +199,18 @@ export default function AdminPanel() {
     setBusinessName(""); setBusinessCity(""); setBusinessAddress(""); setBusinessPhone(""); setBusinessHours("09:00-18:00"); setBusinessLat(""); setBusinessLng(""); setBusinessPhoto(""); setBusinessDescription(""); setBusinessCategory("usta"); setIsNewBusinessOpen(false);
   };
 
+  const handleCreateEvent = async () => {
+    if (!eventTitle.trim() || !eventCity.trim() || !eventLocation.trim() || !eventStartsAt || !eventEndsAt) { toast.error("Etkinlik başlığı, şehir, konum ve tarih aralığı zorunludur."); return; }
+    const id = await createMotoGuardEvent({ title: eventTitle.trim(), description: eventDescription.trim(), city: eventCity.trim(), location: eventLocation.trim(), startsAt: new Date(eventStartsAt).toISOString(), endsAt: new Date(eventEndsAt).toISOString(), image: eventImage.trim() || undefined });
+    if (!id) { toast.error("Etkinlik sunucuya kaydedilemedi. Yönetici yetkisini, tarihleri ve Firebase bağlantısını kontrol edin."); return; }
+    toast.success("Etkinlik Firestore'a kaydedildi.");
+    setEventTitle(""); setEventDescription(""); setEventCity(""); setEventLocation(""); setEventStartsAt(""); setEventEndsAt(""); setEventImage(""); setIsNewEventOpen(false);
+  };
+
+  const handleDeleteEvent = async (eventId: string) => {
+    try { if (!(await deleteMotoGuardEvent(eventId))) { toast.error("Etkinlik silinemedi; yönetici yetkisini kontrol edin."); return; } toast.success("Etkinlik sunucudan silindi."); }
+    catch (error) { console.error("Event deletion failed", error); toast.error("Etkinlik sunucudan silinemedi."); }
+  };
   const handleCreateBanner = async () => {
     if (!bannerTitle.trim()) {
       toast.error("Lütfen reklam başlığı girin.");
@@ -277,6 +309,7 @@ export default function AdminPanel() {
             { id: "posts", label: "📢 Gönderiler" },
             { id: "listings", label: "🛒 İlanlar" },
             { id: "businesses", label: "🔧 İşletmeler" },
+            { id: "events", label: `🗓️ Etkinlikler (${events.length})` },
             { id: "banners", label: "📢 Reklam/Sponsor" },
           ].map((tab) => (
             <button
@@ -399,6 +432,15 @@ export default function AdminPanel() {
           </div>
         )}
 
+        {/* Event Management */}
+        {activeTab === "events" && (
+          <div className="mt-4 space-y-3">
+            <button onClick={() => setIsNewEventOpen(true)} className="w-full bg-primary text-white font-bold text-xs py-3 rounded-xl flex items-center justify-center gap-1.5"><CalendarDays className="w-4 h-4" /> Yeni Etkinlik Yayınla</button>
+            {events.length === 0 && <Card className="bg-card-gradient border-border p-5 rounded-xl text-center"><p className="text-xs text-muted-foreground">Henüz etkinlik yok. Yönetici panelinden yayınlayabilirsiniz.</p></Card>}
+            {events.map((event) => <Card key={event.id} className="bg-card-gradient border-border p-4 rounded-xl flex items-start justify-between gap-3"><div><p className="font-bold text-white text-xs">{event.title}</p><p className="text-xs text-muted-foreground">{event.city} · {event.location}</p><p className="text-[10px] text-muted-foreground mt-1">{event.startsAt}</p></div><button onClick={() => handleDeleteEvent(event.id)} className="p-2 text-destructive hover:bg-destructive/10 rounded-xl" title="Etkinliği sil"><Trash2 className="w-4 h-4" /></button></Card>)}
+          </div>
+        )}
+
         {/* Business Management */}
         {activeTab === "businesses" && (
           <div className="mt-4 space-y-3">
@@ -450,6 +492,23 @@ export default function AdminPanel() {
           </div>
         )}
       </div>
+
+      {/* New Event Modal */}
+      {isNewEventOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md">
+          <Card className="w-full max-w-md max-h-[90vh] overflow-y-auto bg-card-gradient border-border p-5 rounded-2xl shadow-2xl space-y-3">
+            <div className="flex items-center justify-between border-b border-border pb-3"><h3 className="font-display font-bold text-white uppercase text-base">Etkinlik Yayınla</h3><button onClick={() => setIsNewEventOpen(false)} className="p-1 rounded-lg hover:bg-muted text-muted-foreground"><X className="w-5 h-5" /></button></div>
+            <input placeholder="Etkinlik başlığı *" value={eventTitle} onChange={(e) => setEventTitle(e.target.value)} className="w-full bg-card border border-border rounded-xl p-2.5 text-xs text-foreground" />
+            <textarea placeholder="Açıklama" value={eventDescription} onChange={(e) => setEventDescription(e.target.value)} className="w-full bg-card border border-border rounded-xl p-2.5 text-xs text-foreground" rows={3} />
+            <input placeholder="Şehir *" value={eventCity} onChange={(e) => setEventCity(e.target.value)} className="w-full bg-card border border-border rounded-xl p-2.5 text-xs text-foreground" />
+            <input placeholder="Konum / buluşma noktası *" value={eventLocation} onChange={(e) => setEventLocation(e.target.value)} className="w-full bg-card border border-border rounded-xl p-2.5 text-xs text-foreground" />
+            <label className="block text-xs text-muted-foreground">Başlangıç *<input type="datetime-local" value={eventStartsAt} onChange={(e) => setEventStartsAt(e.target.value)} className="mt-1 w-full bg-card border border-border rounded-xl p-2.5 text-xs text-foreground" /></label>
+            <label className="block text-xs text-muted-foreground">Bitiş *<input type="datetime-local" value={eventEndsAt} onChange={(e) => setEventEndsAt(e.target.value)} className="mt-1 w-full bg-card border border-border rounded-xl p-2.5 text-xs text-foreground" /></label>
+            <input placeholder="Görsel URL (isteğe bağlı)" value={eventImage} onChange={(e) => setEventImage(e.target.value)} className="w-full bg-card border border-border rounded-xl p-2.5 text-xs text-foreground" />
+            <div className="flex gap-2 pt-2"><button onClick={() => setIsNewEventOpen(false)} className="flex-1 py-2.5 rounded-xl border border-border text-xs text-muted-foreground">İptal</button><button onClick={handleCreateEvent} className="flex-1 py-2.5 rounded-xl bg-primary text-white font-bold text-xs">Sunucuya Kaydet</button></div>
+          </Card>
+        </div>
+      )}
 
       {/* New Business Modal */}
       {isNewBusinessOpen && (
