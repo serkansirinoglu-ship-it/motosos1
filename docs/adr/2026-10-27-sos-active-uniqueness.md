@@ -37,3 +37,19 @@ The server must use a narrowly scoped Admin SDK identity and must not expose a g
 ## Known limitations
 
 The current client query and in-memory lock remain defense-in-depth only. Cross-device uniqueness is not fixed by this document or by the existing Safe CI checks. Device-level SOS end-to-end behavior has not been tested here.
+
+## Repository feasibility audit (2026-10-27)
+
+Reviewed the current branch without touching production resources:
+
+- `server/index.ts` is an Express static-file server with a catch-all route that serves the SPA; it has no authenticated API routes.
+- `vercel.json` currently declares only the frozen pnpm install command and does not define a serverless API/function routing strategy.
+- The root `package.json` does not include the Firebase Admin SDK.
+- The existing browser client uses the Firebase client SDK; it is not a trusted environment for enforcing a cross-device uniqueness lock.
+- The existing `sosCreateLock` is explicitly limited to one JavaScript runtime.
+
+### Implementation gate
+
+**Do not add a production-facing SOS endpoint yet.** First decide and document the supported backend execution target (for example, a properly configured serverless function or managed backend service), its identity verification method, secret storage, App Check strategy, rate limits, logging policy, and deployment owner. Then implement the endpoint behind a non-production-only configuration with emulator-backed transaction/concurrency tests. A generic Express route in the current SPA server is not assumed to work as a Vercel function.
+
+No Firebase Admin dependency, endpoint, secret, hosting configuration, Firestore rule, or production deployment was changed as part of this feasibility audit.
