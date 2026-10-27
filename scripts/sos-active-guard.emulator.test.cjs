@@ -102,12 +102,28 @@ async function run() {
     assert.equal(retry.created, false, "retry must return existing active SOS");
     assert.equal(retry.id, activeId);
 
+    assert.equal(await closeActiveSOS(`${uid}-not-owner`, activeId, "resolved"), false,
+      "a different owner must not close another user's SOS");
+    assert.equal((await sosCollection.doc(activeId).get()).data()?.status, "active",
+      "unauthorized close must leave SOS active");
+    assert.equal((await guardRef.get()).data()?.sosId, activeId,
+      "unauthorized close must leave the active guard untouched");
+
     assert.equal(await closeActiveSOS(uid, activeId, "cancelled"), true);
     assert.equal((await guardRef.get()).exists, false, "closing the guarded SOS clears the guard");
 
     const next = await createOrGetActiveSOS(uid);
     assert.equal(next.created, true, "new SOS is allowed after terminal close");
     assert.notEqual(next.id, activeId);
+    createdIds.add(next.id);
+
+    // A stale close must never remove a guard now owned by a different request.
+    const newerGuardTarget = "newer-guard-owner-marker";
+    await guardRef.set({ sosId: newerGuardTarget });
+    assert.equal(await closeActiveSOS(uid, next.id, "resolved"), true);
+    assert.equal((await guardRef.get()).data()?.sosId, newerGuardTarget,
+      "closing an older SOS must not clear a guard owned by another SOS");
+    await guardRef.delete();
 
     // Stale guard recovery: a guard pointing at a missing request must not block creation.
     staleUid = `emulator-sos-stale-${randomUUID()}`;
@@ -118,7 +134,7 @@ async function run() {
     assert.equal(recovered.created, true);
     assert.equal((await staleGuardRef.get()).data()?.sosId, recovered.id);
 
-    console.log("PASS: emulator SOS guard transaction serializes concurrent creates, retries, closes, and stale guards.");
+    console.log("PASS: emulator SOS guard transaction serializes concurrent creates, retries, ownership checks, safe close, and stale guards.");
   } finally {
     const guardSnap = await guardRef.get().catch(() => null);
     const testIds = new Set([...createdIds]);
