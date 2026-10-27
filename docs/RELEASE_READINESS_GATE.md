@@ -45,6 +45,8 @@ This document is a release gate, not a claim that the product is production-read
 For each checklist item, record the tested commit SHA, test command/scenario, result, and CI run or review evidence. Re-run the full suite against the exact release candidate after the final code change. A source build alone is not acceptance evidence.
 
 ## Vercel configuration audit (2026-10-27)
+- A direct read-only request to the current Preview URL's `/api/sos` returned HTTP 404 (`NOT_FOUND`). This confirms there is no deployed SOS API route at that path in that Preview; it is not an endpoint-level auth test. Do not wire the client to this route until a protected, non-production server endpoint is implemented and verified.
+
 
 Read-only project metadata and environment-variable names were inspected; secret values were not decrypted or inspected.
 
