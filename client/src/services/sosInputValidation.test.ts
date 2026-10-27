@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isCurrentSOSAuthSession, validateSOSRequestInput, validateSOSStatusUpdatePatch, validateUserProfilePatch, validateUserProfileCreation, validateProductInput, validateProductPatch, validateBannerInput, validateBannerPatch, validateAdminDocumentId } from "./sosInputValidation";
+import { isCurrentSOSAuthSession, isSameSOSAuthScope, validateSOSRequestInput, validateSOSStatusUpdatePatch, validateUserProfilePatch, validateUserProfileCreation, validateProductInput, validateProductPatch, validateBannerInput, validateBannerPatch, validateAdminDocumentId } from "./sosInputValidation";
 
 const validInput = {
   requesterId: "authenticated-rider",
@@ -8,6 +8,21 @@ const validInput = {
   latitude: 38.4237,
   longitude: 27.1428,
 };
+
+describe("isSameSOSAuthScope", () => {
+  it("keeps the same authenticated account in scope", () => {
+    expect(isSameSOSAuthScope("rider-1", "rider-1")).toBe(true);
+  });
+
+  it("keeps an anonymous flow in scope only while the current scope is anonymous", () => {
+    expect(isSameSOSAuthScope(null, null)).toBe(true);
+    expect(isSameSOSAuthScope(undefined, null)).toBe(true);
+    expect(isSameSOSAuthScope(null, undefined)).toBe(true);
+    expect(isSameSOSAuthScope(null, "rider-1")).toBe(false);
+    expect(isSameSOSAuthScope("rider-1", null)).toBe(false);
+    expect(isSameSOSAuthScope("rider-1", "rider-2")).toBe(false);
+  });
+});
 
 describe("isCurrentSOSAuthSession", () => {
   it("allows the original authenticated user while the session UID is unchanged", () => {

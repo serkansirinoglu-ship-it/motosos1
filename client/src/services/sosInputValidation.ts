@@ -11,6 +11,19 @@ export function isCurrentSOSAuthSession(
     authenticatedUid === currentUid;
 }
 
+/**
+ * Compare an asynchronous SOS flow's captured auth scope with the current scope.
+ * A missing UID represents the same anonymous scope only when both sides are missing.
+ */
+export function isSameSOSAuthScope(
+  initialUid: string | null | undefined,
+  currentUid: string | null | undefined,
+): boolean {
+  const initialScope = typeof initialUid === "string" && initialUid.length > 0 ? initialUid : null;
+  const currentScope = typeof currentUid === "string" && currentUid.length > 0 ? currentUid : null;
+  return initialScope === currentScope;
+}
+
 export const SOS_HELP_TYPES = ["lastik", "aku", "yakit", "ariza", "kaza", "cekici", "diger"] as const;
 
 export interface SOSRequestInput {

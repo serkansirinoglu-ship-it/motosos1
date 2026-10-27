@@ -8,7 +8,8 @@ import { useMessages } from "@/contexts/MessageContext";
 import Header from "@/components/Header";
 import EmergencyWarning from "@/components/EmergencyWarning";
 import { sosService, SOSHelpCategory, CATEGORY_LABELS, STATUS_LABELS, SOSStatus } from "@/services/sosService";
-import { createSOSRequest, updateSOSRequest, subscribeActiveSOSRequests } from "../../../firebase";
+import { auth, createSOSRequest, updateSOSRequest, subscribeActiveSOSRequests } from "../../../firebase";
+import { isSameSOSAuthScope } from "@/services/sosInputValidation";
 
 export default function SOSPage() {
   const [sosActive, setSosActive] = useState(false);
@@ -25,6 +26,8 @@ export default function SOSPage() {
   const [nearbyServices, setNearbyServices] = useState<Array<{ key: string; label: string; searchUrl: string; directionsUrl: string }>>([]);
 
   const { user } = useAuth();
+  const currentUserUidRef = useRef<string | null>(user?.uid ?? null);
+  currentUserUidRef.current = user?.uid ?? null;
   const { createHelpRequest } = useMessages();
 
   useEffect(() => {
@@ -62,6 +65,7 @@ export default function SOSPage() {
   const handleSOS = async (catOverride?: SOSHelpCategory) => {
     if (submittingRef.current) return;
     submittingRef.current = true;
+    const initiatingUid = user?.uid ?? null;
     const category = catOverride || selectedCategory || "diger";
     setSelectedCategory(category);
     setSubmitting(true);
@@ -79,6 +83,17 @@ export default function SOSPage() {
       navigator.geolocation.getCurrentPosition(
       async (pos) => {
         toast.dismiss();
+        // Geolocation may resolve after sign-out or account switching. Do not
+        // create even a local SOS under the identity that initiated the request.
+        if (
+          !isSameSOSAuthScope(initiatingUid, auth?.currentUser?.uid) ||
+          !isSameSOSAuthScope(initiatingUid, currentUserUidRef.current)
+        ) {
+          setSubmitting(false);
+          submittingRef.current = false;
+          toast.error("Oturumunuz değiştiği için SOS oluşturulmadı. Yeni oturumda yeniden deneyin.");
+          return;
+        }
         const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
         setPosition({ lat, lng });
@@ -123,9 +138,44 @@ export default function SOSPage() {
               latitude: lat,
               longitude: lng,
             });
+            const scopeStillCurrent =
+              isSameSOSAuthScope(initiatingUid, auth?.currentUser?.uid) &&
+              isSameSOSAuthScope(initiatingUid, currentUserUidRef.current);
+            if (!scopeStillCurrent && res?.error !== "active_duplicate") {
+              sosService.updateStatus(localReq.id, "iptal_edildi");
+              setLocalSosId(null);
+              setPosition(null);
+              setNearbyServices([]);
+              setSubmitting(false);
+              submittingRef.current = false;
+              if (res?.id) {
+                // The server confirmed creation before the account switch. Keep
+                // the remote SOS visible; do not start legacy chat sync as the new user.
+                setSosId(res.id);
+                setStatus("bekleniyor");
+                setSosActive(true);
+                toast.error("SOS sunucuya kaydedildi ancak oturum değişti. Çağrıyı yönetmek için ilk hesaba yeniden giriş yapın. Acil tehlikede 112’yi arayın.");
+              } else {
+                setSosId(null);
+                toast.error("Oturum değiştiği için SOS sonucu doğrulanamadı. İlk hesabınızla aktif çağrınızı kontrol edin; acil tehlikede 112’yi arayın.");
+              }
+              return;
+            }
             if (res?.id) {
               setSosId(res.id);
               firebaseSaved = true;
+            } else if (res?.error === "auth_changed") {
+              // The service rejected the write before committing because the
+              // authenticated identity changed. Remove the local placeholder too.
+              sosService.updateStatus(localReq.id, "iptal_edildi");
+              setLocalSosId(null);
+              setSosId(null);
+              setPosition(null);
+              setNearbyServices([]);
+              setSubmitting(false);
+              submittingRef.current = false;
+              toast.error("Oturumunuz değiştiği için SOS sunucuya kaydedilmedi. Yeni oturumda yeniden deneyin.");
+              return;
             } else if (res?.error === "active_duplicate") {
               // Keep the local UI consistent with the server-side duplicate guard.
               sosService.updateStatus(localReq.id, "iptal_edildi");
