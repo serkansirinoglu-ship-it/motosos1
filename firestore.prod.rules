@@ -279,6 +279,35 @@ service cloud.firestore {
       }
     }
 
+    // Reports: authenticated members can submit bounded reports; only admins can review/update.
+    match /reports/{reportId} {
+      allow create: if isSignedIn()
+        && request.resource.data.keys().hasOnly([
+          'targetType', 'targetId', 'reason', 'details',
+          'reporterUid', 'reporterEmail', 'status', 'createdAt'
+        ])
+        && request.resource.data.reporterUid == request.auth.uid
+        && request.resource.data.reporterEmail == request.auth.token.email
+        && request.resource.data.targetType in ['post', 'listing', 'user', 'message', 'sos']
+        && request.resource.data.targetId is string
+        && request.resource.data.targetId.size() > 0
+        && request.resource.data.targetId.size() <= 200
+        && request.resource.data.reason is string
+        && request.resource.data.reason.size() > 0
+        && request.resource.data.reason.size() <= 160
+        && request.resource.data.details is string
+        && request.resource.data.details.size() <= 1000
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdAt == request.time;
+      allow read: if isAdmin();
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'resolvedAt', 'resolvedBy'])
+        && request.resource.data.status in ['resolved', 'dismissed']
+        && request.resource.data.resolvedBy == request.auth.uid
+        && request.resource.data.resolvedAt == request.time;
+      allow delete: if isAdmin();
+    }
+
     // Products: public read, admin write
     match /products/{productId} {
       allow read: if true;
