@@ -3,7 +3,8 @@ import { ShieldCheck, Users, ShoppingBag, Flag, AlertTriangle, Image as ImageIco
 import { Card } from "@/components/ui/card";
 import Header from "@/components/Header";
 import { useAuth } from "@/contexts/AuthContext";
-import { moderationService, ReportItem } from "@/services/moderationService";
+import { ReportItem } from "@/services/moderationService";
+import { subscribeReportsRealtime, resolveReportRealtime } from "../../../firebase";
 import { communityService, CommunityPost } from "@/services/communityService";
 import { marketplaceService, ListingItem } from "@/services/marketplaceService";
 import { businessService, BusinessProfile } from "@/services/businessService";
@@ -54,7 +55,11 @@ export default function AdminPanel() {
 
   useEffect(() => {
     if (adminAccess !== "allowed") return;
-    setReports(moderationService.getReports());
+    let unsubscribeReports: (() => void) | undefined;
+    void subscribeReportsRealtime(
+      (items) => setReports(items),
+      () => toast.error("Şikâyetler sunucudan alınamadı. Firebase bağlantısını ve yönetici yetkisini kontrol edin."),
+    ).then((unsubscribe) => { unsubscribeReports = unsubscribe; });
     setPosts(communityService.getPosts());
     setListings(marketplaceService.getListings());
     setBusinesses(businessService.getBusinesses());
@@ -62,13 +67,13 @@ export default function AdminPanel() {
     setActiveSOS(sosService.getActiveRequests());
   }, [adminAccess]);
 
-  const handleResolveReport = (id: string, action: "resolved" | "dismissed") => {
-    if (!moderationService.resolveReport(id, action)) {
-      toast.error("Şikâyet bu oturumun listesinde bulunamadı; işlem yapılmadı.");
+  const handleResolveReport = async (id: string, action: "resolved" | "dismissed") => {
+    const saved = await resolveReportRealtime(id, action);
+    if (!saved) {
+      toast.error("Şikâyet sunucuda güncellenemedi; yönetici yetkisini ve bağlantıyı kontrol edin.");
       return;
     }
-    toast.info(`Şikâyet bu oturumda ${action === "resolved" ? "çözüldü" : "reddedildi"} olarak işaretlendi; kalıcı moderasyon kaydı oluşturulmadı.`);
-    setReports(moderationService.getReports());
+    toast.success(action === "resolved" ? "Şikâyet sunucuda çözüldü olarak işaretlendi." : "Şikâyet sunucuda reddedildi olarak işaretlendi.");
   };
 
   const handleDeletePost = (id: string) => {
