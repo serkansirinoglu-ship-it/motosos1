@@ -53,7 +53,7 @@ export default function EventsPage() {
 
         <Card className="bg-amber-500/10 border-amber-500/30 p-3 rounded-xl mb-3">
           <p className="text-[11px] text-amber-200 leading-relaxed">
-            Etkinlikler sunucudan okunur. Etkinlik oluşturma ve düzenleme, mevcut güvenlik kuralları yöneticiye özel yetkiyi garanti etmediği için henüz açılmadı.
+            Etkinlikler sunucudan okunur. Etkinlik oluşturma ve düzenleme yalnızca yönetici panelinden yapılır; kullanıcılar burada yayınlanan etkinlikleri görüntüler.
           </p>
         </Card>
 
