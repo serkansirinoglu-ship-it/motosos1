@@ -369,6 +369,14 @@ export default function SOSPage() {
         setFinishing(false);
         return;
       }
+      // The auth scope or active request may have changed while the remote write
+      // was pending. Never let an old completion clear a newer session's SOS UI.
+      if (!isSOSOwnerScopeCurrent() || sosIdRef.current !== sosId) {
+        finishingRef.current = false;
+        setFinishing(false);
+        toast.error("Oturum veya aktif çağrı değişti. Yeni ekrandaki SOS korunarak eski işlemin sonucu ayrıştırıldı; ilk hesabınızda çağrı durumunu kontrol edin.");
+        return;
+      }
     }
 
     if (localSosId) sosService.updateStatus(localSosId, "iptal_edildi");
@@ -408,6 +416,14 @@ export default function SOSPage() {
         );
         finishingRef.current = false;
         setFinishing(false);
+        return;
+      }
+      // The auth scope or active request may have changed while the remote write
+      // was pending. Never let an old completion clear a newer session's SOS UI.
+      if (!isSOSOwnerScopeCurrent() || sosIdRef.current !== sosId) {
+        finishingRef.current = false;
+        setFinishing(false);
+        toast.error("Oturum veya aktif çağrı değişti. Yeni ekrandaki SOS korunarak eski işlemin sonucu ayrıştırıldı; ilk hesabınızda çağrı durumunu kontrol edin.");
         return;
       }
     }
