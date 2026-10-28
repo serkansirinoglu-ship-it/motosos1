@@ -19,7 +19,6 @@ import BannersRow from "@/components/BannersRow";
 import Leaderboard from "@/components/Leaderboard";
 import { sosService, SOSRequestItem } from "@/services/sosService";
 import { marketplaceService, ListingItem } from "@/services/marketplaceService";
-import EmergencyWarning from "@/components/EmergencyWarning";
 
 export default function Home() {
   const [activeSOSList, setActiveSOSList] = useState<SOSRequestItem[]>([]);
@@ -82,11 +81,6 @@ export default function Home() {
             </Link>
           </div>
         </div>
-      </section>
-
-      {/* 112 Yasal Uyarı Banner */}
-      <section className="px-4 mt-4 max-w-lg mx-auto">
-        <EmergencyWarning />
       </section>
 
       {/* Aktif Yardım Talepleri Widget (Eğer varsa) */}
