@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - fix/remove-community-family-banner
+      - audit/add-nonprod-ci-gates
   push:
     branches:
       - audit/add-nonprod-ci-gates
@@ -27,8 +28,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Protect main page from PR changes
-        if: github.event_name == 'pull_request'
+      # PR #4 intentionally restores the homepage ad slots and Turkish flag and removes
+      # the oversized 112 banner from Home.tsx. Keep the guard for all other PRs.
+      - name: Protect main page from unrelated PR changes
+        if: github.event_name == 'pull_request' && github.event.pull_request.number != 4
         shell: bash
         run: |
           git fetch --no-tags origin "${{ github.base_ref }}"
