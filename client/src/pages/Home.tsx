@@ -48,6 +48,7 @@ export default function Home() {
         <div className="relative px-4 pt-8 pb-6 max-w-lg mx-auto">
           <div className="inline-flex items-center gap-1.5 bg-primary/15 border border-primary/30 px-3 py-1 rounded-full mb-3">
             <Shield className="w-3.5 h-3.5 text-primary" />
+            <span className="text-sm leading-none" aria-hidden="true">🇹🇷</span>
             <span className="text-[11px] font-bold text-primary uppercase tracking-wider">
               Türkiye Moto Dayanışması
             </span>
