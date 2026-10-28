@@ -19,7 +19,6 @@ import BannersRow from "@/components/BannersRow";
 import Leaderboard from "@/components/Leaderboard";
 import { sosService, SOSRequestItem } from "@/services/sosService";
 import { marketplaceService, ListingItem } from "@/services/marketplaceService";
-import EmergencyWarning from "@/components/EmergencyWarning";
 
 export default function Home() {
   const [activeSOSList, setActiveSOSList] = useState<SOSRequestItem[]>([]);
@@ -49,6 +48,7 @@ export default function Home() {
         <div className="relative px-4 pt-8 pb-6 max-w-lg mx-auto">
           <div className="inline-flex items-center gap-1.5 bg-primary/15 border border-primary/30 px-3 py-1 rounded-full mb-3">
             <Shield className="w-3.5 h-3.5 text-primary" />
+            <span className="text-sm leading-none" aria-hidden="true">🇹🇷</span>
             <span className="text-[11px] font-bold text-primary uppercase tracking-wider">
               Türkiye Moto Dayanışması
             </span>
@@ -82,11 +82,6 @@ export default function Home() {
             </Link>
           </div>
         </div>
-      </section>
-
-      {/* 112 Yasal Uyarı Banner */}
-      <section className="px-4 mt-4 max-w-lg mx-auto">
-        <EmergencyWarning />
       </section>
 
       {/* Aktif Yardım Talepleri Widget (Eğer varsa) */}
